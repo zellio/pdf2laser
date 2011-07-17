@@ -1,4 +1,12 @@
-epilog: cups-epilog.c
+epilog: epilog.c
+	gcc \
+		-W \
+		-Wall \
+		-O3 \
+		-o $@ \
+		$< \
+
+cups-epilog: cups-epilog.c
 	gcc \
 		-o $@ \
 		`cups-config --cflags` \

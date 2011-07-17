@@ -4,6 +4,7 @@
  *========================================================================
  * Copyright © 2002-2008 Andrews & Arnold Ltd <info@aaisp.net.uk>
  * Copyright 2008 AS220 Labs <brandon@as220.org>
+ * Copyright 2011 Trammell Hudson <hudson@osresearch.net>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -21,7 +22,7 @@
  *
  *
  * Author: Andrew & Arnold Ltd and Brandon Edens
- *
+ * Converted to a command line tool by Trammell Hudson
  *
  * Description:
  * Epilog laser engraver
@@ -121,6 +122,8 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <getopt.h>
+#include <pwd.h>
 
 
 /*************************************************************************
@@ -205,7 +208,7 @@
 #define TMP_DIRECTORY "/tmp"
 
 /** FIXME */
-#define VECTOR_FREQUENCY_DEFAULT (500)
+#define VECTOR_FREQUENCY_DEFAULT (5000)
 
 /** Default power level for vector cutting. */
 #define VECTOR_POWER_DEFAULT (50)
@@ -230,7 +233,7 @@ static char buf[102400];
 static char debug = DEBUG;
 
 /** Variable to track auto-focus. */
-static int focus = AUTO_FOCUS;
+static int focus = 0;
 
 /** Variable to track whether or not the X axis should be flipped. */
 static char flip = FLIP;
@@ -242,16 +245,10 @@ static int height = BED_HEIGHT;
 static char *job_name = "";
 
 /** User name that submitted the print job. */
-static char *job_user = "";
+static char *job_user = NULL;
 
 /** Title for the job print. */
 static char *job_title = "";
-
-/** Number of copies to produce of the print. */
-static char *job_copies = "";
-
-/** Printer queue specified options. */
-static char *job_options = "";
 
 /** Variable to track the resolution of the print. */
 static int resolution = RESOLUTION_DEFAULT;
@@ -271,10 +268,7 @@ static int raster_power = RASTER_POWER_DEFAULT;
 static int raster_repeat = RASTER_REPEAT;
 
 /** FIXME -- pixel size of screen, 0= threshold */
-static int screen = SCREEN_DEFAULT;
-
-/** The DEVICE_URI for the printer. */
-static char *device_uri = "";
+static int screen_size = SCREEN_DEFAULT;
 
 /** Options for the printer. */
 static char *queue = "";
@@ -308,16 +302,10 @@ static int y_repeat = 1;
  * local functions
  */
 static int big_to_little_endian(uint8_t *position, int bytes);
-static bool execute_ghostscript(char *filename_bitmap, char *filename_eps,
-                                char *filename_vector,
-                                char *bmp_mode, int resolution,
-                                int height, int width);
 static bool generate_raster(FILE *pjl_file, FILE *bitmap_file);
 static bool generate_vector(FILE *pjl_file, FILE *vector_file);
 static bool generate_pjl(FILE *bitmap_file, FILE *pjl_file, FILE *vector_file);
 static bool ps_to_eps(FILE *ps_file, FILE *eps_file);
-static bool process_job_title_commands(char *title);
-static bool process_queue_options(char *queue);
 static void range_checks(void);
 static int printer_connect(const char *host, const int timeout);
 static bool printer_disconnect(int socket_descriptor);
@@ -368,25 +356,15 @@ big_to_little_endian(uint8_t *position, int nbytes)
  * otherwise.
  */
 static bool
-execute_ghostscript(char *filename_bitmap,
-                    char *filename_eps,
-                    char *filename_vector,
-                    char *bmp_mode, int resolution,
-                    int height, int width)
+execute_ghostscript(
+	const char * const filename_bitmap,
+	const char * const filename_eps,
+	const char * const filename_vector,
+	const char * const bmp_mode,
+	int resolution
+)
 {
     char buf[8192];
-#if 0
-    sprintf(buf,
-            "/usr/local/bin/gs -q -dBATCH -dNOPAUSE -r%d -g%dx%d -sDEVICE=%s \
--sOutputFile=%s %s > %s",
-            resolution,
-            (width * resolution) / POINTS_PER_INCH,
-            (height * resolution) / POINTS_PER_INCH,
-            bmp_mode,
-            filename_bitmap,
-            filename_eps,
-            filename_vector);
-#else
     sprintf(buf,
             "/usr/local/bin/gs -q -dBATCH -dNOPAUSE -r%d -sDEVICE=%s \
 -sOutputFile=%s %s > %s",
@@ -395,7 +373,6 @@ execute_ghostscript(char *filename_bitmap,
             filename_bitmap,
             filename_eps,
             filename_vector);
-#endif
 
     if (debug) {
         fprintf(stderr, "%s\n", buf);
@@ -522,8 +499,8 @@ generate_raster(FILE *pjl_file, FILE *bitmap_file)
                         switch (raster_mode) {
                         case 'c':      // colour (passes)
                         {
-                            unsigned char *f = buf;
-                            unsigned char *t = buf;
+                            unsigned char *f = (unsigned char *) buf;
+                            unsigned char *t = (unsigned char *) buf;
                             if (d > sizeof (buf)) {
                                 perror("Too wide");
                                 return false;
@@ -965,10 +942,10 @@ round  cvi = flattenpath{transform(M)=== round cvi ===(,)=== round cvi \
 =}{transform(L)=== round cvi ===(,)=== round cvi =}{}{(C)=}pathforall \
 newpath}{stroke}ifelse}bind def/showpage{(X)= showpage}bind def\n");
             if (raster_mode != 'c' && raster_mode != 'g') {
-                if (screen == 0) {
+                if (screen_size == 0) {
                     fprintf(eps_file, "{0.5 ge{1}{0}ifelse}settransfer\n");
                 } else {
-                    int s = screen;
+                    int s = screen_size;
                     if (resolution >= 600) {
                         // adjust for overprint
                         fprintf(eps_file,
@@ -976,7 +953,7 @@ newpath}{stroke}ifelse}bind def/showpage{(X)= showpage}bind def\n");
                                 resolution / 600, s);
                     }
                     fprintf(eps_file, "%d 30{%s}setscreen\n", resolution / s,
-                            (screen > 0) ? "pop abs 1 exch sub" :
+                            (screen_size > 0) ? "pop abs 1 exch sub" :
                             "180 mul cos exch 180 mul cos add 2 div");
                 }
             }
@@ -989,165 +966,6 @@ newpath}{stroke}ifelse}bind def/showpage{(X)= showpage}bind def\n");
 }
 
 
-/**
- * The print job title can affect the functioning of the software. Job titles
- * can take three forms:
- * xRXxRYx specify that the execution of the job should repeat.
- * cCXcCYc specify the center location for the print (in inches).
- * nofocus if autofocus is to be disabled.
- *
- * @param the print job title.
- * @return True if the system is able to process the job title, false otherwise.
- */
-static bool
-process_job_title_commands(char *title)
-{
-    // xRXxRYx for repeat, cCXcCYc is centre (mm)
-    char *p = title;
-    char *d;
-    if (*p++ == 'x') {
-        if (isdigit(*p)) {
-            d = p;
-            while (isdigit(*p)) {
-                p++;
-            }
-            if (*p++ == 'x') {
-                x_repeat = atoi(d);
-                title = p;
-                if (isdigit(*p)) {
-                    d = p;
-                    while (isdigit(*p)) {
-                        p++;
-                    }
-                    if (*p++ == 'x') {
-                        y_repeat = atoi(d);
-                        title = p;
-                    }
-                }
-            }
-        }
-    }
-    p = title;
-    if (*p++ == 'c') {
-        if (isdigit(*p)) {
-            d = p;
-            while (isdigit(*p)) {
-                p++;
-            }
-            if (*p++ == 'c') {
-                x_center = atoi(d) * POINTS_PER_INCH;
-                title = p;
-                if (isdigit(*p)) {
-                    d = p;
-                    while (isdigit(*p)) {
-                        p++;
-                    }
-                    if (*p++ == 'c') {
-                        y_center = atoi(d) * POINTS_PER_INCH;
-                        title = p;
-                    }
-                }
-            }
-        }
-    }
-    if (!strncmp(job_title, "nofocus", 7)) {
-        title += 7;
-        focus = 0;
-    }
-    return true;
-}
-
-/**
- * Process the queue options which take a form akin to:
- * @verbatim
- * /rp=100/rs=100/vp=100/vs=10/vf=5000/rm=mono/flip/af
- * @endverbatim
- * Each option is separated by the '/' character and can be specified as
- * /name=value or just /name (for boolean values).
- *
- * This function has the side effect of modifying the global variables
- * specifying major settings for the device.
- *
- * @param queue a string containing the options that are to be interpreted and
- * assigned to the global variables controlling printer characteristics.
- *
- * @return True if the function is able to complete its task, false otherwise.
- */
-static bool
-process_queue_options(char *queue_options)
-{
-    char *o = strchr(queue_options, '/');
-
-    if (!queue_options) {
-        fprintf(stderr, "URI syntax epilog://host/queue_optionsname\n");
-        return false;
-    }
-    *queue_options++ = 0;
-
-    if (o) {
-        *o++ = 0;
-        while (*o) {
-            char *t = o,
-                *v = "1";
-            while (isalpha(*o)) {
-                o++;
-            }
-            if (*o == '=') {
-                *o++ = 0;
-                v = o;
-                while (*o && (isalnum(*o) || *o == '-')) {
-                    o++;
-                }
-            }
-            while (*o && !isalpha(*o)) {
-                *o++ = 0;
-            }
-            if (!strcasecmp(t, "af")) {
-                focus = atoi(v);
-            }
-            if (!strcasecmp(t, "r")) {
-                resolution = atoi(v);
-            }
-            if (!strcasecmp(t, "rs")) {
-                raster_speed = atoi(v);
-            }
-            if (!strcasecmp(t, "rp")) {
-                raster_power = atoi(v);
-            }
-            if (!strcasecmp(t, "rm")) {
-                raster_mode = tolower(*v);
-            }
-            if (!strcasecmp(t, "rr")) {
-                raster_repeat = atoi(v);
-            }
-            if (!strcasecmp(t, "vs")) {
-                vector_speed = atoi(v);
-            }
-            if (!strcasecmp(t, "vp")) {
-                vector_power = atoi(v);
-            }
-            if (!strcasecmp(t, "vf")) {
-                vector_freq = atoi(v);
-            }
-            if (!strcasecmp(t, "sc")) {
-                screen = atoi(v);
-            }
-            if (!strcasecmp(t, "w")) {
-                width = atoi(v);
-            }
-            if (!strcasecmp(t, "h")) {
-                height = atoi(v);
-            }
-            if (!strcasecmp(t, "flip")) {
-                flip = 1;
-            }
-            if (!strcasecmp(t, "debug")) {
-                debug = 1;
-            }
-        }
-    }
-    return true;
-}
 
 /**
  * Perform range validation checks on the major global variables to ensure
@@ -1159,51 +977,44 @@ process_queue_options(char *queue_options)
 static void
 range_checks(void)
 {
-    if (raster_power > 100) {
+    if (raster_power > 100)
         raster_power = 100;
-    }
-    if (raster_power < 0) {
+    else
+    if (raster_power < 0)
         raster_power = 0;
-    }
 
-    if (raster_speed > 100) {
+    if (raster_speed > 100)
         raster_speed = 100;
-    }
-    if (raster_speed < 1) {
+    else
+    if (raster_speed < 1)
         raster_speed = 1;
-    }
 
-    if (resolution > 1200) {
+    if (resolution > 1200)
         resolution = 1200;
-    }
-    if (resolution < 75) {
+    else
+    if (resolution < 75)
         resolution = 75;
-    }
 
-    if (screen < 1) {
-        screen = 1;
-    }
+    if (screen_size < 1)
+        screen_size = 1;
 
-    if (vector_freq < 10) {
+    if (vector_freq < 10)
         vector_freq = 10;
-    }
-    if (vector_freq > 5000) {
+    else
+    if (vector_freq > 5000)
         vector_freq = 5000;
-    }
 
-    if (vector_power > 100) {
+    if (vector_power > 100)
         vector_power = 100;
-    }
-    if (vector_power < 0) {
+    else
+    if (vector_power < 0)
         vector_power = 0;
-    }
 
-    if (vector_speed > 100) {
+    if (vector_speed > 100)
         vector_speed = 100;
-    }
-    if (vector_speed < 1) {
+    else
+    if (vector_speed < 1)
         vector_speed = 1;
-    }
 }
 
 /**
@@ -1389,6 +1200,50 @@ printer_send(const char *host, FILE *pjl_file)
     return true;
 }
 
+
+static void usage(int rc, const char * const msg)
+{
+	static const char usage_str[] =
+"Usage: epilog [options] < file.ps\n"
+"Options:\n"
+" -p | --printer ip                  IP address of printer\n"
+" -P | --preset name                 Select a default preset\n"
+" -a | --autofocus                   Enable auto focus\n"
+" -n | --job Jobname                 Set the job name to display\n"
+"\n"
+"Raster options:\n"
+" -d | --dpi 300                     Resolution of raster artwork\n"
+" -R | --raster-power 0-100          Raster power\n"
+" -r | --raster-speed 0-100          Raster speed\n"
+" -m | --mode mono/grey/color        Mode for rasterization (default mono)\n"
+" -s | --screen-size N               Photograph screen size (default 8)\n"
+"\n"
+"Vector options:\n"
+" -V | --vector-power 0-100          Vector power\n"
+" -v | --vector-speed 0-100          Vector speed\n"
+" -f | --frequency 10-5000           Vector frequency\n"
+"";
+	fprintf(stderr, "%s%s\n", msg, usage_str);
+	exit(rc);
+}
+
+static const struct option long_options[] = {
+	{ "printer",		required_argument, NULL, 'p' },
+	{ "preset",		required_argument, NULL, 'P' },
+	{ "autofocus",		required_argument, NULL, 'a' },
+	{ "job",                required_argument, NULL, 'n' },
+	{ "dpi",		required_argument, NULL, 'd' },
+	{ "raster-power",	required_argument, NULL, 'R' },
+	{ "raster-speed",	required_argument, NULL, 'r' },
+	{ "mode",		required_argument, NULL, 'm' },
+	{ "screen-size",	required_argument, NULL, 's' },
+	{ "frequency",		required_argument, NULL, 'f' },
+	{ "vector-power",	required_argument, NULL, 'V' },
+	{ "vector-speed",	required_argument, NULL, 'v' },
+	{ NULL, 0, NULL, 0 },
+};
+
+
 /**
  * Main entry point for the program.
  *
@@ -1401,87 +1256,100 @@ printer_send(const char *host, FILE *pjl_file)
 int
 main(int argc, char *argv[])
 {
+	const char * host = "localhost";
 
-    /** The printer hostname. */
-    static char *host = "";
+	while (1)
+	{
+		const char ch = getopt_long(argc, argv, "Dp:P:n:d:r:R:v:V:m:f:s:a", long_options, NULL);
+		if (ch <= 0 )
+			break;
+		switch(ch)
+		{
+		case 'D': debug++; break;
+		case 'p': host = optarg; break;
+		case 'P': usage(EXIT_FAILURE, "Presets are not supported yet\n"); break;
+		case 'n': job_name = optarg; break;
+		case 'd': resolution = atoi(optarg); break;
+		case 'r': raster_speed = atoi(optarg); break;
+		case 'R': raster_power = atoi(optarg); break;
+		case 'v': vector_speed = atoi(optarg); break;
+		case 'V': vector_power = atoi(optarg); break;
+		case 'm': raster_mode = tolower(*optarg); break;
+		case 'f': vector_freq = atoi(optarg); break;
+		case 's': screen_size = atoi(optarg); break;
+		case 'a': focus = AUTO_FOCUS; break;
+		default: usage(EXIT_FAILURE, "Unknown argument\n"); break;
+		}
+	}
+
+	/* Perform a check over the global values to ensure that they have values
+	 * that are within a tolerated range.
+	 */
+	range_checks();
+
+	if (!host)
+		usage(EXIT_FAILURE, "Printer host must be specfied\n");
+
+	// Skip any of the processed arguments
+	argc -= optind;
+	argv += optind;
+
+	// If they did not specify a user, get their name
+	if (!job_user)
+	{
+		uid_t uid = getuid();
+		struct passwd * pw = getpwuid(uid);
+		job_user = strdup(pw->pw_name);
+	}
+
+	// If there is an argument after, there must be only one
+	// and it will be the input postcript / pdf
+	if (argc > 1)
+		usage(EXIT_FAILURE, "Only one input file may be specified\n");
+	const char * const filename = argc ? argv[0] : "stdin";
+
+	if (!job_name)
+		job_name = filename;
+
+	job_title = job_name;
+
+	/* Gather the postscript file from either standard input or a filename
+	 * specified as a command line argument.
+	 */
+	FILE * file_cups = argc ? fopen(filename, "r") : stdin;
+	if (!file_cups)
+	{
+		perror(filename);
+		exit(EXIT_FAILURE);
+	}
+
+	fprintf(stderr,
+		"Job: %s (%s)\n"
+		"Raster speed=%d power=%d dpi=%d\n"
+		"Vector speed=%d power=%d freq=%d\n"
+		"",
+		job_title,
+		job_user,
+		raster_speed,
+		raster_power,
+		resolution,
+		vector_speed,
+		vector_power,
+		vector_freq
+	);
+
 
     /* Strings designating filenames. */
     char file_basename[FILENAME_NCHARS];
     char filename_bitmap[FILENAME_NCHARS];
-    char filename_cups_debug[FILENAME_NCHARS];
     char filename_eps[FILENAME_NCHARS];
     char filename_pdf[FILENAME_NCHARS];
     char filename_pjl[FILENAME_NCHARS];
     char filename_ps[FILENAME_NCHARS];
     char filename_vector[FILENAME_NCHARS];
 
-    /* File handles. */
-    FILE *file_debug;
-    FILE *file_bitmap;
-    FILE *file_eps;
-    FILE *file_cups;
-    FILE *file_pdf;
-    FILE *file_ps;
-    FILE *file_ps_output;
-    FILE *file_pjl;
-    FILE *file_vector;
-
     /* Temporary variables. */
     int l;
-
-    /*
-     * Process the command line arguments specified by the user. Proper command
-     * line arguments are fed to this program from cups and will be of a form akin
-     * to:
-     * @verbatim
-     * job_number user job_title num_copies queue_options
-     * 123        jdoe myjob     1          asdf
-     * @endverbatim
-     */
-    if (argc == 1) {
-        printf("direct epilog \"Unknown\" \"Epilog laser (thin red lines vector cut)\"\n");
-        return 1;
-    }
-    if (argc > 1) {
-        job_name = argv[1];
-    }
-    if (argc > 2) {
-        job_user = argv[2];
-    }
-    if (argc > 3) {
-        job_title = argv[3];
-    }
-    if (argc > 4) {
-        job_copies = argv[4];
-    }
-    if (argc > 5) {
-        job_options = argv[5];
-    }
-
-    /* Gather the site information from the user's environment variable. */
-    device_uri = getenv("DEVICE_URI");
-    if (!device_uri) {
-        fprintf(stderr, "No $DEVICE_URI set\n");
-        return 0;
-    }
-    host = strstr(device_uri, "//");
-    if (!host) {
-        fprintf(stderr, "URI syntax epilog://host/queuename\n");
-        return 0;
-    }
-    host += 2;
-
-    /* Process the queue arguments. */
-    queue = strchr(host, '/');
-    if (!process_queue_options(queue)) {
-        fprintf(stderr, "Error processing epilog queue options.");
-        return 0;
-    }
-
-    /* Perform a check over the global values to ensure that they have values
-     * that are within a tolerated range.
-     */
-    range_checks();
 
     /* Determine and set the names of all files that will be manipulated by the
      * program.
@@ -1492,42 +1360,13 @@ main(int argc, char *argv[])
     sprintf(filename_pjl, "%s.pjl", file_basename);
     sprintf(filename_vector, "%s.vector", file_basename);
 
-    /* Gather the postscript file from either standard input or a filename
-     * specified as a command line argument.
-     */
-    if (argc > 6) {
-        file_cups = fopen(argv[6], "r");
-    } else {
-        file_cups = stdin;
-    }
-    if (!file_cups) {
-        perror((argc > 6) ? argv[6] : "stdin");
-        return 1;
-    }
+    /* File handles. */
+    FILE *file_bitmap;
+    FILE *file_pdf;
+    FILE *file_ps;
+    FILE *file_pjl;
+    FILE *file_vector;
 
-    /* Write out the incoming cups data if debug is enabled. */
-    if (debug) {
-        /* We save the incoming cups data to the filesystem. */
-        sprintf(filename_cups_debug, "%s.cups", file_basename);
-        file_debug = fopen(filename_cups_debug, "w");
-
-        /* Check that file handle opened. */
-        if (!file_debug) {
-            perror(filename_cups_debug);
-            return 1;
-        }
-
-        /* Write cups data to the filesystem. */
-        while ((l = fread((char *)buf, 1, sizeof(buf), file_cups)) > 0) {
-            fwrite((char *)buf, 1, l, file_debug);
-        }
-        fclose(file_debug);
-        /* In case file_cups pointed to stdin we close the existing file handle
-         * and switch over to using the debug file handle.
-         */
-        fclose(file_cups);
-        file_cups = fopen(filename_cups_debug, "r");
-    }
 
     /* Check whether the incoming data is ps or pdf data. */
     fread((char *)buf, 1, 4, file_cups);
@@ -1552,32 +1391,6 @@ main(int argc, char *argv[])
 
         fclose(file_cups);
         fclose(file_pdf);
-
-        if (PDF_ROTATE_90) {
-            /* Configuration specifies that PDF will be rotated 90 degrees
-             * clockwise. Use the program pdftk to rotate the pdf.
-             */
-            sprintf(buf, "/usr/bin/pdftk %s cat endE output %s_rotated.pdf",
-                    filename_pdf, file_basename);
-            /* If debug is enabled then print the command to be executed. */
-            if (debug) {
-                fprintf(stderr, "%s\n", buf);
-            }
-            /* Execute the pdftk command. */
-            if (system(buf)) {
-                fprintf(stderr, "Failure to execute pdftk. Quitting...");
-                return 1;
-            }
-            /* Cleanup old pdf file if debug not enabled. */
-            if (!debug) {
-                /* Debug is disabled so remove non-rotated pdf file. */
-                if (unlink(filename_pdf)) {
-                    perror(filename_pdf);
-                }
-            }
-            /* Reset the pdf filename to the rotated file's name. */
-            sprintf(filename_pdf, "%s_rotated.pdf", file_basename);
-        }
 
         /* Setup the postscript output filename. */
         sprintf(filename_ps, "%s.ps", file_basename);
@@ -1607,7 +1420,7 @@ main(int argc, char *argv[])
     }
 
     /* Open the encapsulated postscript file for writing. */
-    file_eps = fopen(filename_eps, "w");
+    FILE * const file_eps = fopen(filename_eps, "w");
     if (!file_eps) {
         perror(filename_eps);
         return 1;
@@ -1618,6 +1431,7 @@ main(int argc, char *argv[])
         fclose(file_eps);
         return 1;
     }
+
     /* Cleanup after encapsulated postscript creation. */
     fclose(file_eps);
     if (file_ps != stdin) {
@@ -1627,27 +1441,21 @@ main(int argc, char *argv[])
         }
     }
 
-    if(!execute_ghostscript(filename_bitmap,
-                            filename_eps,
-                            filename_vector,
-                            (raster_mode == 'c') ? "bmp16m" :
-                            (raster_mode == 'g') ? "bmpgray" : "bmpmono",
-                            resolution, height, width)) {
-        perror("Failure to execute ghostscript command.\n");
-        return 1;
-    }
+	const char * const raster_string =
+		raster_mode == 'c' ? "bmp16m" :
+		raster_mode == 'g' ? "bmpgray" :
+		"bmpmono";
 
-    /* The print job title has the capability to modify characteristics of the
-     * print. Check for embedded information and possibly update the job title
-     * before sending the title to the printer.
-     */
-    if (!*job_title || !strcasecmp(job_title, "_stdin_") ||
-        !strcasecmp(job_title, "(stdin)") || !strncasecmp (job_title, "print ", 6)) {
-        sprintf(job_title, "%dx%din", width / POINTS_PER_INCH,
-                height / POINTS_PER_INCH);
-    } else {
-        process_job_title_commands(job_title);
-    }
+    	if(!execute_ghostscript(
+		filename_bitmap,
+		filename_eps,
+		filename_vector,
+		raster_string,
+		resolution
+	)) {
+		perror("Failure to execute ghostscript command.\n");
+		return 1;
+	}
 
     /* Open file handles needed by generation of the printer job language
      * file.
@@ -1703,4 +1511,3 @@ main(int argc, char *argv[])
 
     return 0;
 }
-
