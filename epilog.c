@@ -242,13 +242,13 @@ static char flip = FLIP;
 static int height = BED_HEIGHT;
 
 /** Job name for the print. */
-static char *job_name = "";
+static char *job_name = NULL;
 
 /** User name that submitted the print job. */
 static char *job_user = NULL;
 
 /** Title for the job print. */
-static char *job_title = "";
+static char *job_title = NULL;
 
 /** Variable to track the resolution of the print. */
 static int resolution = RESOLUTION_DEFAULT;
@@ -1308,8 +1308,16 @@ main(int argc, char *argv[])
 		usage(EXIT_FAILURE, "Only one input file may be specified\n");
 	const char * const filename = argc ? argv[0] : "stdin";
 
+	// If no job name is specified, use just the filename if there
+	// are any / in the name.
 	if (!job_name)
-		job_name = filename;
+	{
+		job_name = strrchr(filename, '/');
+		if (!job_name)
+			job_name = filename;
+		else
+			job_name++; // skip the /
+	}
 
 	job_title = job_name;
 
@@ -1323,6 +1331,7 @@ main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
+	// Report the settings on stdout
 	fprintf(stderr,
 		"Job: %s (%s)\n"
 		"Raster speed=%d power=%d dpi=%d\n"
