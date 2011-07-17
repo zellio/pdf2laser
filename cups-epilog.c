@@ -375,6 +375,7 @@ execute_ghostscript(char *filename_bitmap,
                     int height, int width)
 {
     char buf[8192];
+#if 0
     sprintf(buf,
             "/usr/local/bin/gs -q -dBATCH -dNOPAUSE -r%d -g%dx%d -sDEVICE=%s \
 -sOutputFile=%s %s > %s",
@@ -385,6 +386,17 @@ execute_ghostscript(char *filename_bitmap,
             filename_bitmap,
             filename_eps,
             filename_vector);
+#else
+    sprintf(buf,
+            "/usr/local/bin/gs -q -dBATCH -dNOPAUSE -r%d -sDEVICE=%s \
+-sOutputFile=%s %s > %s",
+            resolution,
+            bmp_mode,
+            filename_bitmap,
+            filename_eps,
+            filename_vector);
+#endif
+
     if (debug) {
         fprintf(stderr, "%s\n", buf);
     }
