@@ -43,6 +43,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include <string.h>
 #include <sys/signal.h>
 #include <sys/socket.h>
@@ -55,7 +56,7 @@
 
 typedef struct
 {
-	FILE * file;
+	int fd;
 	const char * host;
 	const char * title;
 	const char * queue;
@@ -70,6 +71,30 @@ typedef struct
 
 
 void
+printer_send(
+	printer_job_t * const job,
+	const char * const fmt,
+	...
+)
+{
+	static char buf[1024];
+	va_list ap;
+	va_start(ap, fmt);
+	int len = vsnprintf(buf, sizeof(buf), fmt, ap);
+	va_end(ap);
+	fprintf(stderr, "sending '%s'\n", buf);
+
+	// epilog.c sends the nul at the end?
+	ssize_t rc = write(job->fd, buf, len);
+	if (rc != len)
+	{
+		perror("short write");
+		abort();
+	}
+}
+
+
+void
 vector_moveto(
 	printer_job_t * const job,
 	uint32_t x,
@@ -77,7 +102,7 @@ vector_moveto(
 	int pen
 )
 {
-	fprintf(job->file, "P%c%d%d;",
+	printer_send(job, "P%c%d,%d;",
 		pen ? 'D' : 'U',
 		x,
 		y
@@ -93,7 +118,7 @@ vector_param(
 	int speed
 )
 {
-	fprintf(job->file,
+	printer_send(job,
 		"XR%04d;YP%03d;ZS%03d;",
 		freq,
 		power,
@@ -108,18 +133,18 @@ vector_init(
 )
 {
 	/* add vector information to the print job. */
-        fprintf(job->file, "\eE@PJL ENTER LANGUAGE=PCL\r\n");
+        printer_send(job, "\eE@PJL ENTER LANGUAGE=PCL\r\n");
 
         /* Page Orientation */
-        fprintf(job->file, "\e*r0F");
-        fprintf(job->file, "\e*r%dT", job->height);
-        fprintf(job->file, "\e*r%dS", job->width);
-        fprintf(job->file, "\e*r1A");
-        fprintf(job->file, "\e*rC");
-        fprintf(job->file, "\e%%1B");
+        printer_send(job, "\e*r0F");
+        printer_send(job, "\e*r%dT", job->height);
+        printer_send(job, "\e*r%dS", job->width);
+        printer_send(job, "\e*r1A");
+        printer_send(job, "\e*rC");
+        printer_send(job, "\e%%1B");
 
 	// We are now in HPGL mode 
-	fprintf(job->file, "IN;");
+	printer_send(job, "IN;");
 }
 
 
@@ -128,7 +153,7 @@ vector_end(
 	printer_job_t * const job
 )
 {
-	fprintf(job->file, "\e%%0B"); // end HLGL
+	printer_send(job, "\e%%0B"); // end HLGL
 }
 
 
@@ -141,27 +166,27 @@ printer_header(
 )
 {
     /* Print the printer job language header. */
-    fprintf(job->file, "\e%%-12345X@PJL JOB NAME=%s\r\n", job->title);
-    fprintf(job->file, "\eE@PJL ENTER LANGUAGE=PCL\r\n");
+    printer_send(job, "\e%%-12345X@PJL JOB NAME=%s\r\n", job->title);
+    printer_send(job, "\eE@PJL ENTER LANGUAGE=PCL\r\n");
     /* Set autofocus on or off. */
-    fprintf(job->file, "\e&y%dA", job->auto_focus);
+    printer_send(job, "\e&y%dA", job->auto_focus);
     /* Left (long-edge) offset registration.  Adjusts the position of the
      * logical page across the width of the page.
      */
-    fprintf(job->file, "\e&l0U");
+    printer_send(job, "\e&l0U");
     /* Top (short-edge) offset registration.  Adjusts the position of the
      * logical page across the length of the page.
      */
-    fprintf(job->file, "\e&l0Z");
+    printer_send(job, "\e&l0Z");
 
     /* Resolution of the print. */
-    fprintf(job->file, "\e&u%dD", job->resolution);
+    printer_send(job, "\e&u%dD", job->resolution);
     /* X position = 0 */
-    fprintf(job->file, "\e*p0X");
+    printer_send(job, "\e*p0X");
     /* Y position = 0 */
-    fprintf(job->file, "\e*p0Y");
+    printer_send(job, "\e*p0Y");
     /* PCL resolution. */
-    fprintf(job->file, "\e*t%dR", job->resolution);
+    printer_send(job, "\e*t%dR", job->resolution);
 
 #if 0
     /* If raster power is enabled and raster mode is not 'n' then add that
@@ -170,7 +195,7 @@ printer_header(
     if (raster_power && raster_mode != 'n') {
 
         /* FIXME unknown purpose. */
-        fprintf(pjl_file, "\e&y0C");
+        printer_send(job, "\e&y0C");
 
         /* We're going to perform a raster print. */
         generate_raster(pjl_file, bitmap_file);
@@ -188,18 +213,19 @@ printer_footer(
 )
 {
 	/* Reset */
-	fprintf(job->file, "\eE");
+	printer_send(job, "\eE");
 	/* Exit language. */
-	fprintf(job->file, "\e%%-12345X");
+	printer_send(job, "\e%%-12345X");
 	/* End job. */
-	fprintf(job->file, "@PJL EOJ \r\n");
+	printer_send(job, "@PJL EOJ \r\n");
 
 	/* Pad out the remainder of the file with 0 characters. */
 	int i;
 	for(i = 0; i < 4096; i++)
-		fputc('\0', job->file);
-
-	fflush(job->file);
+	{
+		char nul = '\0';
+		write(job->fd, &nul, 1);
+	}
 }
 
 
@@ -211,7 +237,7 @@ printer_footer(
  * connect operation.
  * @return A socket descriptor to the printer.
  */
-static FILE *
+static int
 tcp_connect(const char *host, const int timeout)
 {
 	int i;
@@ -277,7 +303,7 @@ tcp_connect(const char *host, const int timeout)
 			// Found it and connected
 			alarm(0);
 			freeaddrinfo(res);
-			return fdopen(fd, "rw");
+			return fd;
 		}
 
 		// Didn't find anything this time; try again
@@ -298,11 +324,9 @@ tcp_connect(const char *host, const int timeout)
  * @return True if the printer connection was successfully closed, false otherwise.
  */
 static bool
-tcp_disconnect(FILE * file)
+tcp_disconnect(int fd)
 {
-	int fd = fileno(file);
 	int rc = close(fd);
-
 	if (rc == 0)
 		return true;
 
@@ -316,7 +340,7 @@ printer_disconnect(
 	printer_job_t * const job
 )
 {
-	tcp_disconnect(job->file);
+	tcp_disconnect(job->fd);
 	free(job);
 }
 
@@ -327,11 +351,11 @@ printer_read(
 )
 {
 	// ensure that all output has been sent
-	fflush(job->file);
-	const int fd = fileno(job->file);
-	printf("waiting on fd %d\n", fd);
-	uint8_t result;
-	ssize_t rc = read(fd, &result, sizeof(result));
+	fprintf(stderr, "waiting on fd %d\n", job->fd);
+	int8_t result = -1;
+	ssize_t rc = read(job->fd, &result, sizeof(result));
+
+	fprintf(stderr, "rc=%zd value=%d\n", rc, result);
 
 	// Success == 0 byte
 	if (rc == sizeof(result) && result == 0)
@@ -360,8 +384,9 @@ printer_connect(
 
 	*job = (printer_job_t) {
 		.host		= strdup(host),
-		.job_name	= "live",
+		.job_name	= "live.pdf",
 		.job_size	= 1 << 20, // fake 1 MB for now
+		.title		= "live-test",
 		.queue		= "",
 		.user		= "user",
 		.auto_focus	= 0,
@@ -378,21 +403,24 @@ printer_connect(
 	    *d = 0;
 
 	/* Connect to the printer. */
-	job->file = tcp_connect(job->host, 60);
-	if (!job->file)
+	job->fd = tcp_connect(job->host, 60);
+	if (job->fd < 0)
 		return NULL;
 
 	// talk to printer
-	fprintf(job->file, "\002%s\n", job->queue);
+	printer_send(job, "\002%s\n", job->queue);
 	if (!printer_read(job))
 		return NULL;
 
-	fprintf(job->file, "P%s\n", job->user);
-	fprintf(job->file, "J%s\n", job->title);
-	fprintf(job->file, "ldfA%s%s\n", job->job_name, localhost);
-	fprintf(job->file, "UdfA%s%s\n", job->job_name, localhost);
-	fprintf(job->file, "N%s\n", job->title);
-	fprintf(job->file, "\002%zu cfA%s%s\n",
+/*
+	// due to off-by-one errors, the epilog.c code never sends these
+	printer_send(job, "P%s\n", job->user);
+	printer_send(job, "J%s\n", job->title);
+	printer_send(job, "ldfA%s:%s\n", job->job_name, localhost);
+	printer_send(job, "UdfA%s:%s\n", job->job_name, localhost);
+	printer_send(job, "N%s\n", job->title);
+*/
+	printer_send(job, "\002%zu cfA%s%s\n",
 		strlen(localhost) + 2, // the length of the H command
 		job->job_name,
 		localhost
@@ -400,11 +428,13 @@ printer_connect(
 	if (!printer_read(job))
 		return NULL;
 
-	fprintf(job->file, "H%s\n", localhost);
+	printer_send(job, "H%s\n", localhost);
+	char nul = '\0';
+	write(job->fd, &nul, 1);
 	if (!printer_read(job))
 		return NULL;
 
-	fprintf(job->file, "\003%zu dfA%s%s\n",
+	printer_send(job, "\003%zu dfA%s%s\n",
 		job->job_size,
 		job->job_name,
 		localhost
@@ -419,6 +449,8 @@ printer_connect(
 int main(void)
 {
 	printer_job_t * const job = printer_connect("192.168.3.4");
+	if (!job)
+		return -1;
 
 	printf("connected\n");
 
@@ -441,7 +473,6 @@ int main(void)
 		printf("sending point %d\n", i);
 
 		vector_moveto(job, 1, points[i][0], points[i][1]);
-		fflush(job->file);
 		i = (i + 1) % num_points;
 		getchar();
 	}
