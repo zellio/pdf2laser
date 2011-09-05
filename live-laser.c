@@ -67,7 +67,43 @@ typedef struct
 	uint32_t resolution;
 	uint32_t width;
 	uint32_t height;
+	size_t sent_bytes;
 } printer_job_t;
+
+
+void
+printer_send_raw(
+	printer_job_t * const job,
+	const void * const buf,
+	const size_t len
+)
+{
+#if 0
+	unsigned i;
+	fprintf(stderr, "sending %zu bytes:", len);
+	for(i = 0 ; i < len ; i++)
+	{
+		char c = buf[i];
+		fprintf(stderr, "%c", isprint(c) ? c : '.');
+	}
+
+	for(i = 0 ; i < len ; i++)
+		fprintf(stderr, " %02x", (uint8_t) buf[i]);
+	fprintf(stderr, "\n");
+#else
+	write(1, buf, len);
+#endif
+
+	// epilog.c sends the nul at the end?
+	ssize_t rc = write(job->fd, buf, len);
+	if (rc != (ssize_t) len)
+	{
+		perror("short write");
+		abort();
+	}
+
+	job->sent_bytes += len;
+}
 
 
 void
@@ -80,26 +116,19 @@ printer_send(
 	static char buf[1024];
 	va_list ap;
 	va_start(ap, fmt);
-	int len = vsnprintf(buf, sizeof(buf), fmt, ap);
+	ssize_t len = vsnprintf(buf, sizeof(buf), fmt, ap);
 	va_end(ap);
-	fprintf(stderr, "sending '%s'\n", buf);
 
-	// epilog.c sends the nul at the end?
-	ssize_t rc = write(job->fd, buf, len);
-	if (rc != len)
-	{
-		perror("short write");
-		abort();
-	}
+	printer_send_raw(job, buf, len);
 }
 
 
 void
 vector_moveto(
 	printer_job_t * const job,
+	int pen,
 	uint32_t x,
-	uint32_t y,
-	int pen
+	uint32_t y
 )
 {
 	printer_send(job, "P%c%d,%d;",
@@ -154,6 +183,7 @@ vector_end(
 )
 {
 	printer_send(job, "\e%%0B"); // end HLGL
+	printer_send(job, "\e%%1BPU");  // start HLGL, and pen up, end
 }
 
 
@@ -214,17 +244,17 @@ printer_footer(
 {
 	/* Reset */
 	printer_send(job, "\eE");
-	/* Exit language. */
-	printer_send(job, "\e%%-12345X");
-	/* End job. */
-	printer_send(job, "@PJL EOJ \r\n");
+	/* Exit language and end job. */
+	printer_send(job, "\e%%-12345X@PJL EOJ \r\n");
+
+	fprintf(stderr, "sent %zu bytes / %zu\n", job->sent_bytes, job->job_size);
 
 	/* Pad out the remainder of the file with 0 characters. */
 	int i;
 	for(i = 0; i < 4096; i++)
 	{
 		char nul = '\0';
-		write(job->fd, &nul, 1);
+		printer_send_raw(job, &nul, 1);
 	}
 }
 
@@ -312,7 +342,7 @@ tcp_connect(const char *host, const int timeout)
 
 	fprintf(stderr, "Cannot connect to %s\n", host);
 	alarm(0);
-	return NULL;
+	return -1;
 }
 
 
@@ -326,6 +356,7 @@ tcp_connect(const char *host, const int timeout)
 static bool
 tcp_disconnect(int fd)
 {
+	fprintf(stderr, "closing socket\n");
 	int rc = close(fd);
 	if (rc == 0)
 		return true;
@@ -382,17 +413,19 @@ printer_connect(
 	if (!job)
 		return NULL;
 
+	const uint32_t dpi = 1200;
+
 	*job = (printer_job_t) {
 		.host		= strdup(host),
 		.job_name	= "live.pdf",
-		.job_size	= 1 << 20, // fake 1 MB for now
+		.job_size	= 1 << 8, // fake 1 KB for now
 		.title		= "live-test",
 		.queue		= "",
 		.user		= "user",
 		.auto_focus	= 0,
-		.resolution	= 1200,
-		.width		= 8,
-		.height		= 8,
+		.resolution	= dpi,
+		.width		= 8 * dpi,
+		.height		= 8 * dpi,
 	};
 
 	char localhost[128] = "";
@@ -430,7 +463,7 @@ printer_connect(
 
 	printer_send(job, "H%s\n", localhost);
 	char nul = '\0';
-	write(job->fd, &nul, 1);
+	printer_send_raw(job, &nul, 1);
 	if (!printer_read(job))
 		return NULL;
 
@@ -442,6 +475,7 @@ printer_connect(
 	if (!printer_read(job))
 		return NULL;
 
+	job->sent_bytes = 0;
 	return job;
 }
 
@@ -452,32 +486,47 @@ int main(void)
 	if (!job)
 		return -1;
 
-	printf("connected\n");
+	fprintf(stderr, "connected\n");
 
 	printer_header(job);
+	job->sent_bytes = 0;
+
 	vector_init(job);
 	vector_param(job, 5000, 100, 5);
 
 	const uint32_t points[][2] = {
-		{ 0, 0 },
-		{ 1200, 0 },
+		{ 2400, 2400 },
+		{ 1200, 2400 },
 		{ 1200, 1200 },
-		{ 0, 1200 },
+		{ 2400, 1200 },
 	};
 
 	const unsigned num_points = sizeof(points) / sizeof(*points);
 
+	// Move away from the corner first
+	vector_moveto(job, 0, points[0][0], points[0][1]);
+
 	unsigned i = 0;
-	while (1)
+	while (i < num_points)
 	{
-		printf("sending point %d\n", i);
+		fprintf(stderr, "sending point %d\n", i);
 
 		vector_moveto(job, 1, points[i][0], points[i][1]);
-		i = (i + 1) % num_points;
+		//i = (i + 1) % num_points;
+		i++;
 		getchar();
 	}
 
+	// go home with the pen up
+	vector_moveto(job, 0, 0, 0);
+	
 	vector_end(job);
+
+	char c = '\0';
+	for (i = 0 ; i < 4096 ; i++)
+		write(job->fd, &c, 1);
 	printer_footer(job);
 	printer_disconnect(job);
+
+	return 0;
 }
