@@ -6,6 +6,14 @@ epilog: epilog.c
 		-o $@ \
 		$< \
 
+live-laser: live-laser.c
+	gcc \
+		-W \
+		-Wall \
+		-O3 \
+		-o $@ \
+		$< \
+
 cups-epilog: cups-epilog.c
 	gcc \
 		-o $@ \
