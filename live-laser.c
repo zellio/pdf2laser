@@ -538,7 +538,7 @@ int main(void)
 	job->sent_bytes = 0;
 
 	vector_init(job);
-	vector_param(job, 5000, 100, 5);
+	vector_param(job, 5000, 100, 50);
 
 	const uint32_t points[][2] = {
 		{ 2400, 2400 },
@@ -567,10 +567,6 @@ int main(void)
 	vector_moveto(job, 0, 0, 0);
 	
 	vector_end(job);
-
-	char c = '\0';
-	for (i = 0 ; i < 4096 ; i++)
-		write(job->fd, &c, 1);
 	printer_footer(job);
 	printer_disconnect(job);
 
