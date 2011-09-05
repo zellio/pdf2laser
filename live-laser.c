@@ -187,6 +187,48 @@ vector_end(
 }
 
 
+
+/** vector doesn't work without a fake raster component */
+static void
+raster_header(
+	printer_job_t * const job
+)
+{
+	/* Unknown purpose */
+	printer_send(job, "\e&y0C");
+        /* Raster Orientation */
+        printer_send(job, "\e*r0F");
+        /* Raster power */
+        printer_send(job, "\e&y%dP", 100);
+
+        /* Raster speed */
+        printer_send(job, "\e&z%dS", 100);
+        printer_send(job, "\e*r%dT", job->height);
+        printer_send(job, "\e*r%dS", job->width);
+
+        /* Raster compression */
+/*
+        fprintf(pjl_file, "\e*b%dM", (raster_mode == 'c' || raster_mode == 'g')
+                ? 7 : 2);
+*/
+	printer_send(job, "\e*b7M");
+
+        /* Raster direction (1 = up) */
+        printer_send(job, "\e&y1O");
+}
+
+static void
+raster_footer(
+	printer_job_t * const job
+)
+{
+        printer_send(job, "\e*rC%c%c",
+		(char) 26,
+		(char) 4
+	);
+}
+
+
 /**
  *
  */
@@ -217,6 +259,10 @@ printer_header(
     printer_send(job, "\e*p0Y");
     /* PCL resolution. */
     printer_send(job, "\e*t%dR", job->resolution);
+
+	// vector only mode still requires an empty raster section
+	raster_header(job);
+	raster_footer(job);
 
 #if 0
     /* If raster power is enabled and raster mode is not 'n' then add that
