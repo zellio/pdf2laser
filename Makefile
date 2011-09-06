@@ -11,8 +11,15 @@ live-laser: live-laser.c
 		-W \
 		-Wall \
 		-O3 \
+		-m32 \
+		-I/usr/local/include/opencv \
 		-o $@ \
 		$< \
+		-L/usr/local/lib \
+		-lhighgui \
+		-lcvaux \
+		-lcxcore \
+		-lcv \
 
 cups-epilog: cups-epilog.c
 	gcc \

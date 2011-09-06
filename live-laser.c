@@ -52,6 +52,8 @@
 #include <unistd.h>
 #include <getopt.h>
 #include <pwd.h>
+#include <cv.h>
+#include <highgui.h>
 
 
 typedef struct
@@ -91,8 +93,13 @@ printer_send_raw(
 		fprintf(stderr, " %02x", (uint8_t) buf[i]);
 	fprintf(stderr, "\n");
 #else
-	write(1, buf, len);
+	//write(1, buf, len);
 #endif
+	if (job->sent_bytes > job->job_size - 64)
+	{
+		fprintf(stderr, "Too many bytes!  We're done\n");
+		return;
+	}
 
 	// epilog.c sends the nul at the end?
 	ssize_t rc = write(job->fd, buf, len);
@@ -296,12 +303,13 @@ printer_footer(
 	fprintf(stderr, "sent %zu bytes / %zu\n", job->sent_bytes, job->job_size);
 
 	/* Pad out the remainder of the file with 0 characters. */
-	int i;
-	for(i = 0; i < 4096; i++)
-	{
-		char nul = '\0';
-		printer_send_raw(job, &nul, 1);
-	}
+	size_t i;
+	size_t remaining = job->job_size - job->sent_bytes;
+	fprintf(stderr, "sending %zu pad bytes\n", remaining);
+	job->sent_bytes = 0;
+
+	void * buf = calloc(1, remaining + 4096);
+	printer_send_raw(job, buf, remaining + 4096);
 }
 
 
@@ -459,12 +467,12 @@ printer_connect(
 	if (!job)
 		return NULL;
 
-	const uint32_t dpi = 1200;
+	const uint32_t dpi = 150;
 
 	*job = (printer_job_t) {
 		.host		= strdup(host),
 		.job_name	= "live.pdf",
-		.job_size	= 1 << 8, // fake 1 KB for now
+		.job_size	= 64 << 10, // fake 64 MB for now
 		.title		= "live-test",
 		.queue		= "",
 		.user		= "user",
@@ -526,6 +534,46 @@ printer_connect(
 }
 
 
+static void
+mouse_handler(
+	int event,
+	int x,
+	int y,
+	int flags,
+	void * job_ptr
+)
+{
+	static int last_down;
+
+	printer_job_t * const job = job_ptr;
+	switch (event)
+	{
+	case CV_EVENT_MOUSEMOVE:
+		if (flags & CV_EVENT_FLAG_CTRLKEY)
+		{
+			// If we're not already with the laser on,
+			// do the first move with out firing.
+			vector_moveto(job, last_down, x*2, y*2);
+			last_down = 1;
+			printf("%d, %d, %d\n", flags, x, y);
+		} else
+		if (last_down) {
+			// Force a non-laser movement
+			vector_moveto(job, 0, x*2, y*2);
+			last_down = 0;
+		}
+
+		break;
+	case CV_EVENT_LBUTTONDOWN:
+		vector_moveto(job, 0, x*2, y*2);
+		break;
+	default:
+		printf("event %d\n", event);
+		break;
+	}
+}
+
+
 int main(void)
 {
 	printer_job_t * const job = printer_connect("192.168.3.4");
@@ -540,31 +588,14 @@ int main(void)
 	vector_init(job);
 	vector_param(job, 5000, 100, 50);
 
-	const uint32_t points[][2] = {
-		{ 2400, 2400 },
-		{ 1200, 2400 },
-		{ 1200, 1200 },
-		{ 2400, 1200 },
-	};
+	cvNamedWindow("main", CV_WINDOW_AUTOSIZE);
+	IplImage * const img = cvCreateImage(cvSize(1024, 512), IPL_DEPTH_8U, 3);
 
-	const unsigned num_points = sizeof(points) / sizeof(*points);
-
-	// Move away from the corner first
-	vector_moveto(job, 0, points[0][0], points[0][1]);
-
-	unsigned i = 0;
-	while (i < num_points)
-	{
-		fprintf(stderr, "sending point %d\n", i);
-
-		vector_moveto(job, 1, points[i][0], points[i][1]);
-		//i = (i + 1) % num_points;
-		i++;
-		getchar();
-	}
-
-	// go home with the pen up
-	vector_moveto(job, 0, 0, 0);
+	//cvSetMouseCallback("main", mouse_handler, job);
+	cvShowImage("main", img);
+	cvSetMouseCallback("main", mouse_handler, job);
+	while (cvWaitKey(0) != 27)
+		;
 	
 	vector_end(job);
 	printer_footer(job);
