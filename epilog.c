@@ -1169,6 +1169,7 @@ printer_send(const char *host, FILE *pjl_file)
     sprintf(buf + strlen(buf) + 1, "N%s\n", job_title);
     sprintf(buf + strlen(buf) + 1, "\002%d cfA%s%s\n", (int)strlen(buf), job_name, localhost);
     write(socket_descriptor, buf + strlen(buf) + 1, strlen(buf + strlen(buf) + 1));
+
     read(socket_descriptor, &lpdres, 1);
     if (lpdres) {
         fprintf(stderr, "Bad response from %s, %u\n", host, lpdres);
@@ -1199,7 +1200,7 @@ printer_send(const char *host, FILE *pjl_file)
         {
             int l;
             while ((l = fread((char *)buf, 1, sizeof (buf), pjl_file)) > 0) {
-                write(socket_descriptor, (char *)buf, l);
+		write(socket_descriptor, buf, l);
             }
         }
     }
@@ -1415,7 +1416,7 @@ main(int argc, char *argv[])
         sprintf(filename_ps, "%s.ps", file_basename);
 
         /* Execute the command pdf2ps to convert the pdf file to ps. */
-        sprintf(buf, "/usr/bin/pdf2ps %s %s", filename_pdf, filename_ps);
+        sprintf(buf, "/usr/local/bin/pdf2ps %s %s", filename_pdf, filename_ps);
         if (debug) {
             fprintf(stderr, "%s\n", buf);
         }
