@@ -55,6 +55,10 @@
 #include <cv.h>
 #include <highgui.h>
 
+static int vector_power = 100;
+static int vector_speed = 50;
+static int update_param;
+
 
 typedef struct
 {
@@ -154,6 +158,8 @@ vector_param(
 	int speed
 )
 {
+	fprintf(stderr, "Hz=%d Power=%d Speed=%d\n", freq, power, speed);
+
 	printer_send(job,
 		"XR%04d;YP%03d;ZS%03d;",
 		freq,
@@ -546,6 +552,13 @@ mouse_handler(
 	static int last_down;
 
 	printer_job_t * const job = job_ptr;
+
+	if (update_param)
+	{
+		vector_param(job, 5000, vector_power, vector_speed);
+		update_param = 0;
+	}
+
 	switch (event)
 	{
 	case CV_EVENT_MOUSEMOVE:
@@ -574,8 +587,22 @@ mouse_handler(
 }
 
 
+static void
+trackbar_callback(
+	int unused
+)
+{
+	(void) unused;
+	update_param = 1;
+}
+
+
 int main(void)
 {
+#if 1
+	printer_job_t _job;
+	printer_job_t * const job = &_job;
+#else
 	printer_job_t * const job = printer_connect("192.168.3.4");
 	if (!job)
 		return -1;
@@ -587,9 +614,13 @@ int main(void)
 
 	vector_init(job);
 	vector_param(job, 5000, 100, 50);
+#endif
 
 	cvNamedWindow("main", CV_WINDOW_AUTOSIZE);
-	IplImage * const img = cvCreateImage(cvSize(1024, 512), IPL_DEPTH_8U, 3);
+	IplImage * const img = cvCreateImage(cvSize(1024, 768), IPL_DEPTH_8U, 3);
+
+	cvCreateTrackbar("power", "main", &vector_power, 100, trackbar_callback);
+	cvCreateTrackbar("speed", "main", &vector_speed, 100, trackbar_callback);
 
 	//cvSetMouseCallback("main", mouse_handler, job);
 	cvShowImage("main", img);
