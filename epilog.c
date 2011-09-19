@@ -121,6 +121,7 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <arpa/inet.h>
 #include <unistd.h>
 #include <getopt.h>
 #include <pwd.h>
@@ -1055,8 +1056,8 @@ printer_connect(const char *host, const int timeout)
             for (addr = res; addr; addr = addr->ai_next) {
 		const struct sockaddr_in * addr_in = (void*) addr->ai_addr;
 		if (addr_in)
-		fprintf(stderr, "trying to connect to %d\n",
-			//inet_ntoa(addr_in->sin_addr),
+		fprintf(stderr, "trying to connect to %s:%d\n",
+			inet_ntoa(addr_in->sin_addr),
 			ntohs(addr_in->sin_port)
 		);
 
