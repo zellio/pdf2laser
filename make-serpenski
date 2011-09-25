@@ -1,0 +1,45 @@
+#!/usr/bin/perl
+# Work around the lack of recursion in openscad by generating larger
+# input files.
+use warnings;
+use strict;
+
+my $maxdepth = shift || 5;
+
+
+print <<"";
+module serpenski_0()
+{
+	// draw the bottom pyramid
+	polyhedron(
+		points = [
+			[0,0,0],
+			[0,1,0],
+			[sqrt(3)/2,1/2,0],
+			[sqrt(3)/4,1/2,sqrt(6)/3],
+		],
+		triangles = [
+			[0,2,1],
+			[0,1,3],
+			[0,3,2],
+			[1,2,3],
+		]
+	);
+}
+
+
+print <<"" for (1..$maxdepth);
+module serpenski_${_}()
+{
+	scale([1/2,1/2,1/2]) {
+		translate([0,0,0]) serpenski_@{[$_-1]}();
+		translate([0,1,0]) serpenski_@{[$_-1]}();
+		translate([sqrt(3)/2,1/2,0]) serpenski_@{[$_-1]}();
+		translate([sqrt(3)/4,1/2,sqrt(6)/3]) serpenski_@{[$_-1]}();
+	}
+}
+
+print <<"";
+scale(10) serpenski_${maxdepth}();
+
+__END__
