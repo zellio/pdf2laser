@@ -8,10 +8,12 @@ my $maxdepth = shift || 5;
 
 
 print <<"";
+eps = 0.1;
 module serpenski_0()
 {
 	// draw the bottom pyramid
-	polyhedron(
+	// scale up slightly to make the points intersect
+	scale(1+eps) polyhedron(
 		points = [
 			[0,0,0],
 			[0,1,0],
