@@ -1,0 +1,61 @@
+#!/usr/bin/perl
+use warnings;
+use strict;
+
+my $bmp = do { local $/; <> };
+
+my $width = unpack("V", substr($bmp, 18, 4));
+my $height = unpack("V", substr($bmp, 22, 4));
+my $offset = unpack("V", substr($bmp, 10, 4));
+
+#printf "height=%d width=%d offset=%d\n", $height, $width, $offset;
+my $pitch = $width * 3; # should be rounded?
+my $scale = 5;
+my $off_x = $scale * 2;
+my $off_y = $scale * 2;
+
+print <<"";
+<svg xmlns="http://www.w3.org/2000/svg">
+
+for(my $y = 0 ; $y < $height ; $y++)
+{
+	my $row = substr($bmp, $offset + ($height - $y - 1) * $pitch, $width*3);
+
+	for(my $x = 0 ; $x < $width ; $x++)
+	{
+		my $rx = ($y % 2) ? $x : ($width - $x - 1);
+		my $byte = unpack("C", substr($row, $rx*3, 1));
+		$byte += 4; # "no blank spots"
+		#$byte = 256 - $byte;  # "negative"
+
+		my $radius = sprintf "%.2f", $scale * $byte / 520.0;
+		my $px = $scale * $rx + $off_x;
+		my $py = $scale * $y + $off_y;
+
+		print <<"";
+			<circle
+				cy = "$px"
+				cx = "$py"
+				r = "$radius"
+				stroke = "#ff0000"
+				fill = "none"
+			/>
+
+	}
+}
+
+my $width_px = $scale * $width + $off_x*2;
+my $height_px = $scale * $height + $off_y*2;
+
+print <<"";
+<rect
+	x = "0"
+	y = "0"
+	height = "$width_px"
+	width = "$height_px"
+	stroke = "#ff0000"
+	fill = "none"
+/>
+</svg>
+
+__END__
