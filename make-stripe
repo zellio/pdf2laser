@@ -1,0 +1,102 @@
+#!/usr/bin/perl
+# Generate a half-tone svg/pdf from an input image
+use warnings;
+use strict;
+use Getopt::Long;
+use File::Slurp;
+
+my $bmp_file		= "/tmp/halftone.$$.bmp";
+my $bmp_width		= 64;
+my $no_border		= 0;
+my $negative		= 0;
+my $scale		= 5; # size of each circle
+
+GetOptions(
+	"w|width=i"		=> \$bmp_width,
+	"s|scale=i"		=> \$scale,
+	"b|no-border+"		=> \$no_border,
+	"n|negative+"		=> \$negative,
+) or die "see source for usage\n";
+
+my $jpg_file = shift || die "usage: $0 [options] file.jpg\n";
+
+system "convert",
+	-resize		=> $bmp_width,
+	-type		=> "grayscale",
+	$jpg_file	=> $bmp_file,
+and die "convert $jpg_file failed\n";
+
+my $bmp = read_file($bmp_file, binmode => ':raw')
+	or die "$bmp_file: Unable to read: $!\n";
+
+my $width = unpack("V", substr($bmp, 18, 4));
+my $height = unpack("V", substr($bmp, 22, 4));
+my $offset = unpack("V", substr($bmp, 10, 4));
+
+die "Conversion error?  BMP width is $width, expected $bmp_width\n"
+	unless $width == $bmp_width;
+
+#printf "height=%d width=%d offset=%d\n", $height, $width, $offset;
+my $pitch = $width * 3; # should be rounded?
+my $off_x = $scale * 2;
+my $off_y = $scale * 2;
+
+print <<"";
+<svg xmlns="http://www.w3.org/2000/svg">
+
+for(my $y = 0 ; $y < $height ; $y++)
+{
+	my $row = substr($bmp, $offset + ($height - $y - 1) * $pitch, $width*3);
+
+	for(my $x = 0 ; $x < $width ; $x++)
+	{
+		my $left_to_right = $y % 2;
+		my $rx = $left_to_right ? $x : ($width - $x - 1);
+		my $byte = unpack("C", substr($row, $rx*3, 1));
+
+		if ($negative)
+		{
+			$byte = 256 - $byte;
+		} else {
+			$byte += 4;
+		}
+
+		my $radius = sprintf "%.2f", $scale * $byte / 520.0;
+		my $px1 = $scale * $rx + $off_x;
+		my $px2 = $scale * $rx + $off_x + $radius;
+		my $py = $scale * $y + $off_y;
+
+		($px1,$px2) = ($px2,$px1)
+			unless $left_to_right;
+
+		print <<"";
+			<line
+				x1="$px1"
+				y1="$py"
+				x2="$px2"
+				y2="$py"
+				stroke = "#ff0000"
+				fill = "none"
+				width = "0.1px"
+			/>
+
+	}
+}
+
+my $width_px = $scale * $width + $off_x*1.5;
+my $height_px = $scale * $height + $off_y*1.5;
+
+print <<"" unless $no_border;
+<rect
+	x = "0"
+	y = "0"
+	width = "$width_px"
+	height = "$height_px"
+	stroke = "#ff0000"
+	fill = "none"
+/>
+
+print <<"";
+</svg>
+
+__END__
