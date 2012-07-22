@@ -745,12 +745,6 @@ vector_stats(
 				v->x1, v->y1,
 				v->x2, v->y2
 			);
-
-		} else {
-			fprintf(stderr, "zero length cut? %u %u -> %u %u\n",
-				v->x1, v->y1,
-				v->x2, v->y2
-			);
 		}
 
 		// Advance the point
@@ -788,6 +782,9 @@ vector_create(
 				return;
 			if (p->x1 == x2 && p->y1 == y2
 			&&  p->x2 == x1 && p->y2 == y1)
+				return;
+			if (x1 == x2
+			&&  y1 == y2)
 				return;
 		}
 
@@ -836,6 +833,7 @@ vectors_parse(
 	int mx = 0, my = 0;
 	int lx = 0, ly = 0;
 	int power = 100;
+	int count = 0;
 
 	char buf[256];
 
@@ -864,6 +862,7 @@ vectors_parse(
 			// the current point to the new point.
 			sscanf(buf+1, "%d,%d", &x, &y);
 			vector_create(vectors, power, lx, ly, x, y);
+			count++;
 			lx = x;
 			ly = y;
 			break;
@@ -883,6 +882,7 @@ vectors_parse(
 	}
 
 done:
+	fprintf(stderr, "read %u segments\n", count);
 	vector_stats(vectors->vectors);
 
 	return vectors;
@@ -1721,6 +1721,7 @@ static void usage(int rc, const char * const msg)
 " -V | --vector-power 0-100          Vector power\n"
 " -v | --vector-speed 0-100          Vector speed\n"
 " -f | --frequency 10-5000           Vector frequency\n"
+" -O | --no-optimize                 Disable vector optimization\n"
 "";
 	fprintf(stderr, "%s%s\n", msg, usage_str);
 	exit(rc);
@@ -1740,6 +1741,7 @@ static const struct option long_options[] = {
 	{ "frequency",		required_argument, NULL, 'f' },
 	{ "vector-power",	required_argument, NULL, 'V' },
 	{ "vector-speed",	required_argument, NULL, 'v' },
+	{ "no-optimize",	no_argument, NULL, 'O' },
 	{ NULL, 0, NULL, 0 },
 };
 
@@ -1760,7 +1762,13 @@ main(int argc, char *argv[])
 
 	while (1)
 	{
-		const char ch = getopt_long(argc, argv, "Dp:P:n:d:r:R:v:V:m:f:s:a", long_options, NULL);
+		const char ch = getopt_long(
+			argc,
+			argv,
+			"Dp:P:n:d:r:R:v:V:m:f:s:aO",
+			long_options,
+			NULL
+		);
 		if (ch <= 0 )
 			break;
 		switch(ch)
@@ -1778,6 +1786,7 @@ main(int argc, char *argv[])
 		case 'f': vector_freq = atoi(optarg); break;
 		case 's': screen_size = atoi(optarg); break;
 		case 'a': focus = AUTO_FOCUS; break;
+		case 'O': do_vector_optimize = 0; break;
 		default: usage(EXIT_FAILURE, "Unknown argument\n"); break;
 		}
 	}
