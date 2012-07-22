@@ -117,6 +117,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
+#include <limits.h>
 #include <sys/signal.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
@@ -298,6 +300,9 @@ static int y_center;
 /** Track whether or not to repeat X. */
 static int y_repeat = 1;
 
+/** Should the vector cutting be optimized and dupes removed? */
+static int do_vector_optimize = 1;
+
 
 /*************************************************************************
  * local functions
@@ -365,7 +370,7 @@ execute_ghostscript(
 {
 	char buf[8192];
 	snprintf(buf, sizeof(buf),
-		"/usr/local/bin/gs"
+		"/opt/local/bin/gs"
 			" -q"
 			" -dBATCH"
 			" -dNOPAUSE"
@@ -398,6 +403,7 @@ execute_ghostscript(
 static bool
 generate_raster(FILE *pjl_file, FILE *bitmap_file)
 {
+    const int invert = 0;
     int h;
     int d;
     int offx;
@@ -470,10 +476,9 @@ generate_raster(FILE *pjl_file, FILE *bitmap_file)
 
         /* Raster Orientation */
         fprintf(pjl_file, "\e*r0F");
-        /* Raster power */
-        fprintf(pjl_file, "\e&y%dP",
-                (raster_mode == 'c' ||
-                 raster_mode == 'g') ? 100 : raster_power);
+        /* Raster power -- color and gray scaled before, but scale with the user provided power */
+        fprintf(pjl_file, "\e&y%dP", raster_power);
+
         /* Raster speed */
         fprintf(pjl_file, "\e&z%dS", raster_speed);
         fprintf(pjl_file, "\e*r%dT", height * y_repeat);
@@ -510,7 +515,7 @@ generate_raster(FILE *pjl_file, FILE *bitmap_file)
                         {
                             unsigned char *f = (unsigned char *) buf;
                             unsigned char *t = (unsigned char *) buf;
-                            if (d > sizeof (buf)) {
+                            if (d > (int) sizeof (buf)) {
                                 perror("Too wide");
                                 return false;
                             }
@@ -551,7 +556,7 @@ generate_raster(FILE *pjl_file, FILE *bitmap_file)
                         {
                             /* BMP padded to 4 bytes per scan line */
                             int d = (h + 3) / 4 * 4;
-                            if (d > sizeof (buf)) {
+                            if (d > (int) sizeof (buf)) {
                                 fprintf(stderr, "Too wide\n");
                                 return false;
                             }
@@ -561,14 +566,20 @@ generate_raster(FILE *pjl_file, FILE *bitmap_file)
                                 return false;
                             }
                             for (l = 0; l < h; l++) {
-                                buf[l] = (255 - (uint8_t)buf[l]);
+				if (invert)
+					buf[l] = (uint8_t) buf[l];
+				else
+					buf[l] = (255 - (uint8_t)buf[l]);
                             }
                         }
                         break;
                         default:       // mono
                         {
+static int i;
+if (i++==0)
+printf("mono\n");
                             int d = (h + 3) / 4 * 4;  // BMP padded to 4 bytes per scan line
-                            if (d > sizeof (buf))
+                            if (d > (int) sizeof (buf))
                             {
                                 perror("Too wide");
                                 return false;
@@ -669,12 +680,488 @@ generate_raster(FILE *pjl_file, FILE *bitmap_file)
     return true;
 }
 
+
+typedef struct _vector vector_t;
+struct _vector
+{
+	vector_t * next;
+	vector_t ** prev;
+	int x1;
+	int y1;
+	int x2;
+	int y2;
+	int p;
+};
+
+
+typedef struct
+{
+	vector_t * vectors;
+} vectors_t;
+
+
+static void
+vector_stats(
+	vector_t * v
+)
+{
+	int lx = 0;
+	int ly = 0;
+	long cut_len_sum = 0;
+	int cuts = 0;
+
+	long transit_len_sum = 0;
+	int transits = 0;
+
+	while (v)
+	{
+		long t_dx = lx - v->x1;
+		long t_dy = ly - v->y1;
+
+		long transit_len = sqrt(t_dx * t_dx + t_dy * t_dy);
+		if (transit_len != 0)
+		{
+			transits++;
+			transit_len_sum += transit_len;
+
+			if (0)
+			fprintf(stderr, "mov %8u %8u -> %8u %8u\n",
+				lx, ly,
+				v->x1, v->y1
+			);
+		}
+
+		long c_dx = v->x1 - v->x2;
+		long c_dy = v->y1 - v->y2;
+
+		long cut_len = sqrt(c_dx*c_dx + c_dy*c_dy);
+		if (cut_len != 0)
+		{
+			cuts++;
+			cut_len_sum += cut_len;
+
+			if (0)
+			fprintf(stderr, "cut %8u %8u -> %8u %8u\n",
+				v->x1, v->y1,
+				v->x2, v->y2
+			);
+
+		} else {
+			fprintf(stderr, "zero length cut? %u %u -> %u %u\n",
+				v->x1, v->y1,
+				v->x2, v->y2
+			);
+		}
+
+		// Advance the point
+		lx = v->x2;
+		ly = v->y2;
+		v = v->next;
+	}
+
+	fprintf(stderr, "Cuts: %u len %lu\n", cuts, cut_len_sum);
+	fprintf(stderr, "Move: %u len %lu\n", transits, transit_len_sum);
+}
+
+
+static void
+vector_create(
+	vectors_t * const vectors,
+	int power,
+	int x1,
+	int y1,
+	int x2,
+	int y2
+)
+{
+	// Find the end of the list and, if vector optimization is
+	// turned on, check for duplicates
+	vector_t ** iter = &vectors->vectors;
+	while (*iter)
+	{
+		vector_t * const p = *iter;
+
+		if (do_vector_optimize)
+		{
+			if (p->x1 == x1 && p->y1 == y1
+			&&  p->x2 == x2 && p->y2 == y2)
+				return;
+			if (p->x1 == x2 && p->y1 == y2
+			&&  p->x2 == x1 && p->y2 == y1)
+				return;
+		}
+
+		iter = &p->next;
+	}
+
+	vector_t * const v = calloc(1, sizeof(*v));
+	if (!v)
+		return;
+
+	v->p = power;
+	v->x1 = x1;
+	v->y1 = y1;
+	v->x2 = x2;
+	v->y2 = y2;
+
+	// Append it to the now known end of the list
+	v->next = NULL;
+	v->prev = iter;
+	*iter = v;
+}
+
+
+
 /**
+ * Generate a list of vectors.
  *
+ * The vector format is:
+ * Pp -- Power setting up to 100
+ * Mx,y -- Move (start a line at x,y)
+ * Lx,y -- Line to x,y from the current position
+ * C -- Closing line segment to the starting position
+ * X -- end of file
+ *
+ * Multi segment vectors are split into individual vectors, which are
+ * then passed into the topological sort routine.
+ *
+ * Exact duplictes will be deleted to try to avoid double hits..
  */
+static vectors_t *
+vectors_parse(
+	FILE * const vector_file
+)
+{
+	vectors_t * const vectors = calloc(1, sizeof(*vectors));
+	int mx = 0, my = 0;
+	int lx = 0, ly = 0;
+	int power = 100;
+
+	char buf[256];
+
+	while (fgets(buf, sizeof(buf), vector_file))
+	{
+		//fprintf(stderr, "read '%s'\n", buf);
+		const char cmd = buf[0];
+		int x, y;
+
+		switch (cmd)
+		{
+		case 'P':
+			sscanf(buf+1, "%d", &power);
+			break;
+		case 'M':
+			// Start a new line.
+			// This also implicitly sets the
+			// current laser position
+			sscanf(buf+1, "%d,%d", &mx, &my);
+			lx = mx;
+			ly = my;
+			break;
+		case 'L':
+			// Add a line segment from the current
+			// point to the new point, and update
+			// the current point to the new point.
+			sscanf(buf+1, "%d,%d", &x, &y);
+			vector_create(vectors, power, lx, ly, x, y);
+			lx = x;
+			ly = y;
+			break;
+		case 'C':
+			// Closing segment from the current point
+			// back to the starting point
+			vector_create(vectors, power, lx, ly, mx, my);
+			lx = mx;
+			lx = my;
+			break;
+		case 'X':
+			goto done;
+		default:
+			fprintf(stderr, "Unknown command '%c'", cmd);
+			return NULL;
+		}
+	}
+
+done:
+	vector_stats(vectors->vectors);
+
+	return vectors;
+}
+
+
+/** Find the closest vector to a given point and remove it from the list.
+ *
+ * This might reverse a vector if it is closest to draw it in reverse
+ * order.
+ */
+static vector_t *
+vector_find_closest(
+	vector_t * v,
+	const int cx,
+	const int cy
+)
+{
+	long best_dist = LONG_MAX;
+	vector_t * best = NULL;
+	int do_reverse = 0;
+
+	while (v)
+	{
+		long dx1 = cx - v->x1;
+		long dy1 = cy - v->y1;
+		long dist1 = dx1*dx1 + dy1*dy1;
+
+		if (dist1 < best_dist)
+		{
+			best = v;
+			best_dist = dist1;
+			do_reverse = 0;
+		}
+
+		long dx2 = cx - v->x2;
+		long dy2 = cy - v->y2;
+		long dist2 = dx2*dx2 + dy2*dy2;
+		if (dist2 < best_dist)
+		{
+			best = v;
+			best_dist = dist2;
+			do_reverse = 1;
+		}
+
+		v = v->next;
+	}
+
+	if (!best)
+		return NULL;
+
+	// Remove it from the list
+	*best->prev = best->next;
+	if (best->next)
+		best->next->prev = best->prev;
+
+	// If reversing is required, flip the x1/x2 and y1/y2
+	if (do_reverse)
+	{
+		int x1 = best->x1;
+		int y1 = best->y1;
+		best->x1 = best->x2;
+		best->y1 = best->y2;
+		best->x2 = x1;
+		best->y2 = y1;
+	}
+
+	best->next = NULL;
+	best->prev = NULL;
+
+	return best;
+}
+
+
+/**
+ * Optimize the cut order to minimize transit time.
+ *
+ * Simplistic greedy algorithm: look for the closest vector that starts
+ * or ends at the same point as the current point. 
+ *
+ * This does not split vectors.
+ */
+static int
+vector_optimize(
+	vectors_t * const vectors
+)
+{
+	int cx = 0;
+	int cy = 0;
+
+	vector_t * vs = NULL;
+	vector_t * vs_tail = NULL;
+
+	while (vectors->vectors)
+	{
+		vector_t * v = vector_find_closest(vectors->vectors, cx, cy);
+
+		if (!vs)
+		{
+			// Nothing on the list yet
+			vs = vs_tail = v;
+		} else {
+			// Add it to the tail of the list
+			v->next = NULL;
+			v->prev = &vs_tail->next;
+			vs_tail->next = v;
+			vs_tail = v;
+		}
+		
+		// Move the current point to the end of the line segment
+		cx = v->x2;
+		cy = v->y2;
+	}
+
+	vector_stats(vs);
+
+	// Now replace the list in the vectors object with this new one
+	vectors->vectors = vs;
+	if (vs)
+		vs->prev = &vectors->vectors;
+
+	return 0;
+}
+
+				
 static bool
 generate_vector(FILE *pjl_file, FILE *vector_file)
 {
+	vectors_t * const vectors = vectors_parse(vector_file);
+	if (do_vector_optimize)
+		vector_optimize(vectors);
+
+	int lx = 0;
+	int ly = 0;
+
+	fprintf(pjl_file, "IN;");
+	fprintf(pjl_file, "XR%04d;", vector_freq);
+	fprintf(pjl_file, "YP%03d;", vector_power);
+	fprintf(pjl_file, "ZS%03d", vector_speed); // note: no ";"
+
+	// \note: step and repeat is no longer supported
+
+	const vector_t * v = vectors->vectors;
+	while (v)
+	{
+		if (v->x1 != lx || v->y1 != ly)
+		{
+			// Stop the laser; we need to transit
+			// and then start the laser as we go to
+			// the next point.  Note initial ";"
+			fprintf(pjl_file, ";PU%d,%d;PD%d,%d",
+				v->y1,
+				v->x1,
+				v->y2,
+				v->x2
+			);
+		} else {
+			// This is the continuation of a line, so
+			// just add additional points
+			fprintf(pjl_file, ",%d,%d",
+				v->y2,
+				v->x2
+			);
+		}
+
+		// Changing power on the fly is not supported for now
+		// \todo: Check v->power and adjust ZS, XR, etc
+
+		// Move to the next vector, updating our current point
+		lx = v->x2;
+		ly = v->y2;
+		v = v->next;
+	}
+
+	// Stop the laser (note initial ";")
+	fprintf(pjl_file, ";PU;");
+	fprintf(pjl_file, "\e%%0B"); // end HLGL
+	fprintf(pjl_file, "\e%%1BPU"); // start HLGL, pen up?
+
+	return true;
+
+#if 0
+                if (!isalpha(*buf)) {
+                    int x,
+                        y;
+                    if (!passstart) {
+                        passstart = 1;
+
+
+                    }
+                    switch (*buf) {
+                    case 'M': // move
+                        if (sscanf((char *) buf + 1, "%d,%d", &y, &x)
+                            == 2) {
+                            sx = x;
+                            sy = y;
+                            newline = 1;
+                        }
+                        break;
+                    case 'C': // close - only makes sense after an "L"
+                        if (newline == 0 && up == 0 && (lx != sx || ly
+                                                        != sy)) {
+                            fprintf(pjl_file, ",%d,%d", basex + offx + sx +
+                                    HPGLX, basey + offy + sy + HPGLY);
+                        }
+                        break;
+                    case 'P': // power
+                        if (sscanf((char *)buf + 1, "%d", &x) == 1
+                            && x != power) {
+                            int epower;
+                            power = x;
+                            if (!started) {
+                                started = 1;
+                                /* XXX disabled as current code path inserts
+                                 *  this statement AFTER the IN; statement.
+                                 */
+                                /* start HPGL */
+/*                                 fprintf(pjl_file, "\e%%1B");     */
+                            }
+                            if (!up) {
+                                fprintf(pjl_file, ";PU");
+                            }
+                            up = 1;
+                            epower = (power * vector_power + 50) / 100;
+                            if (vector_speed && vector_speed < 100) {
+                                int espeed = vector_speed;
+                                int efreq = vector_freq;
+                                if (epower && x < 100) {
+                                    int r;
+                                    int q;
+                                    r = 10000 / x; // power, up to set power level (i.e. x=100)
+                                    q = 10000 / espeed;
+                                    if (q < r)
+                                        r = q;
+                                    q = 500000 / efreq;
+                                    if (q < r)
+                                        r = q;
+                                    epower = (50 + epower * r) / 100;
+                                    espeed = (50 + espeed * r) / 100;
+                                    efreq = (50 + espeed * r) / 100;
+                                }
+                                fprintf(pjl_file, ";ZS%03d;XR%04d;", espeed, efreq);
+                            }
+                            fprintf(pjl_file, ";YP%03d;", epower);
+                        }
+                        break;
+                    case 'L': // line
+                        if (!started) {
+                            started = 1;
+                            //fprintf(pjl_file, "\e%%1B;");      // start HPGL
+                        }
+                        if (newline) {
+                            if (!up)
+                                fprintf(pjl_file, ";");
+                            fprintf(pjl_file, "PU%d,%d",
+                                    basex + offx + sx + HPGLX,
+                                    basey + offy + sy + HPGLY);
+                            up = 1;
+                            newline = 0;
+                        }
+                        if (up) {
+                            fprintf(pjl_file, ";PD");
+                        } else {
+                            fprintf(pjl_file, ",");
+                        }
+                        up = 0;
+                        if (sscanf ((char *) buf + 1, "%d,%d", &y, &x)
+                            == 2) {
+                            fprintf (pjl_file, "%d,%d", basex + offx + x +
+                                     HPGLX, basey + offy + y + HPGLY);
+                        }
+                        lx = x;
+                        ly = y;
+                        break;
+                    }
+                    if (*buf == 'X')
+                        break;
+                }
+            }
     char up = 1;           // output status
     char newline = 1;      // input status (last was M)
     char started = 0;
@@ -819,6 +1306,8 @@ generate_vector(FILE *pjl_file, FILE *vector_file)
         fprintf(pjl_file, "\e%%0B");      // end HLGL
     }
     fprintf(pjl_file, "\e%%1BPU");  // start HLGL, and pen up, end
+#endif
+
     return true;
 }
 
@@ -1267,7 +1756,7 @@ static const struct option long_options[] = {
 int
 main(int argc, char *argv[])
 {
-	const char * host = "localhost";
+	const char * host = "192.168.1.4";
 
 	while (1)
 	{
@@ -1417,7 +1906,7 @@ main(int argc, char *argv[])
         sprintf(filename_ps, "%s.ps", file_basename);
 
         /* Execute the command pdf2ps to convert the pdf file to ps. */
-        sprintf(buf, "/usr/local/bin/pdf2ps %s %s", filename_pdf, filename_ps);
+        sprintf(buf, "/opt/local/bin/pdf2ps %s %s", filename_pdf, filename_ps);
         if (debug) {
             fprintf(stderr, "%s\n", buf);
         }
