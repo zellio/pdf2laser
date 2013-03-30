@@ -6,6 +6,23 @@ epilog: epilog.c
 		-o $@ \
 		$< \
 
+ta10: ta10.c
+	gcc \
+		-W \
+		-Wall \
+		-O3 \
+		-o $@ \
+		$< \
+
+epilog2: epilog2.c
+	gcc \
+		-W \
+		-Wall \
+		-O3 \
+		-o $@ \
+		$< \
+		-lm \
+
 live-laser: live-laser.c
 	gcc \
 		-W \
