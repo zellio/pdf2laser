@@ -657,7 +657,7 @@ generate_vector(FILE *pjl_file, FILE *vector_file)
 	fprintf(pjl_file, ":E3500\r\n");
 	fprintf(pjl_file, ":P2\r\n"); // use pen 2
 	fprintf(pjl_file, ":7%d\r\n", vector_speed / 2); // move speed 1 - 50
-	fprintf(pjl_file, ":U0,0\r\n");
+	fprintf(pjl_file, "U0,0\r\n");
 
 	// \note: step and repeat is no longer supported
 
