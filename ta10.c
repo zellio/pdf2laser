@@ -233,64 +233,17 @@ static char buf[102400];
 /** Determines whether or not debug is enabled. */
 static char debug = DEBUG;
 
-/** Variable to track auto-focus. */
-static int focus = 0;
-
 /** Variable to track whether or not the X axis should be flipped. */
 static char flip = FLIP;
 
 /** Height of the image (y-axis). By default this is the bed's height. */
 static int height = BED_HEIGHT;
 
-/** Job name for the print. */
-static const char *job_name = NULL;
-
-/** User name that submitted the print job. */
-static const char *job_user = NULL;
-
-/** Title for the job print. */
-static const char *job_title = NULL;
-
-/** Variable to track the resolution of the print. */
-static int resolution = RESOLUTION_DEFAULT;
-
-/** Variable to track the mode for rasterization. One of color 'c', or
- * grey-scale 'g', mono 'm', or none 'n'
- */
-static char raster_mode = RASTER_MODE_DEFAULT;
-
-/** Variable to track whether or not a rasterization should be repeated. */
-static int raster_repeat = RASTER_REPEAT;
-
-/** FIXME -- pixel size of screen, 0= threshold */
-static int screen_size = SCREEN_DEFAULT;
-
-/** Options for the printer. */
-static char *queue = "";
-
 /** Variable to track the vector speed. */
 static int vector_speed = VECTOR_SPEED_DEFAULT;
 
-/** Variable to track the vector power. */
-static int vector_power = VECTOR_POWER_DEFAULT;
-
-/** Variable to track the vector frequency. FIXME */
-static int vector_freq = VECTOR_FREQUENCY_DEFAULT;
-
 /** Width of the image (x-axis). By default this is the bed's width. */
 static int width = BED_WIDTH;            // default bed
-
-/** X re-center (0 = not). */
-static int x_center;
-
-/** Track whether or not to repeat X. */
-static int x_repeat = 1;
-
-/** Y re-center (0 = not). */
-static int y_center;
-
-/** Track whether or not to repeat X. */
-static int y_repeat = 1;
 
 /** Should the vector cutting be optimized and dupes removed? */
 static int do_vector_optimize = 1;
@@ -299,40 +252,13 @@ static int do_vector_optimize = 1;
 /*************************************************************************
  * local functions
  */
-static int big_to_little_endian(uint8_t *position, int bytes);
 static bool generate_vector(FILE *pjl_file, FILE *vector_file);
 static bool generate_pjl(FILE *pjl_file, FILE *vector_file);
 static bool ps_to_eps(FILE *ps_file, FILE *eps_file);
 static void range_checks(void);
-static int printer_connect(const char *host, const int timeout);
-static bool printer_disconnect(int socket_descriptor);
-static bool printer_send(const char *host, FILE *pjl_file);
 
 
 /*************************************************************************/
-
-/**
- * Convert a big endian value stored in the array starting at the given pointer
- * position to its little endian value.
- *
- * @param position the starting location for the conversion. Each successive
- * unsigned byte is upto nbytes is considered part of the value.
- * @param nbytes the number of successive bytes to convert.
- *
- * @return An integer containing the little endian value of the successive
- * bytes.
- */
-static int
-big_to_little_endian(uint8_t *position, int nbytes)
-{
-    int i;
-    int result = 0;
-
-    for (i = 0; i < nbytes; i++) {
-        result += *(position + i) << (8 * i);
-    }
-    return result;
-}
 
 /**
  * Execute ghostscript feeding it an ecapsulated postscript file which is then
@@ -730,8 +656,8 @@ generate_vector(FILE *pjl_file, FILE *vector_file)
 	fprintf(pjl_file, ":520,20\r\n");
 	fprintf(pjl_file, ":E3500\r\n");
 	fprintf(pjl_file, ":P2\r\n"); // use pen 2
+	fprintf(pjl_file, ":7%d\r\n", vector_speed / 2); // move speed 1 - 50
 	fprintf(pjl_file, ":U0,0\r\n");
-	fprintf(pjl_file, ":715\r\n");
 
 	// \note: step and repeat is no longer supported
 
@@ -841,22 +767,6 @@ eq exch 0.0 eq and exch 0.0 ne and{(P)=== currentrgbcolor pop pop 100 mul \
 round  cvi = flattenpath{transform(M)=== round cvi ===(,)=== round cvi \
 =}{transform(L)=== round cvi ===(,)=== round cvi =}{}{(C)=}pathforall \
 newpath}{stroke}ifelse}bind def/showpage{(X)= showpage}bind def\n");
-            if (raster_mode != 'c' && raster_mode != 'g') {
-                if (screen_size == 0) {
-                    fprintf(eps_file, "{0.5 ge{1}{0}ifelse}settransfer\n");
-                } else {
-                    int s = screen_size;
-                    if (resolution >= 600) {
-                        // adjust for overprint
-                        fprintf(eps_file,
-                                "{dup 0 ne{%d %d div add}if}settransfer\n",
-                                resolution / 600, s);
-                    }
-                    fprintf(eps_file, "%d 30{%s}setscreen\n", resolution / s,
-                            (screen_size > 0) ? "pop abs 1 exch sub" :
-                            "180 mul cos exch 180 mul cos add 2 div");
-                }
-            }
         }
     }
     while ((l = fread ((char *) buf, 1, sizeof (buf), ps_file)) > 0) {
@@ -877,133 +787,11 @@ newpath}{stroke}ifelse}bind def/showpage{(X)= showpage}bind def\n");
 static void
 range_checks(void)
 {
-    if (resolution > 1200)
-        resolution = 1200;
-    else
-    if (resolution < 75)
-        resolution = 75;
-
-    if (screen_size < 1)
-        screen_size = 1;
-
-    if (vector_freq < 10)
-        vector_freq = 10;
-    else
-    if (vector_freq > 5000)
-        vector_freq = 5000;
-
-    if (vector_power > 100)
-        vector_power = 100;
-    else
-    if (vector_power < 0)
-        vector_power = 0;
-
     if (vector_speed > 100)
         vector_speed = 100;
     else
-    if (vector_speed < 1)
-        vector_speed = 1;
-}
-
-/**
- * Connect to a printer.
- *
- * @param host The hostname or IP address of the printer to connect to.
- * @param timeout The number of seconds to wait before timing out on the
- * connect operation.
- * @return A socket descriptor to the printer.
- */
-static int
-printer_connect(const char *host, const int timeout)
-{
-    int socket_descriptor = -1;
-    int i;
-
-    for (i = 0; i < timeout; i++) {
-        struct addrinfo *res;
-        struct addrinfo *addr;
-        struct addrinfo base = { 0, PF_UNSPEC, SOCK_STREAM };
-        int error_code = getaddrinfo(host, "printer", &base, &res);
-
-        /* Set an alarm to go off if the program has gone out to lunch. */
-        alarm(SECONDS_PER_MIN);
-
-        /* If getaddrinfo did not return an error code then we attempt to
-         * connect to the printer and establish a socket.
-         */
-        if (!error_code) {
-            for (addr = res; addr; addr = addr->ai_next) {
-		const struct sockaddr_in * addr_in = (void*) addr->ai_addr;
-		if (addr_in)
-		fprintf(stderr, "trying to connect to %s:%d\n",
-			inet_ntoa(addr_in->sin_addr),
-			ntohs(addr_in->sin_port)
-		);
-
-                socket_descriptor = socket(addr->ai_family, addr->ai_socktype,
-                                           addr->ai_protocol);
-                if (socket_descriptor >= 0) {
-                    if (!connect(socket_descriptor, addr->ai_addr,
-                                 addr->ai_addrlen)) {
-                        break;
-                    } else {
-                        close(socket_descriptor);
-                        socket_descriptor = -1;
-                    }
-                }
-            }
-            freeaddrinfo(res);
-        }
-        if (socket_descriptor >= 0) {
-            break;
-        }
-
-        /* Sleep for a second then try again. */
-        sleep(1);
-    }
-    if (i >= timeout) {
-        fprintf(stderr, "Cannot connect to %s\n", host);
-        return -1;
-    }
-    /* Disable the timeout alarm. */
-    alarm(0);
-    /* Return the newly opened socket descriptor */
-    return socket_descriptor;
-}
-
-/**
- * Disconnect from a printer.
- *
- * @param socket_descriptor the descriptor of the printer that is to be
- * disconnected from.
- * @return True if the printer connection was successfully closed, false otherwise.
- */
-static bool
-printer_disconnect(int socket_descriptor)
-{
-    int error_code;
-    error_code = close(socket_descriptor);
-    /* Report on possible errors to standard error. */
-    if (error_code == -1) {
-        switch (errno) {
-        case EBADF:
-            perror("Socket descriptor given was not valid.");
-            break;
-        case EINTR:
-            perror("Closing socket descriptor was interrupted by a signal.");
-            break;
-        case EIO:
-            perror("I/O error occurred during closing of socket descriptor.");
-            break;
-        }
-    }
-
-    /* Return status of disconnect operation to the calling function. */
-    if (error_code) {
-        return false;
-    } else {
-        return true;
-    }
+    if (vector_speed < 2)
+        vector_speed = 2;
 }
 
 
@@ -1061,16 +849,8 @@ main(int argc, char *argv[])
 		switch(ch)
 		{
 		case 'D': debug++; break;
-		case 'p': host = optarg; break;
 		case 'P': usage(EXIT_FAILURE, "Presets are not supported yet\n"); break;
-		case 'n': job_name = optarg; break;
-		case 'd': resolution = atoi(optarg); break;
 		case 'v': vector_speed = atoi(optarg); break;
-		case 'V': vector_power = atoi(optarg); break;
-		case 'm': raster_mode = tolower(*optarg); break;
-		case 'f': vector_freq = atoi(optarg); break;
-		case 's': screen_size = atoi(optarg); break;
-		case 'a': focus = AUTO_FOCUS; break;
 		case 'O': do_vector_optimize = 0; break;
 		default: usage(EXIT_FAILURE, "Unknown argument\n"); break;
 		}
@@ -1107,14 +887,9 @@ main(int argc, char *argv[])
 
 	// Report the settings on stdout
 	fprintf(stderr,
-		"Job: %s (%s)\n"
-		"Vector: speed=%d power=%d freq=%d\n"
+		"Vector: speed=%d\n"
 		"",
-		job_title,
-		job_user,
-		vector_speed,
-		vector_power,
-		vector_freq
+		vector_speed
 	);
 
 
@@ -1140,10 +915,8 @@ main(int argc, char *argv[])
     sprintf(filename_vector, "%s.vector", file_basename);
 
     /* File handles. */
-    FILE *file_bitmap;
     FILE *file_pdf;
     FILE *file_ps;
-    FILE *file_pjl;
     FILE *file_vector;
 
 
@@ -1220,17 +993,14 @@ main(int argc, char *argv[])
         }
     }
 
-	const char * const raster_string =
-		raster_mode == 'c' ? "bmp16m" :
-		raster_mode == 'g' ? "bmpgray" :
-		"bmpmono";
+	const char * const raster_string = "bmpmono";
 
     	if(!execute_ghostscript(
 		filename_bitmap,
 		filename_eps,
 		filename_vector,
 		raster_string,
-		resolution
+		RESOLUTION_DEFAULT
 	)) {
 		perror("Failure to execute ghostscript command.\n");
 		return 1;
