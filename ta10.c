@@ -729,7 +729,7 @@ generate_vector(FILE *pjl_file, FILE *vector_file)
 	fprintf(pjl_file, ":32\r\n");
 	fprintf(pjl_file, ":520,20\r\n");
 	fprintf(pjl_file, ":E3500\r\n");
-	fprintf(pjl_file, ":P1\r\n");
+	fprintf(pjl_file, ":P2\r\n"); // use pen 2
 	fprintf(pjl_file, ":U0,0\r\n");
 	fprintf(pjl_file, ":715\r\n");
 
