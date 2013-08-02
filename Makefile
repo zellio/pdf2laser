@@ -5,6 +5,7 @@ epilog: epilog.c
 		-O3 \
 		-o $@ \
 		$< \
+		-lm \
 
 ta10: ta10.c
 	gcc \
