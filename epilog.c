@@ -370,7 +370,7 @@ execute_ghostscript(
 {
 	char buf[8192];
 	snprintf(buf, sizeof(buf),
-		"/opt/local/bin/gs"
+		"gs"
 			" -q"
 			" -dBATCH"
 			" -dNOPAUSE"
@@ -1669,7 +1669,7 @@ main(int argc, char *argv[])
         sprintf(filename_ps, "%s.ps", file_basename);
 
         /* Execute the command pdf2ps to convert the pdf file to ps. */
-        sprintf(buf, "/opt/local/bin/pdf2ps %s %s", filename_pdf, filename_ps);
+        sprintf(buf, "pdf2ps %s %s", filename_pdf, filename_ps);
         if (debug) {
             fprintf(stderr, "%s\n", buf);
         }
