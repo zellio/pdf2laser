@@ -1188,11 +1188,43 @@ ps_to_eps(FILE *ps_file, FILE *eps_file)
         if (!strncasecmp((char *) buf, "%!", 2)) {
             fprintf
                 (eps_file,
-                 "/==={(        )cvs print}def/stroke{currentrgbcolor 0.0 \
-eq exch 0.0 eq and exch 0.0 ne and{(P)=== currentrgbcolor pop pop 100 mul \
-round  cvi = flattenpath{transform(M)=== round cvi ===(,)=== round cvi \
-=}{transform(L)=== round cvi ===(,)=== round cvi =}{}{(C)=}pathforall \
-newpath}{stroke}ifelse}bind def/showpage{(X)= showpage}bind def\n");
+		"/=== {(        ) cvs print} def" // print a number
+		"/stroke {"
+			"currentrgbcolor "
+			"0.0 eq "
+			"exch 0.0 eq "
+			"and "
+			"exch 0.0 ne "
+			"and "
+			"not "
+			"{"
+				// Default is to just stroke
+				"stroke"
+			"}{"
+				// solid red, green or blue
+				"(P)=== "
+				"currentrgbcolor "
+				"pop pop "
+				"(,)=== "
+				"100 mul round cvi = "
+				"flattenpath { "
+					"transform (M)=== "
+					"round cvi === "
+					"(,)=== "
+					"round cvi ="
+				"}{"
+					"transform(L)=== "
+					"round cvi === "
+					"(,)=== "
+					"round cvi ="
+				"}{}{"
+					"(C)="
+				"}"
+				"pathforall newpath"
+			"} ifelse"
+		"}bind def"
+		"/showpage {(X)= showpage}bind def"
+		"\n");
             if (raster_mode != 'c' && raster_mode != 'g') {
                 if (screen_size == 0) {
                     fprintf(eps_file, "{0.5 ge{1}{0}ifelse}settransfer\n");
