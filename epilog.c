@@ -1,4 +1,6 @@
 /** @file cups-epilog.c - Epilog cups driver */
+#define _POSIX_SOURCE
+#define _XOPEN_SOURCE
 
 /* @file cups-epilog.c @verbatim
  *========================================================================
@@ -117,6 +119,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <math.h>
 #include <limits.h>
 #include <sys/signal.h>
@@ -276,11 +279,14 @@ static int screen_size = SCREEN_DEFAULT;
 /** Options for the printer. */
 static char *queue = "";
 
+// how many different vector power level groups
+#define VECTOR_PASSES 3
+
 /** Variable to track the vector speed. */
-static int vector_speed = VECTOR_SPEED_DEFAULT;
+static int vector_speed[VECTOR_PASSES] = { 100, 100, 100 };
 
 /** Variable to track the vector power. */
-static int vector_power = VECTOR_POWER_DEFAULT;
+static int vector_power[VECTOR_PASSES] = { 1, 1, 1 };
 
 /** Variable to track the vector frequency. FIXME */
 static int vector_freq = VECTOR_FREQUENCY_DEFAULT;
@@ -388,7 +394,7 @@ execute_ghostscript(
 	);
 
 	if (debug)
-		fprintf(stderr, "Executing: %s\n", buf);
+		printf("Executing: %s\n", buf);
 
 	if (system(buf))
 		return false;
@@ -470,7 +476,7 @@ generate_raster(FILE *pjl_file, FILE *bitmap_file)
             d = (h + 3) / 4 * 4;
         }
         if (debug) {
-            fprintf(stderr, "Width %d Height %d Bytes %d Line %d\n",
+            printf("Width %d Height %d Bytes %d Line %d\n",
                     width, height, h, d);
         }
 
@@ -491,7 +497,7 @@ generate_raster(FILE *pjl_file, FILE *bitmap_file)
 
         if (debug) {
             /* Output raster debug information */
-            fprintf(stderr, "Raster power=%d speed=%d\n",
+            printf("Raster power=%d speed=%d\n",
                     ((raster_mode == 'c' || raster_mode == 'g') ?
                      100 : raster_power),
                     raster_speed);
@@ -753,8 +759,8 @@ vector_stats(
 		v = v->next;
 	}
 
-	fprintf(stderr, "Cuts: %u len %lu\n", cuts, cut_len_sum);
-	fprintf(stderr, "Move: %u len %lu\n", transits, transit_len_sum);
+	printf("Cuts: %u len %lu\n", cuts, cut_len_sum);
+	printf("Move: %u len %lu\n", transits, transit_len_sum);
 }
 
 
@@ -829,9 +835,10 @@ vectors_parse(
 	FILE * const vector_file
 )
 {
-	vectors_t * const vectors = calloc(1, sizeof(*vectors));
+	vectors_t * const vectors = calloc(VECTOR_PASSES, sizeof(*vectors));
 	int mx = 0, my = 0;
 	int lx = 0, ly = 0;
+	int pass = 0;
 	int power = 100;
 	int count = 0;
 
@@ -846,8 +853,30 @@ vectors_parse(
 		switch (cmd)
 		{
 		case 'P':
-			sscanf(buf+1, "%d", &power);
+		{
+			// note that they will be in bgr order in the file
+			int r, g, b;
+			sscanf(buf+1, ",%d,%d,%d", &b, &g, &r);
+			if (r == 0 && g != 0 && b == 0)
+			{
+				pass = 0;
+				power = g;
+			} else
+			if (r != 0 && g == 0 && b == 0)
+			{
+				pass = 1;
+				power = r;
+			} else
+			if (r == 0 && g == 0 && b != 0)
+			{
+				pass = 2;
+				power = b;
+			} else {
+				fprintf(stderr, "non-red/green/blue vector? %d,%d,%d\n", r, g, b);
+				exit(-1);
+			}
 			break;
+		}
 		case 'M':
 			// Start a new line.
 			// This also implicitly sets the
@@ -861,7 +890,7 @@ vectors_parse(
 			// point to the new point, and update
 			// the current point to the new point.
 			sscanf(buf+1, "%d,%d", &x, &y);
-			vector_create(vectors, power, lx, ly, x, y);
+			vector_create(&vectors[pass], power, lx, ly, x, y);
 			count++;
 			lx = x;
 			ly = y;
@@ -869,7 +898,7 @@ vectors_parse(
 		case 'C':
 			// Closing segment from the current point
 			// back to the starting point
-			vector_create(vectors, power, lx, ly, mx, my);
+			vector_create(&vectors[pass], power, lx, ly, mx, my);
 			lx = mx;
 			lx = my;
 			break;
@@ -882,8 +911,16 @@ vectors_parse(
 	}
 
 done:
-	fprintf(stderr, "read %u segments\n", count);
-	vector_stats(vectors->vectors);
+	printf("read %u segments\n", count);
+	for (int i = 0 ; i < VECTOR_PASSES ; i++)
+	{
+		printf("Vector pass %d: power=%d speed=%d\n",
+			i,
+			vector_power[i],
+			vector_speed[i]
+		);
+		vector_stats(vectors[i].vectors);
+	}
 
 	return vectors;
 }
@@ -1007,25 +1044,16 @@ vector_optimize(
 	return 0;
 }
 
-				
-static bool
-generate_vector(FILE *pjl_file, FILE *vector_file)
-{
-	vectors_t * const vectors = vectors_parse(vector_file);
-	if (do_vector_optimize)
-		vector_optimize(vectors);
 
+static void
+output_vector(
+	FILE * const pjl_file,
+	const vector_t * v
+)
+{
 	int lx = 0;
 	int ly = 0;
 
-	fprintf(pjl_file, "IN;");
-	fprintf(pjl_file, "XR%04d;", vector_freq);
-	fprintf(pjl_file, "YP%03d;", vector_power);
-	fprintf(pjl_file, "ZS%03d", vector_speed); // note: no ";"
-
-	// \note: step and repeat is no longer supported
-
-	const vector_t * v = vectors->vectors;
 	while (v)
 	{
 		if (v->x1 != lx || v->y1 != ly)
@@ -1059,6 +1087,34 @@ generate_vector(FILE *pjl_file, FILE *vector_file)
 
 	// Stop the laser (note initial ";")
 	fprintf(pjl_file, ";PU;");
+}
+
+				
+static bool
+generate_vector(
+	FILE * const pjl_file,
+	FILE * const vector_file
+)
+{
+	vectors_t * const vectors = vectors_parse(vector_file);
+
+	fprintf(pjl_file, "IN;");
+	fprintf(pjl_file, "XR%04d;", vector_freq);
+
+	// \note: step and repeat is no longer supported
+
+	for (int i = 0 ; i < VECTOR_PASSES ; i++)
+	{
+		if (do_vector_optimize)
+			vector_optimize(&vectors[i]);
+
+		const vector_t * v = vectors[i].vectors;
+
+		fprintf(pjl_file, "YP%03d;", vector_power[i]);
+		fprintf(pjl_file, "ZS%03d", vector_speed[i]); // note: no ";"
+		output_vector(pjl_file, v);
+	}
+
 	fprintf(pjl_file, "\e%%0B"); // end HLGL
 	fprintf(pjl_file, "\e%%1BPU"); // start HLGL, pen up?
 
@@ -1111,7 +1167,6 @@ generate_pjl(FILE *bitmap_file, FILE *pjl_file,
     }
 
     /* If vector power is > 0 then add vector information to the print job. */
-    if (vector_power) {
         fprintf(pjl_file, "\eE@PJL ENTER LANGUAGE=PCL\r\n");
         /* Page Orientation */
         fprintf(pjl_file, "\e*r0F");
@@ -1123,7 +1178,6 @@ generate_pjl(FILE *bitmap_file, FILE *pjl_file,
 
         /* We're going to perform a vector print. */
         generate_vector(pjl_file, vector_file);
-    }
 
     /* Footer for printer job language. */
     /* Reset */
@@ -1190,38 +1244,65 @@ ps_to_eps(FILE *ps_file, FILE *eps_file)
                 (eps_file,
 		"/=== {(        ) cvs print} def" // print a number
 		"/stroke {"
+			// check for solid red
 			"currentrgbcolor "
 			"0.0 eq "
 			"exch 0.0 eq "
 			"and "
-			"exch 0.0 ne "
+			"exch 1.0 eq "
 			"and "
-			"not "
+			// check for solid blue
+			"currentrgbcolor "
+			"0.0 eq "
+			"exch 1.0 eq "
+			"and "
+			"exch 0.0 eq "
+			"and "
+			"or "
+			// check for solid blue
+			"currentrgbcolor "
+			"1.0 eq "
+			"exch 0.0 eq "
+			"and "
+			"exch 0.0 eq "
+			"and "
+			"or "
 			"{"
-				// Default is to just stroke
-				"stroke"
-			"}{"
 				// solid red, green or blue
 				"(P)=== "
 				"currentrgbcolor "
-				"pop pop "
+				"(,)=== "
+				"100 mul round cvi === "
+				"(,)=== "
+				"100 mul round cvi === "
 				"(,)=== "
 				"100 mul round cvi = "
-				"flattenpath { "
+				"flattenpath "
+				"{ "
+					// moveto
 					"transform (M)=== "
 					"round cvi === "
 					"(,)=== "
 					"round cvi ="
 				"}{"
+					// lineto
 					"transform(L)=== "
 					"round cvi === "
 					"(,)=== "
 					"round cvi ="
-				"}{}{"
+				"}{"
+					// curveto (not implemented)
+				"}{"
+					// closepath
 					"(C)="
 				"}"
 				"pathforall newpath"
-			"} ifelse"
+			"}"
+			"{"
+				// Default is to just stroke
+				"stroke"
+			"}"
+			"ifelse"
 		"}bind def"
 		"/showpage {(X)= showpage}bind def"
 		"\n");
@@ -1288,17 +1369,20 @@ range_checks(void)
     if (vector_freq > 5000)
         vector_freq = 5000;
 
-    if (vector_power > 100)
-        vector_power = 100;
-    else
-    if (vector_power < 0)
-        vector_power = 0;
+	for (int i = 0 ; i < VECTOR_PASSES ; i++)
+	{
+	    if (vector_power[i] > 100)
+		vector_power[i] = 100;
+	    else
+	    if (vector_power[i] < 0)
+		vector_power[i] = 0;
 
-    if (vector_speed > 100)
-        vector_speed = 100;
-    else
-    if (vector_speed < 1)
-        vector_speed = 1;
+	    if (vector_speed[i] > 100)
+		vector_speed[i] = 100;
+	    else
+	    if (vector_speed[i] < 1)
+		vector_speed[i] = 1;
+	}
 }
 
 /**
@@ -1331,7 +1415,7 @@ printer_connect(const char *host, const int timeout)
             for (addr = res; addr; addr = addr->ai_next) {
 		const struct sockaddr_in * addr_in = (void*) addr->ai_addr;
 		if (addr_in)
-		fprintf(stderr, "trying to connect to %s:%d\n",
+		printf("trying to connect to %s:%d\n",
 			inet_ntoa(addr_in->sin_addr),
 			ntohs(addr_in->sin_port)
 		);
@@ -1421,13 +1505,13 @@ printer_send(const char *host, FILE *pjl_file)
     }
 
 	if (debug)
-		fprintf(stderr, "printer host: '%s'\n", host);
+		printf("printer host: '%s'\n", host);
 
     /* Connect to the printer. */
     socket_descriptor = printer_connect(host, PRINTER_MAX_WAIT);
 
 	if (debug)
-		fprintf(stderr, "printer host: '%s' fd %d\n", host, socket_descriptor);
+		printf("printer host: '%s' fd %d\n", host, socket_descriptor);
 
     // talk to printer
     sprintf(buf, "\002%s\n", queue);
@@ -1465,7 +1549,7 @@ printer_send(const char *host, FILE *pjl_file)
                 return false;
             }
             sprintf((char *) buf, "\003%u dfA%s%s\n", (int) file_stat.st_size, job_name, localhost);
-		fprintf(stderr, "job '%s': size %u\n", job_name, (int) file_stat.st_size);
+		printf("job '%s': size %u\n", job_name, (int) file_stat.st_size);
         }
         write(socket_descriptor, (char *)buf, strlen(buf));
         read(socket_descriptor, &lpdres, 1);
@@ -1504,10 +1588,18 @@ static void usage(int rc, const char * const msg)
 " -s | --screen-size N               Photograph screen size (default 8)\n"
 "\n"
 "Vector options:\n"
-" -V | --vector-power 0-100          Vector power\n"
-" -v | --vector-speed 0-100          Vector speed\n"
 " -f | --frequency 10-5000           Vector frequency\n"
 " -O | --no-optimize                 Disable vector optimization\n"
+" -V | --vector-power 0-100          Vector power (second pass, red)\n"
+" -v | --vector-speed 0-100          Vector speed (second pass, red)\n"
+"\n"
+"For multiple passes, use green, red and blue vectors.\n"
+" -G | --vector0-power 0-100         Vector power (first pass, green)\n"
+" -g | --vector0-speed 0-100         Vector speed (first pass, green)\n"
+" -V | --vector1-power 0-100         Vector power (second pass, red)\n"
+" -v | --vector1-speed 0-100         Vector speed (second pass, red)\n"
+" -B | --vector2-power 0-100         Vector power (third pass, blue)\n"
+" -b | --vector2-speed 0-100         Vector speed (third pass, blue)\n"
 "";
 	fprintf(stderr, "%s%s\n", msg, usage_str);
 	exit(rc);
@@ -1527,6 +1619,12 @@ static const struct option long_options[] = {
 	{ "frequency",		required_argument, NULL, 'f' },
 	{ "vector-power",	required_argument, NULL, 'V' },
 	{ "vector-speed",	required_argument, NULL, 'v' },
+	{ "vector0-power",	required_argument, NULL, 'G' },
+	{ "vector0-speed",	required_argument, NULL, 'g' },
+	{ "vector1-power",	required_argument, NULL, 'V' },
+	{ "vector1-speed",	required_argument, NULL, 'v' },
+	{ "vector2-power",	required_argument, NULL, 'B' },
+	{ "vector2-speed",	required_argument, NULL, 'b' },
 	{ "no-optimize",	no_argument, NULL, 'O' },
 	{ NULL, 0, NULL, 0 },
 };
@@ -1551,7 +1649,7 @@ main(int argc, char *argv[])
 		const char ch = getopt_long(
 			argc,
 			argv,
-			"Dp:P:n:d:r:R:v:V:m:f:s:aO",
+			"Dp:P:n:d:r:R:v:V:g:G:b:B:m:f:s:aO",
 			long_options,
 			NULL
 		);
@@ -1566,8 +1664,12 @@ main(int argc, char *argv[])
 		case 'd': resolution = atoi(optarg); break;
 		case 'r': raster_speed = atoi(optarg); break;
 		case 'R': raster_power = atoi(optarg); break;
-		case 'v': vector_speed = atoi(optarg); break;
-		case 'V': vector_power = atoi(optarg); break;
+		case 'g': vector_speed[0] = atoi(optarg); break;
+		case 'G': vector_power[0] = atoi(optarg); break;
+		case 'v': vector_speed[1] = atoi(optarg); break;
+		case 'V': vector_power[1] = atoi(optarg); break;
+		case 'b': vector_speed[2] = atoi(optarg); break;
+		case 'B': vector_power[2] = atoi(optarg); break;
 		case 'm': raster_mode = tolower(*optarg); break;
 		case 'f': vector_freq = atoi(optarg); break;
 		case 's': screen_size = atoi(optarg); break;
@@ -1628,18 +1730,16 @@ main(int argc, char *argv[])
 	}
 
 	// Report the settings on stdout
-	fprintf(stderr,
+	printf(
 		"Job: %s (%s)\n"
 		"Raster: speed=%d power=%d dpi=%d\n"
-		"Vector: speed=%d power=%d freq=%d\n"
+		"Vector: freq=%d\n"
 		"",
 		job_title,
 		job_user,
 		raster_speed,
 		raster_power,
 		resolution,
-		vector_speed,
-		vector_power,
 		vector_freq
 	);
 
@@ -1703,7 +1803,7 @@ main(int argc, char *argv[])
         /* Execute the command pdf2ps to convert the pdf file to ps. */
         sprintf(buf, "pdf2ps %s %s", filename_pdf, filename_ps);
         if (debug) {
-            fprintf(stderr, "%s\n", buf);
+            printf("executing: %s\n", buf);
         }
         if (system(buf)) {
             fprintf(stderr, "Failure to execute pdf2ps. Quitting...");

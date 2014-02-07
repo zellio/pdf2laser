@@ -1,5 +1,6 @@
 epilog: epilog.c
 	gcc \
+		-std=c99 \
 		-W \
 		-Wall \
 		-O3 \
