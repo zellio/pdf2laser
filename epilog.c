@@ -1590,16 +1590,10 @@ static void usage(int rc, const char * const msg)
 "Vector options:\n"
 " -f | --frequency 10-5000           Vector frequency\n"
 " -O | --no-optimize                 Disable vector optimization\n"
-" -V | --vector-power 0-100          Vector power (second pass, red)\n"
-" -v | --vector-speed 0-100          Vector speed (second pass, red)\n"
+" -V | --vector-power 0-100[,G,B]    Vector power for the R,G and B passes\n"
+" -v | --vector-speed 0-100[,G,B]    Vector speed\n"
 "\n"
-"For multiple passes, use green, red and blue vectors.\n"
-" -G | --vector0-power 0-100         Vector power (first pass, green)\n"
-" -g | --vector0-speed 0-100         Vector speed (first pass, green)\n"
-" -V | --vector1-power 0-100         Vector power (second pass, red)\n"
-" -v | --vector1-speed 0-100         Vector speed (second pass, red)\n"
-" -B | --vector2-power 0-100         Vector power (third pass, blue)\n"
-" -b | --vector2-speed 0-100         Vector speed (third pass, blue)\n"
+" If only one power or speed is specified it will be used for all three\n"
 "";
 	fprintf(stderr, "%s%s\n", msg, usage_str);
 	exit(rc);
@@ -1619,15 +1613,39 @@ static const struct option long_options[] = {
 	{ "frequency",		required_argument, NULL, 'f' },
 	{ "vector-power",	required_argument, NULL, 'V' },
 	{ "vector-speed",	required_argument, NULL, 'v' },
-	{ "vector0-power",	required_argument, NULL, 'G' },
-	{ "vector0-speed",	required_argument, NULL, 'g' },
-	{ "vector1-power",	required_argument, NULL, 'V' },
-	{ "vector1-speed",	required_argument, NULL, 'v' },
-	{ "vector2-power",	required_argument, NULL, 'B' },
-	{ "vector2-speed",	required_argument, NULL, 'b' },
 	{ "no-optimize",	no_argument, NULL, 'O' },
 	{ NULL, 0, NULL, 0 },
 };
+
+
+/*
+ * Look for "X,Y,Z" for each power setting, or "X" for all three.
+ * Handle the case where we have been given floating point values,
+ * even though we only want to deal with integers.
+ */
+static int
+vector_param_set(
+	int * const values,
+	const char * arg
+)
+{
+	double v[3] = { 0, 0, 0 };
+	int rc = sscanf(arg, "%lf,%lf,%lf", &v[0], &v[1], &v[2]);
+	if (rc < 1)
+		return -1;
+
+	// convert to integer from the floating point representation
+	values[0] = v[0];
+	values[1] = v[1];
+	values[2] = v[2];
+
+	if (rc <= 1)
+		values[1] = values[0];
+	if (rc <= 2)
+		values[2] = values[1];
+
+	return rc;
+}
 
 
 /**
@@ -1664,12 +1682,14 @@ main(int argc, char *argv[])
 		case 'd': resolution = atoi(optarg); break;
 		case 'r': raster_speed = atoi(optarg); break;
 		case 'R': raster_power = atoi(optarg); break;
-		case 'g': vector_speed[0] = atoi(optarg); break;
-		case 'G': vector_power[0] = atoi(optarg); break;
-		case 'v': vector_speed[1] = atoi(optarg); break;
-		case 'V': vector_power[1] = atoi(optarg); break;
-		case 'b': vector_speed[2] = atoi(optarg); break;
-		case 'B': vector_power[2] = atoi(optarg); break;
+		case 'v':
+			if (vector_param_set(vector_speed, optarg) < 0)
+				usage(EXIT_FAILURE, "unable to parse vector-speed");
+			break;
+		case 'V':
+			if (vector_param_set(vector_power, optarg) < 0)
+				usage(EXIT_FAILURE, "unable to parse vector-power");
+			break;
 		case 'm': raster_mode = tolower(*optarg); break;
 		case 'f': vector_freq = atoi(optarg); break;
 		case 's': screen_size = atoi(optarg); break;
@@ -1733,14 +1753,20 @@ main(int argc, char *argv[])
 	printf(
 		"Job: %s (%s)\n"
 		"Raster: speed=%d power=%d dpi=%d\n"
-		"Vector: freq=%d\n"
+		"Vector: freq=%d speed=%d,%d,%d power=%d,%d,%d\n"
 		"",
 		job_title,
 		job_user,
 		raster_speed,
 		raster_power,
 		resolution,
-		vector_freq
+		vector_freq,
+		vector_speed[0],
+		vector_speed[1],
+		vector_speed[2],
+		vector_power[0],
+		vector_power[1],
+		vector_power[2]
 	);
 
 
