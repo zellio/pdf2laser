@@ -998,7 +998,7 @@ vector_find_closest(
  * Optimize the cut order to minimize transit time.
  *
  * Simplistic greedy algorithm: look for the closest vector that starts
- * or ends at the same point as the current point. 
+ * or ends at the same point as the current point.
  *
  * This does not split vectors.
  */
@@ -1028,7 +1028,7 @@ vector_optimize(
 			vs_tail->next = v;
 			vs_tail = v;
 		}
-		
+
 		// Move the current point to the end of the line segment
 		cx = v->x2;
 		cy = v->y2;
@@ -1089,7 +1089,7 @@ output_vector(
 	fprintf(pjl_file, ";PU;");
 }
 
-				
+
 static bool
 generate_vector(
 	FILE * const pjl_file,
