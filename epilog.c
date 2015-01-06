@@ -481,19 +481,19 @@ generate_raster(FILE *pjl_file, FILE *bitmap_file)
         }
 
         /* Raster Orientation */
-        fprintf(pjl_file, "\e*r0F");
+        fprintf(pjl_file, "\033*r0F");
         /* Raster power -- color and gray scaled before, but scale with the user provided power */
-        fprintf(pjl_file, "\e&y%dP", raster_power);
+        fprintf(pjl_file, "\033&y%dP", raster_power);
 
         /* Raster speed */
-        fprintf(pjl_file, "\e&z%dS", raster_speed);
-        fprintf(pjl_file, "\e*r%dT", height * y_repeat);
-        fprintf(pjl_file, "\e*r%dS", width * x_repeat);
+        fprintf(pjl_file, "\033&z%dS", raster_speed);
+        fprintf(pjl_file, "\033*r%dT", height * y_repeat);
+        fprintf(pjl_file, "\033*r%dS", width * x_repeat);
         /* Raster compression */
-        fprintf(pjl_file, "\e*b%dM", (raster_mode == 'c' || raster_mode == 'g')
+        fprintf(pjl_file, "\033*b%dM", (raster_mode == 'c' || raster_mode == 'g')
                 ? 7 : 2);
         /* Raster direction (1 = up) */
-        fprintf(pjl_file, "\e&y1O");
+        fprintf(pjl_file, "\033&y1O");
 
         if (debug) {
             /* Output raster debug information */
@@ -504,7 +504,7 @@ generate_raster(FILE *pjl_file, FILE *bitmap_file)
         }
 
         /* start at current position */
-        fprintf(pjl_file, "\e*r1A");
+        fprintf(pjl_file, "\033*r1A");
         for (offx = width * (x_repeat - 1); offx >= 0; offx -= width) {
             for (offy = height * (y_repeat - 1); offy >= 0; offy -= height) {
                 for (pass = 0; pass < passes; pass++) {
@@ -622,11 +622,11 @@ printf("mono\n");
                                 ;
                             }
                             r++;
-                            fprintf(pjl_file, "\e*p%dY", basey + offy + y);
-                            fprintf(pjl_file, "\e*p%dX", basex + offx +
+                            fprintf(pjl_file, "\033*p%dY", basey + offy + y);
+                            fprintf(pjl_file, "\033*p%dX", basex + offx +
                                     ((raster_mode == 'c' || raster_mode == 'g') ? l : l * 8));
                             if (dir) {
-                                fprintf(pjl_file, "\e*b%dA", -(r - l));
+                                fprintf(pjl_file, "\033*b%dA", -(r - l));
                                 // reverse bytes!
                                 for (n = 0; n < (r - l) / 2; n++){
                                     unsigned char t = buf[l + n];
@@ -634,7 +634,7 @@ printf("mono\n");
                                     buf[r - n - 1] = t;
                                 }
                             } else {
-                                fprintf(pjl_file, "\e*b%dA", (r - l));
+                                fprintf(pjl_file, "\033*b%dA", (r - l));
                             }
                             dir = 1 - dir;
                             // pack
@@ -665,7 +665,7 @@ printf("mono\n");
                                     }
                                 }
                             }
-                            fprintf(pjl_file, "\e*b%dW", (n + 7) / 8 * 8);
+                            fprintf(pjl_file, "\033*b%dW", (n + 7) / 8 * 8);
                             r = 0;
                             while (r < n)
                                 fputc(pack[r++], pjl_file);
@@ -679,7 +679,7 @@ printf("mono\n");
                 }
             }
         }
-        fprintf(pjl_file, "\e*rC");       // end raster
+        fprintf(pjl_file, "\033*rC");       // end raster
         fputc(26, pjl_file);      // some end of file markers
         fputc(4, pjl_file);
     }
@@ -1115,8 +1115,8 @@ generate_vector(
 		output_vector(pjl_file, v);
 	}
 
-	fprintf(pjl_file, "\e%%0B"); // end HLGL
-	fprintf(pjl_file, "\e%%1BPU"); // start HLGL, pen up?
+	fprintf(pjl_file, "\033%%0B"); // end HLGL
+	fprintf(pjl_file, "\033%%1BPU"); // start HLGL, pen up?
 
 	return true;
 }
@@ -1132,27 +1132,27 @@ generate_pjl(FILE *bitmap_file, FILE *pjl_file,
     int i;
 
     /* Print the printer job language header. */
-    fprintf(pjl_file, "\e%%-12345X@PJL JOB NAME=%s\r\n", job_title);
-    fprintf(pjl_file, "\eE@PJL ENTER LANGUAGE=PCL\r\n");
+    fprintf(pjl_file, "\033%%-12345X@PJL JOB NAME=%s\r\n", job_title);
+    fprintf(pjl_file, "\033E@PJL ENTER LANGUAGE=PCL\r\n");
     /* Set autofocus on or off. */
-    fprintf(pjl_file, "\e&y%dA", focus);
+    fprintf(pjl_file, "\033&y%dA", focus);
     /* Left (long-edge) offset registration.  Adjusts the position of the
      * logical page across the width of the page.
      */
-    fprintf(pjl_file, "\e&l0U");
+    fprintf(pjl_file, "\033&l0U");
     /* Top (short-edge) offset registration.  Adjusts the position of the
      * logical page across the length of the page.
      */
-    fprintf(pjl_file, "\e&l0Z");
+    fprintf(pjl_file, "\033&l0Z");
 
     /* Resolution of the print. */
-    fprintf(pjl_file, "\e&u%dD", resolution);
+    fprintf(pjl_file, "\033&u%dD", resolution);
     /* X position = 0 */
-    fprintf(pjl_file, "\e*p0X");
+    fprintf(pjl_file, "\033*p0X");
     /* Y position = 0 */
-    fprintf(pjl_file, "\e*p0Y");
+    fprintf(pjl_file, "\033*p0Y");
     /* PCL resolution. */
-    fprintf(pjl_file, "\e*t%dR", resolution);
+    fprintf(pjl_file, "\033*t%dR", resolution);
 
     /* If raster power is enabled and raster mode is not 'n' then add that
      * information to the print job.
@@ -1160,30 +1160,30 @@ generate_pjl(FILE *bitmap_file, FILE *pjl_file,
     if (raster_power && raster_mode != 'n') {
 
         /* FIXME unknown purpose. */
-        fprintf(pjl_file, "\e&y0C");
+        fprintf(pjl_file, "\033&y0C");
 
         /* We're going to perform a raster print. */
         generate_raster(pjl_file, bitmap_file);
     }
 
     /* If vector power is > 0 then add vector information to the print job. */
-        fprintf(pjl_file, "\eE@PJL ENTER LANGUAGE=PCL\r\n");
+        fprintf(pjl_file, "\033E@PJL ENTER LANGUAGE=PCL\r\n");
         /* Page Orientation */
-        fprintf(pjl_file, "\e*r0F");
-        fprintf(pjl_file, "\e*r%dT", height * y_repeat);
-        fprintf(pjl_file, "\e*r%dS", width * x_repeat);
-        fprintf(pjl_file, "\e*r1A");
-        fprintf(pjl_file, "\e*rC");
-        fprintf(pjl_file, "\e%%1B");
+        fprintf(pjl_file, "\033*r0F");
+        fprintf(pjl_file, "\033*r%dT", height * y_repeat);
+        fprintf(pjl_file, "\033*r%dS", width * x_repeat);
+        fprintf(pjl_file, "\033*r1A");
+        fprintf(pjl_file, "\033*rC");
+        fprintf(pjl_file, "\033%%1B");
 
         /* We're going to perform a vector print. */
         generate_vector(pjl_file, vector_file);
 
     /* Footer for printer job language. */
     /* Reset */
-    fprintf(pjl_file, "\eE");
+    fprintf(pjl_file, "\033E");
     /* Exit language. */
-    fprintf(pjl_file, "\e%%-12345X");
+    fprintf(pjl_file, "\033%%-12345X");
     /* End job. */
     fprintf(pjl_file, "@PJL EOJ \r\n");
     /* Pad out the remainder of the file with 0 characters. */
