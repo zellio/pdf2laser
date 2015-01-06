@@ -1,6 +1,6 @@
 /** @file cups-epilog.c - Epilog cups driver */
 #define _POSIX_SOURCE
-#define _XOPEN_SOURCE
+#define _XOPEN_SOURCE 500
 
 /* @file cups-epilog.c @verbatim
  *========================================================================
