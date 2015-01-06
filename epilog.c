@@ -1600,21 +1600,23 @@ static void usage(int rc, const char * const msg)
 }
 
 static const struct option long_options[] = {
-	{ "debug",		no_argument, NULL, 'D' },
-	{ "printer",		required_argument, NULL, 'p' },
-	{ "preset",		required_argument, NULL, 'P' },
-	{ "autofocus",		required_argument, NULL, 'a' },
-	{ "job",                required_argument, NULL, 'n' },
-	{ "dpi",		required_argument, NULL, 'd' },
-	{ "raster-power",	required_argument, NULL, 'R' },
-	{ "raster-speed",	required_argument, NULL, 'r' },
-	{ "mode",		required_argument, NULL, 'm' },
-	{ "screen-size",	required_argument, NULL, 's' },
-	{ "frequency",		required_argument, NULL, 'f' },
-	{ "vector-power",	required_argument, NULL, 'V' },
-	{ "vector-speed",	required_argument, NULL, 'v' },
-	{ "no-optimize",	no_argument, NULL, 'O' },
-	{ NULL, 0, NULL, 0 },
+	{ "debug",         no_argument,        NULL,  'D' },
+	{ "printer",       required_argument,  NULL,  'p' },
+	{ "preset",        required_argument,  NULL,  'P' },
+	{ "autofocus",     required_argument,  NULL,  'a' },
+	{ "job",           required_argument,  NULL,  'n' },
+	{ "dpi",           required_argument,  NULL,  'd' },
+	{ "raster-power",  required_argument,  NULL,  'R' },
+	{ "raster-speed",  required_argument,  NULL,  'r' },
+	{ "mode",          required_argument,  NULL,  'm' },
+	{ "screen-size",   required_argument,  NULL,  's' },
+	{ "frequency",     required_argument,  NULL,  'f' },
+	{ "vector-power",  required_argument,  NULL,  'V' },
+	{ "vector-speed",  required_argument,  NULL,  'v' },
+	{ "no-optimize",   no_argument,        NULL,  'O' },
+	{ "help",          no_argument,        NULL,  'h' },
+	{ "version",       no_argument,        NULL,  '@' },
+	{ NULL,            0,                  NULL,   0  },
 };
 
 
@@ -1667,7 +1669,7 @@ main(int argc, char *argv[])
 		const char ch = getopt_long(
 			argc,
 			argv,
-			"Dp:P:n:d:r:R:v:V:g:G:b:B:m:f:s:aO",
+			"Dp:P:n:d:r:R:v:V:g:G:b:B:m:f:s:aO:h",
 			long_options,
 			NULL
 		);
@@ -1695,6 +1697,8 @@ main(int argc, char *argv[])
 		case 's': screen_size = atoi(optarg); break;
 		case 'a': focus = AUTO_FOCUS; break;
 		case 'O': do_vector_optimize = 0; break;
+		case 'h': usage(EXIT_SUCCESS, ""); break;
+		case '@': fprintf(stdout, "0.1.0"); exit(0); break;
 		default: usage(EXIT_FAILURE, "Unknown argument\n"); break;
 		}
 	}
