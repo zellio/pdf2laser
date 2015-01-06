@@ -1402,7 +1402,7 @@ printer_connect(const char *host, const int timeout)
     for (i = 0; i < timeout; i++) {
         struct addrinfo *res;
         struct addrinfo *addr;
-        struct addrinfo base = { 0, PF_UNSPEC, SOCK_STREAM };
+        struct addrinfo base = { 0, PF_UNSPEC, SOCK_STREAM, 0, 0, NULL, NULL, NULL };
         int error_code = getaddrinfo(host, "printer", &base, &res);
 
         /* Set an alarm to go off if the program has gone out to lunch. */
