@@ -1,26 +1,27 @@
+APP=pdf2laser
+
 CC=gcc
 RM=rm
+INSTALL=install
 
 CFLAGS=-std=c99 -Wall -Wextra -pedantic -O3
-LDFLAGS=
+LDFLAGS=-lm
 
-.PHONY: all clean
+prefix=/usr/local
+exec_prefix=$(prefix)
+bindir=$(exec_prefix)/bin
+srcdir=src
 
-all: pdf2laser
+.PHONY: all clean install
+
+all: $(APP)
 
 clean:
-	$(RM) -f pdf2laser ta10 live-laser cups-pdf2laser
+	$(RM) -f $(APP)
 
-pdf2laser: src/pdf2laser.c
-	$(CC) \
-		$(CFLAGS) \
-		$(LDFLAGS) \
-		-lm \
-		-o $(@) \
-		$(<)
+install: all
+	$(INSTALL) -d -m 755 '$(DESTDIR)$(bindir)'
+	$(INSTALL) $(APP) '$(DESTDIR)$(bindir)'
 
-INSTALL_LOCATION=/usr/libexec/cups/backend/pdf2laser
-
-install: pdf2laser
-	sudo cp $< $(INSTALL_LOCATION)
-	sudo chown root:wheel $(INSTALL_LOCATION)
+$(APP): $(srcdir)/$(APP).c
+	$(CC) $(CFLAGS) $(LDFLAGS) $(<) -o $(@)
