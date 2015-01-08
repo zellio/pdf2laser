@@ -16,7 +16,7 @@
 5. Create new Pull Request
 
 ## Copyright
-
+```
 Copyright (c) 2002-2008 Andrews & Arnold Ltd <info@aaisp.net.uk>
 Copyright (c) 2008 AS220 Labs <brandon@as220.org>
 Copyright (c) 2011 Trammell Hudson <hudson@osresearch.net>
@@ -34,5 +34,4 @@ General Public License for more details.
 
 You should have received a copy of the GNU General Public License along
 with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-See [LICENSE](/LICENSE) for further details.
+```
