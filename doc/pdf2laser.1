@@ -1,54 +1,89 @@
 .\" INPR
 .TH pdf2laser 1 2015-08-01 GNU "NYC Resistor Tools"
 .SH NAME
-pdf2laser \- a tool to send PDF files to an Epilog laser cutter over wifi
+pdf2laser \- a tool to send PDF files to an Epilog laser cutter
+.
 .SH SYNOPSIS
-pdf2laser [OPTION...] FILE
+.B pdf2laser
+.RI [ OPTION "]... [" FILE ]
+.
 .SH DESCRIPTION
-.PP
-It's a program
+.B pdf2laser
+sends PDF files to an Epilog laser cutter for printing over the network.
+.
 .SH OPTIONS
-.PP
 Mandatory arguments to long options are mandatory for short options too.
 .SS GENERAL OPTIONS
-.IP "\fB\-p, \-\^\-printer ip\fP"
-ip-address of the target printer
-.IP "\fB\-P, \-\-preset name\fP"
-Select a default preset
-.IP "\fB\-a, \-\-autofocus\fP"
-Enable auto focus
-.IP "\fB\-n, \-\-job Jobname\fP"
-Set the job name to display
+.TP
+.B
+.BI \-p " ADDRESS" "\fR,\fP \-\^\-printer=" ADDRESS
+IP address of the target printer.
+.TP
+.BI \-P " PRESET" "\fR,\fP \-\^\-preset=" PRESET
+Select a default preset.
+.TP
+.BR \-a ", " \-\^\-autofocus
+Enable auto focus.
+.TP
+.BI \-n " JOBNAME" "\fR,\fP \-\^\-job=" JOBNAME
+Set the job name to display.
 .SS RASTER OPTIONS
-.IP "\fB\-d, \-\-dpi DPI\fP"
-Resolution of raster artwork
-.IP "\fB\-R, \-\-raster-power 0-100\fP"
-Raster power
-.IP "\fB\-r, \-\-raster-speed 0-100\fP"
-Raster speed
-.IP "\fB\-m, \-\-mode mono|grey|color\fP"
-Mode for rasterization (default mono)
-.IP "\fB\-s, \-\-screen-size N\fP"
-Photograph screen size (default 8)
+.TP
+.BI \-d " DPI" "\fR,\fP \-\^\-dpi=" DPI
+Resolution of raster artwork.
+.TP
+.BI \-R " POWER" "\fR,\fP \-\^\-raster-power=" POWER
+Raster power (0-100).
+.TP
+.BI \-r " SPEED" "\fR,\fP \-\^\-raster-speed=" SPEED
+Raster speed (0-100).
+.TP
+.BI \-m " MODE" "\fR,\fP \-\^\-mode=" MODE
+Mode for rasterization (default mono).
+.TP
+.BI \-s " SIZE" "\fR,\fP \-\^\-screen-size=" SIZE
+Photograph screen size (default 8).
 .SS VECTOR OPTIONS
-.IP "\fB\-f, \-\-frequency 10-5000\fP"
-Vector frequency
-.IP "\fB\-O, \-\-no-optimize\fP"
-Disable vector optimization
-.IP "\fB\-V, \-\-vector-power 0-100[,G,B]\fP"
-Vector power for the R,G and B passes
-.IP "\fB\-v, \-\-vector-speed 0-100[,G,B]\fP"
-Vector speed. If only one power or speed is specified it will be used for all three
+.TP
+.BI \-f " FREQUENCY" "\fR,\fP \-\^\-frequency=" FREQUENCY
+Vector frequency (10-5000).
+.TP
+.BR \-O ", " \-\^\-no-optimize
+Disable vector optimization.
+.TP
+.BI \-V " POWER" "\fR,\fP \-\^\-vector-power=" POWER
+Vector power for the R,G and B passes.
+If only one power or speed is specified it will be used for all three.
+.TP
+.BI \-v " SPEED" "\fR,\fP \-\^\-vector-speed=" SPEED
+Vector speed for the R,G and B passes.
+If only one power or speed is specified it will be used for all three.
 .SS GENERIC OPTIONS
-.IP "\fB\-h, \-\-help\fP"
-print a short help message and exit.
-.IP "\fB\-\-version\fP"
-print the pdf2laser version number and exit.
+.TP
+.B \-\^\-help
+Output a usage message and exit.
+.TP
+.B \-\^\-version
+Output the version number of
+.B pdf2laser
+and exit.
+.
 .SH EXIT STATUS
-.SH NOTES
+The program will return a 0 on proper execution and a 1 for errors.
+Additionally it will print an error message to \fBstderr\fP.
+.
+.\" .SH EXAMPLE
+.\" .
+.\" .SH NOTES
+.\" .
 .SH BUGS
-.SH EXAMPLE
-.SH CREDITS
-.SH THANKS
-.SH AUTHORS
-.SH SEE ALSO
+Bug reports and issues and be posted on https://github.com/zellio/pdf2laser/issues
+.
+.\" .SH CREDITS
+.\" .
+.\" .SH THANKS
+.\" .
+.\" .SH AUTHORS
+.\" .
+.\" .SH SEE ALSO
+.\" .
