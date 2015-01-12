@@ -69,15 +69,39 @@ Output the version number of
 and exit.
 .
 .SH EXIT STATUS
-The program will return a 0 on proper execution and a 1 for errors.
-Additionally it will print an error message to \fBstderr\fP.
+In event of success
+.B pdf2laser
+will return 0 and exit. In event of an error
+.B pdf2laser
+will print a message to
+.B stderr
+, return 1 and exit.
 .
-.\" .SH EXAMPLE
-.\" .
-.\" .SH NOTES
-.\" .
+.SH EXAMPLES
+When running
+.B pdf2laser
+you'll need to specify the
+.I ADDRESS
+of the laser cutter you are printing to. It is the only mandatory argument.
+Most of the other flags have default values but you will want to specify
+.I POWER
+for both raster and vector as the defaults do not really help very much.
+.TP
+.B pdf2laser "\fR\E\\\fP"
+.BI "\-\^\-printer " ADDRESS
+.BI "\-\^\-raster-power " POWER
+.BI "\-\^\-raster-power " POWER
+.
+.SH NOTES
+Currently if you are at the NYC Resistor space you do not need to specify an
+.I ADDRESS
+for the laser cutter as it is hard coded.
+.B DO NOT COUNT ON THIS FUNCTIONALITY, IT WILL CHANGE IN THE FUTURE
+\&.
+.
 .SH BUGS
-Bug reports and issues and be posted on https://github.com/zellio/pdf2laser/issues
+Bug reports and issues may be posted on
+https://github.com/zellio/pdf2laser/issues
 .
 .\" .SH CREDITS
 .\" .
