@@ -86,11 +86,68 @@ of the laser cutter you are printing to. It is the only mandatory argument.
 Most of the other flags have default values but you will want to specify
 .I POWER
 for both raster and vector as the defaults do not really help very much.
+Most of the time when you use
+.B pdf2laser
+the command call will look like so.
+.RS
 .TP
 .B pdf2laser "\fR\E\\\fP"
+.br
 .BI "\-\^\-printer " ADDRESS
+\E\
+.br
+.BI "\-\^\-dpi " DPI
+\E\
+.br
 .BI "\-\^\-raster-power " POWER
-.BI "\-\^\-raster-power " POWER
+\E\
+.br
+.BI "\-\^\-raster-speed " SPEED
+\E\
+.br
+.BI "\-\^\-frequency " FREQUENCY
+\E\
+.br
+.BI "\-\^\-vector-power " POWER
+\E\
+.br
+.BI "\-\^\-vector-speed " SPEED
+\E\
+.br
+.B FILE
+.RE
+.PP
+You can consult our wiki for the values to replace those fields with for the
+material you are cutting.
+.PP
+When cutting and rastering 1/8th inch birch plywood the call would look as such.
+.RS
+.TP
+.B pdf2laser "\fR\E\\\fP"
+.br
+.BI "\-\^\-printer " 192.168.1.4
+\E\
+.br
+.BI "\-\^\-dpi " 300
+\E\
+.br
+.BI "\-\^\-raster-power " 40
+\E\
+.br
+.BI "\-\^\-raster-speed " 100
+\E\
+.br
+.BI "\-\^\-frequency " 5
+\E\
+.br
+.BI "\-\^\-vector-power " 100
+\E\
+.br
+.BI "\-\^\-vector-speed " 12
+\E\
+.br
+.B awesome_design.pdf
+.RE
 .
 .SH NOTES
 Currently if you are at the NYC Resistor space you do not need to specify an
