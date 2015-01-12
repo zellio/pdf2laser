@@ -61,6 +61,7 @@
 #include <getopt.h>
 #include <pwd.h>
 
+#include "config.h"
 
 /*************************************************************************
  * local defines
@@ -1503,7 +1504,7 @@ printer_send(const char *host, FILE *pjl_file)
 static void usage(int rc, const char * const msg)
 {
 	static const char usage_str[] =
-"Usage: pdf2laser [OPTION]... [FILE]\n"
+"Usage: " PACKAGE " [OPTION]... [FILE]\n"
 "\n"
 "General options:\n"
 "    -a, --autofocus                   Enable auto focus\n"
@@ -1632,7 +1633,7 @@ main(int argc, char *argv[])
 		case 'a': focus = AUTO_FOCUS; break;
 		case 'O': do_vector_optimize = 0; break;
 		case 'h': usage(EXIT_SUCCESS, ""); break;
-		case '@': fprintf(stdout, "0.1.0"); exit(0); break;
+		case '@': fprintf(stdout, "%s\n", VERSION); exit(0); break;
 		default: usage(EXIT_FAILURE, "Unknown argument\n"); break;
 		}
 	}
