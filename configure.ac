@@ -13,8 +13,7 @@ AC_PROG_CC
 AC_PROG_INSTALL
 
 # Checks for libraries.
-# FIXME: Replace `main' with a function in `-lm':
-AC_CHECK_LIB([m], [main])
+AC_SEARCH_LIBS([sqrt], [m])
 
 # Checks for header files.
 AC_CHECK_HEADERS([arpa/inet.h limits.h netdb.h netinet/in.h stdlib.h string.h strings.h sys/socket.h unistd.h])
