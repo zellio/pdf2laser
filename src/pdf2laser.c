@@ -35,7 +35,7 @@
 /// Code:
 
 #define _POSIX_SOURCE
-#define _XOPEN_SOURCE 500
+#define _XOPEN_SOURCE 600
 
 
 /*************************************************************************
