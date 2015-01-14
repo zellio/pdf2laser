@@ -9,7 +9,51 @@ pdf2laser \- tool for printing PDF to an Epilog laser cutter over the network
 .
 .SH DESCRIPTION
 .B pdf2laser
-sends PDF files to an Epilog laser cutter for printing over the network.
+converts PDF files to postscript files via
+.B ghostscript
+and then sends them to an Epilog laser cutter for \*(lqprinting\*(rq.
+In addition to conversation
+.B pdf2laser
+will attempt to optimize the vector path of your cut.
+While this optimization can be disabled (via
+.BR \-O ", " \-\^\-no-optimize )
+it will lead to locally faster cuts.
+Laser cuts are composed of two components, the raster and the vector.
+.PP
+Raster is controlled by the options:
+.IR DPI ", " MODE ", " SPEED ", " POWER ", and " SIZE "."
+.PP
+.I DPI
+is the resolution of your print and is dictated by the
+.I DPI
+setting of the PDF file. The
+.I SPEED
+and
+.I POWER
+settings are just what is on the tin.
+Values for the material you are cutting can be found on our wiki.
+The
+.I MODE
+of your raster dictates how the image will be translated.
+The three modes are mono, grey, and colour.
+.PP
+The mono raster mode uses a line or dot screen on any grey levels or colours.
+This can be controlled with the
+.I SIZE
+parameter.
+The default value of 8 makes a nice fine line screen on 600dpi engraving.
+The grey raster mode maps the grey level to power level.
+The power level is scaled to the raster power setting.
+Unlike the windows driver which always 100% in this mode.
+.PP
+In colour mode, the primary and secondary colours are processed as separate
+passes, using the grey level of the colour as a power level.  The power level
+is scaled to the raster power setting as in the grey mode.  Note that red is
+100% red, and non 100% green and blue, etc, so 50% red, 0% green/blue is not
+counted as red, but counts as \*(lqgrey\*(rq. 100% red, and 50% green/blue
+counts as red, half power.  This means you can make distinct raster areas of
+the page so that you do not waste time moving the head over blank space
+between them.
 .
 .SH OPTIONS
 Mandatory arguments to long options are mandatory for short options too.
