@@ -15,31 +15,30 @@ sends PDF files to an Epilog laser cutter for printing over the network.
 Mandatory arguments to long options are mandatory for short options too.
 .SS GENERAL OPTIONS
 .TP
-.B
-.BI \-p " ADDRESS" "\fR,\fP \-\^\-printer=" ADDRESS
-IP address of the target printer.
-.TP
-.BI \-P " PRESET" "\fR,\fP \-\^\-preset=" PRESET
-Select a default preset.
-.TP
 .BR \-a ", " \-\^\-autofocus
 Enable auto focus.
 .TP
 .BI \-n " JOBNAME" "\fR,\fP \-\^\-job=" JOBNAME
 Set the job name to display.
+.TP
+.BI \-p " ADDRESS" "\fR,\fP \-\^\-printer=" ADDRESS
+IP address of the target printer.
+.TP
+.BI \-P " PRESET" "\fR,\fP \-\^\-preset=" PRESET
+Select a default preset.
 .SS RASTER OPTIONS
 .TP
 .BI \-d " DPI" "\fR,\fP \-\^\-dpi=" DPI
 Resolution of raster artwork.
 .TP
-.BI \-R " POWER" "\fR,\fP \-\^\-raster-power=" POWER
-Raster power (0-100).
+.BI \-m " MODE" "\fR,\fP \-\^\-mode=" MODE
+Mode for rasterization (default mono).
 .TP
 .BI \-r " SPEED" "\fR,\fP \-\^\-raster-speed=" SPEED
 Raster speed (0-100).
 .TP
-.BI \-m " MODE" "\fR,\fP \-\^\-mode=" MODE
-Mode for rasterization (default mono).
+.BI \-R " POWER" "\fR,\fP \-\^\-raster-power=" POWER
+Raster power (0-100).
 .TP
 .BI \-s " SIZE" "\fR,\fP \-\^\-screen-size=" SIZE
 Photograph screen size (default 8).
