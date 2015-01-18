@@ -49,13 +49,36 @@ The power level is scaled to the raster power setting.
 Unlike the windows driver which always 100% in this mode.
 .PP
 In colour mode, the primary and secondary colours are processed as separate
-passes, using the grey level of the colour as a power level.  The power level
-is scaled to the raster power setting as in the grey mode.  Note that red is
+passes, using the grey level of the colour as a power level. The power level
+is scaled to the raster power setting as in the grey mode. Note that red is
 100% red, and non 100% green and blue, etc, so 50% red, 0% green/blue is not
 counted as red, but counts as \*(lqgrey\*(rq. 100% red, and 50% green/blue
-counts as red, half power.  This means you can make distinct raster areas of
+counts as red, half power. This means you can make distinct raster areas of
 the page so that you do not waste time moving the head over blank space
 between them.
+.PP
+Vector is controlled by the options:
+.IR FREQUENCY ", " POWER ", and " SPEED "."
+.PP
+.I FREQUENCY
+controls the frequency of the laser.
+.\"#TODO: Figure out what this option really means (describe it to the user)
+.PP
+The
+.I POWER
+and
+.I SPEED
+settings take between one and three numeric arguments, separated by
+commas (e.g. 20,10). These correspond to the
+.I POWER
+and
+.I SPEED
+levels for the red, green, and blue values of the image. The colours are
+defined in the same manner as in the colour mode of the raster section
+above. The omitted values will be set to the value preceding it. If you set
+only the red value then green and blue will use that, if you set red and green
+then blue will use the green value.
+.B DO NOT COUNT ON THIS FUNCTIONALITY, IT WILL CHANGE IN THE FUTURE\fR.
 .
 .SH OPTIONS
 Mandatory arguments to long options are mandatory for short options too.
