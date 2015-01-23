@@ -61,8 +61,13 @@ Vector is controlled by the options:
 .IR FREQUENCY ", " POWER ", and " SPEED "."
 .PP
 .I FREQUENCY
-controls the frequency of the laser.
-.\"#TODO: Figure out what this option really means (describe it to the user)
+controls the duty cycle of the laser. It can be set from values between 10 and
+5000. The higher the value, the more often the laser pulses each second and
+how much energy is transferred to the material. A lower frequency, by merit of
+transferring less heat to the material, will cause less charring and require a
+higher power and lower speed to achieve the same depth of cut. Low frequencies
+will produce perforation instead of a continuous cut in thinner materials like
+paper.
 .PP
 The
 .I POWER
