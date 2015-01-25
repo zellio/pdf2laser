@@ -1250,13 +1250,11 @@ static void range_checks(void)
  * connect operation.
  * @return A socket descriptor to the printer.
  */
-static int
-printer_connect(const char *host, const int timeout)
+static int printer_connect(const char *host, const int timeout)
 {
 	int socket_descriptor = -1;
-	int i;
 
-	for (i = 0; i < timeout; i++) {
+	for (int i = 0; i < timeout; i++) {
 		struct addrinfo *res;
 		struct addrinfo *addr;
 		struct addrinfo base = { 0, PF_UNSPEC, SOCK_STREAM, 0, 0, NULL, NULL, NULL };
@@ -1274,8 +1272,7 @@ printer_connect(const char *host, const int timeout)
 				if (addr_in)
 					printf("trying to connect to %s:%d\n",
 						   inet_ntoa(addr_in->sin_addr),
-						   ntohs(addr_in->sin_port)
-						   );
+						   ntohs(addr_in->sin_port));
 
 				socket_descriptor = socket(addr->ai_family, addr->ai_socktype,
 										   addr->ai_protocol);
@@ -1291,9 +1288,9 @@ printer_connect(const char *host, const int timeout)
 			}
 			freeaddrinfo(res);
 		}
-		if (socket_descriptor >= 0) {
+
+		if (socket_descriptor >= 0)
 			break;
-		}
 
 		/* Sleep for a second then try again. */
 		sleep(1);
@@ -1302,8 +1299,10 @@ printer_connect(const char *host, const int timeout)
 		fprintf(stderr, "Cannot connect to %s\n", host);
 		return -1;
 	}
+
 	/* Disable the timeout alarm. */
 	alarm(0);
+
 	/* Return the newly opened socket descriptor */
 	return socket_descriptor;
 }
