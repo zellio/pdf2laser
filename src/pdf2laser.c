@@ -985,12 +985,8 @@ static bool generate_vector(FILE * const pjl_file, FILE * const vector_file)
 /**
  *
  */
-static bool
-generate_pjl(FILE *bitmap_file, FILE *pjl_file,
-			 FILE *vector_file)
+static bool generate_pjl(FILE *bitmap_file, FILE *pjl_file, FILE *vector_file)
 {
-	int i;
-
 	/* Print the printer job language header. */
 	fprintf(pjl_file, "\033%%-12345X@PJL JOB NAME=%s\r\n", job_title);
 	fprintf(pjl_file, "\033E@PJL ENTER LANGUAGE=PCL\r\n");
@@ -1018,7 +1014,6 @@ generate_pjl(FILE *bitmap_file, FILE *pjl_file,
 	 * information to the print job.
 	 */
 	if (raster_power && raster_mode != 'n') {
-
 		/* FIXME unknown purpose. */
 		fprintf(pjl_file, "\033&y0C");
 
@@ -1047,9 +1042,9 @@ generate_pjl(FILE *bitmap_file, FILE *pjl_file,
 	/* End job. */
 	fprintf(pjl_file, "@PJL EOJ \r\n");
 	/* Pad out the remainder of the file with 0 characters. */
-	for(i = 0; i < 4096; i++) {
+	for(int i = 0; i < 4096; i++)
 		fputc(0, pjl_file);
-	}
+
 	return true;
 }
 
