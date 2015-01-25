@@ -1314,11 +1314,11 @@ static int printer_connect(const char *host, const int timeout)
  * disconnected from.
  * @return True if the printer connection was successfully closed, false otherwise.
  */
-static bool
-printer_disconnect(int socket_descriptor)
+static bool printer_disconnect(int socket_descriptor)
 {
 	int error_code;
 	error_code = close(socket_descriptor);
+
 	/* Report on possible errors to standard error. */
 	if (error_code == -1) {
 		switch (errno) {
