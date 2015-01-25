@@ -1198,8 +1198,7 @@ static bool ps_to_eps(FILE *ps_file, FILE *eps_file)
  *
  * @return Nothing
  */
-static void
-range_checks(void)
+static void range_checks(void)
 {
 	if (raster_power > 100)
 		raster_power = 100;
@@ -1228,20 +1227,19 @@ range_checks(void)
 		if (vector_freq > 5000)
 			vector_freq = 5000;
 
-	for (int i = 0 ; i < VECTOR_PASSES ; i++)
-		{
-			if (vector_power[i] > 100)
-				vector_power[i] = 100;
-			else
-				if (vector_power[i] < 0)
-					vector_power[i] = 0;
+	for (int i = 0 ; i < VECTOR_PASSES ; i++) {
+		if (vector_power[i] > 100)
+			vector_power[i] = 100;
+		else
+			if (vector_power[i] < 0)
+				vector_power[i] = 0;
 
-			if (vector_speed[i] > 100)
-				vector_speed[i] = 100;
-			else
-				if (vector_speed[i] < 1)
-					vector_speed[i] = 1;
-		}
+		if (vector_speed[i] > 100)
+			vector_speed[i] = 100;
+		else
+			if (vector_speed[i] < 1)
+				vector_speed[i] = 1;
+	}
 }
 
 /**
