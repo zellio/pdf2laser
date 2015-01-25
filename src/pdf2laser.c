@@ -955,11 +955,7 @@ static void output_vector(FILE * const pjl_file, const vector_t *v)
 }
 
 
-static bool
-generate_vector(
-				FILE * const pjl_file,
-				FILE * const vector_file
-				)
+static bool generate_vector(FILE * const pjl_file, FILE * const vector_file)
 {
 	vectors_t * const vectors = vectors_parse(vector_file);
 
@@ -968,17 +964,16 @@ generate_vector(
 
 	// \note: step and repeat is no longer supported
 
-	for (int i = 0 ; i < VECTOR_PASSES ; i++)
-		{
-			if (do_vector_optimize)
-				vector_optimize(&vectors[i]);
+	for (int i = 0; i < VECTOR_PASSES; i++) {
+		if (do_vector_optimize)
+			vector_optimize(&vectors[i]);
 
-			const vector_t * v = vectors[i].vectors;
+		const vector_t * v = vectors[i].vectors;
 
-			fprintf(pjl_file, "YP%03d;", vector_power[i]);
-			fprintf(pjl_file, "ZS%03d", vector_speed[i]); // note: no ";"
-			output_vector(pjl_file, v);
-		}
+		fprintf(pjl_file, "YP%03d;", vector_power[i]);
+		fprintf(pjl_file, "ZS%03d", vector_speed[i]); // note: no ";"
+		output_vector(pjl_file, v);
+	}
 
 	fprintf(pjl_file, "\033%%0B"); // end HLGL
 	fprintf(pjl_file, "\033%%1BPU"); // start HLGL, pen up?
