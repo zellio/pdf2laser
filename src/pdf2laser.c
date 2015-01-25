@@ -824,42 +824,34 @@ static vectors_t *vectors_parse(FILE * const vector_file)
  * This might reverse a vector if it is closest to draw it in reverse
  * order.
  */
-static vector_t *
-vector_find_closest(
-					vector_t * v,
-					const int cx,
-					const int cy
-					)
+static vector_t *vector_find_closest(vector_t *v, const int cx, const int cy)
 {
 	long best_dist = LONG_MAX;
 	vector_t * best = NULL;
 	int do_reverse = 0;
 
-	while (v)
-		{
-			long dx1 = cx - v->x1;
-			long dy1 = cy - v->y1;
-			long dist1 = dx1*dx1 + dy1*dy1;
+	while (v) {
+		long dx1 = cx - v->x1;
+		long dy1 = cy - v->y1;
+		long dist1 = dx1*dx1 + dy1*dy1;
 
-			if (dist1 < best_dist)
-				{
-					best = v;
-					best_dist = dist1;
-					do_reverse = 0;
-				}
-
-			long dx2 = cx - v->x2;
-			long dy2 = cy - v->y2;
-			long dist2 = dx2*dx2 + dy2*dy2;
-			if (dist2 < best_dist)
-				{
-					best = v;
-					best_dist = dist2;
-					do_reverse = 1;
-				}
-
-			v = v->next;
+		if (dist1 < best_dist) {
+			best = v;
+			best_dist = dist1;
+			do_reverse = 0;
 		}
+
+		long dx2 = cx - v->x2;
+		long dy2 = cy - v->y2;
+		long dist2 = dx2*dx2 + dy2*dy2;
+		if (dist2 < best_dist) {
+			best = v;
+			best_dist = dist2;
+			do_reverse = 1;
+		}
+
+		v = v->next;
+	}
 
 	if (!best)
 		return NULL;
@@ -870,15 +862,14 @@ vector_find_closest(
 		best->next->prev = best->prev;
 
 	// If reversing is required, flip the x1/x2 and y1/y2
-	if (do_reverse)
-		{
-			int x1 = best->x1;
-			int y1 = best->y1;
-			best->x1 = best->x2;
-			best->y1 = best->y2;
-			best->x2 = x1;
-			best->y2 = y1;
-		}
+	if (do_reverse) {
+		int x1 = best->x1;
+		int y1 = best->y1;
+		best->x1 = best->x2;
+		best->y1 = best->y2;
+		best->x2 = x1;
+		best->y2 = y1;
+	}
 
 	best->next = NULL;
 	best->prev = NULL;
