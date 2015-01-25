@@ -1059,8 +1059,7 @@ static bool generate_pjl(FILE *bitmap_file, FILE *pjl_file, FILE *vector_file)
  *
  * @return Return true if the function completes its task, false otherwise.
  */
-static bool
-ps_to_eps(FILE *ps_file, FILE *eps_file)
+static bool ps_to_eps(FILE *ps_file, FILE *eps_file)
 {
 	int xoffset = 0;
 	int yoffset = 0;
@@ -1068,9 +1067,9 @@ ps_to_eps(FILE *ps_file, FILE *eps_file)
 	int l;
 	while (fgets((char *)buf, sizeof (buf), ps_file)) {
 		fprintf(eps_file, "%s", (char *)buf);
-		if (*buf != '%') {
+		if (*buf != '%')
 			break;
-		}
+
 		if (!strncasecmp((char *) buf, "%%PageBoundingBox:", 18)) {
 			int lower_left_x;
 			int lower_left_y;
@@ -1081,19 +1080,23 @@ ps_to_eps(FILE *ps_file, FILE *eps_file)
 					   &lower_left_y,
 					   &upper_right_x,
 					   &upper_right_y) == 4) {
+
 				xoffset = lower_left_x;
 				yoffset = lower_left_y;
+
 				width = (upper_right_x - lower_left_x);
 				height = (upper_right_y - lower_left_y);
+
 				fprintf(eps_file, "/setpagedevice{pop}def\n"); // use bbox
-				if (xoffset || yoffset) {
+
+				if (xoffset || yoffset)
 					fprintf(eps_file, "%d %d translate\n", -xoffset, -yoffset);
-				}
-				if (flip) {
+
+				if (flip)
 					fprintf(eps_file, "%d 0 translate -1 1 scale\n", width);
-				}
 			}
 		}
+
 		if (!strncasecmp((char *) buf, "%!", 2)) {
 			fprintf
 				(eps_file,
@@ -1161,6 +1164,7 @@ ps_to_eps(FILE *ps_file, FILE *eps_file)
 				 "}bind def"
 				 "/showpage {(X)= showpage}bind def"
 				 "\n");
+
 			if (raster_mode != 'c' && raster_mode != 'g') {
 				if (screen_size == 0) {
 					fprintf(eps_file, "{0.5 ge{1}{0}ifelse}settransfer\n");
@@ -1179,9 +1183,9 @@ ps_to_eps(FILE *ps_file, FILE *eps_file)
 			}
 		}
 	}
-	while ((l = fread ((char *) buf, 1, sizeof (buf), ps_file)) > 0) {
+	while ((l = fread ((char *) buf, 1, sizeof (buf), ps_file)) > 0)
 		fwrite ((char *) buf, 1, l, eps_file);
-	}
+
 	return true;
 }
 
