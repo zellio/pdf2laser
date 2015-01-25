@@ -1497,14 +1497,11 @@ static const struct option long_options[] = {
  * Handle the case where we have been given floating point values,
  * even though we only want to deal with integers.
  */
-static int
-vector_param_set(
-				 int * const values,
-				 const char * arg
-				 )
+static int vector_param_set(int * const values, const char *arg )
 {
 	double v[3] = { 0, 0, 0 };
 	int rc = sscanf(arg, "%lf,%lf,%lf", &v[0], &v[1], &v[2]);
+
 	if (rc < 1)
 		return -1;
 
@@ -1515,6 +1512,7 @@ vector_param_set(
 
 	if (rc <= 1)
 		values[1] = values[0];
+
 	if (rc <= 2)
 		values[2] = values[1];
 
