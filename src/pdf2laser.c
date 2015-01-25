@@ -627,10 +627,7 @@ generate_raster(FILE *pjl_file, FILE *bitmap_file)
 	return true;
 }
 
-static void
-vector_stats(
-			 vector_t * v
-			 )
+static void vector_stats(vector_t *v)
 {
 	int lx = 0;
 	int ly = 0;
@@ -640,45 +637,36 @@ vector_stats(
 	long transit_len_sum = 0;
 	int transits = 0;
 
-	while (v)
-		{
-			long t_dx = lx - v->x1;
-			long t_dy = ly - v->y1;
+	while (v) {
+		long t_dx = lx - v->x1;
+		long t_dy = ly - v->y1;
 
-			long transit_len = sqrt(t_dx * t_dx + t_dy * t_dy);
-			if (transit_len != 0)
-				{
-					transits++;
-					transit_len_sum += transit_len;
+		long transit_len = sqrt(t_dx * t_dx + t_dy * t_dy);
+		if (transit_len != 0) {
+			transits++;
+			transit_len_sum += transit_len;
 
-					if (0)
-						fprintf(stderr, "mov %8u %8u -> %8u %8u\n",
-								lx, ly,
-								v->x1, v->y1
-								);
-				}
-
-			long c_dx = v->x1 - v->x2;
-			long c_dy = v->y1 - v->y2;
-
-			long cut_len = sqrt(c_dx*c_dx + c_dy*c_dy);
-			if (cut_len != 0)
-				{
-					cuts++;
-					cut_len_sum += cut_len;
-
-					if (0)
-						fprintf(stderr, "cut %8u %8u -> %8u %8u\n",
-								v->x1, v->y1,
-								v->x2, v->y2
-								);
-				}
-
-			// Advance the point
-			lx = v->x2;
-			ly = v->y2;
-			v = v->next;
+			if (0)
+				fprintf(stderr, "mov %8u %8u -> %8u %8u\n", lx, ly, v->x1, v->y1);
 		}
+
+		long c_dx = v->x1 - v->x2;
+		long c_dy = v->y1 - v->y2;
+
+		long cut_len = sqrt(c_dx*c_dx + c_dy*c_dy);
+		if (cut_len != 0) {
+			cuts++;
+			cut_len_sum += cut_len;
+
+			if (0)
+				fprintf(stderr, "cut %8u %8u -> %8u %8u\n", v->x1, v->y1, v->x2, v->y2);
+		}
+
+		// Advance the point
+		lx = v->x2;
+		ly = v->y2;
+		v = v->next;
+	}
 
 	printf("Cuts: %u len %lu\n", cuts, cut_len_sum);
 	printf("Move: %u len %lu\n", transits, transit_len_sum);
