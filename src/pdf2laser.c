@@ -347,32 +347,29 @@ static bool execute_ghostscript(const char * const filename_bitmap,
 /**
  *
  */
-static bool
-generate_raster(FILE *pjl_file, FILE *bitmap_file)
+static bool generate_raster(FILE *pjl_file, FILE *bitmap_file)
 {
 	const int invert = 0;
 	int h;
 	int d;
-	int offx;
-	int offy;
 	int basex = 0;
 	int basey = 0;
 	int repeat;
 
 	uint8_t bitmap_header[BITMAP_HEADER_NBYTES];
 
-	if (x_center) {
+	if (x_center)
 		basex = x_center - width / 2;
-	}
-	if (y_center) {
+
+	if (y_center)
 		basey = y_center - height / 2;
-	}
-	if (basex < 0) {
+
+	if (basex < 0)
 		basex = 0;
-	}
-	if (basey < 0) {
+
+	if (basey < 0)
 		basey = 0;
-	}
+
 	// rasterises
 	basex = basex * resolution / POINTS_PER_INCH;
 	basey = basey * resolution / POINTS_PER_INCH;
@@ -380,13 +377,10 @@ generate_raster(FILE *pjl_file, FILE *bitmap_file)
 	repeat = raster_repeat;
 	while (repeat--) {
 		/* repeated (over printed) */
-		int pass;
-		int passes;
 		long base_offset;
+		int passes = 1;
 		if (raster_mode == 'c') {
 			passes = 7;
-		} else {
-			passes = 1;
 		}
 
 		/* Read in the bitmap header. */
@@ -404,7 +398,6 @@ generate_raster(FILE *pjl_file, FILE *bitmap_file)
 		/* Bytes 10 - 13 base offset for the beginning of the bitmap data. */
 		base_offset = big_to_little_endian(bitmap_header + 10, 4);
 
-
 		if (raster_mode == 'c' || raster_mode == 'g') {
 			/* colour/grey are byte per pixel power levels */
 			h = width;
@@ -416,13 +409,13 @@ generate_raster(FILE *pjl_file, FILE *bitmap_file)
 			/* BMP padded to 4 bytes per scan line */
 			d = (h + 3) / 4 * 4;
 		}
-		if (debug) {
-			printf("Width %d Height %d Bytes %d Line %d\n",
-				   width, height, h, d);
-		}
+
+		if (debug)
+			printf("Width %d Height %d Bytes %d Line %d\n", width, height, h, d);
 
 		/* Raster Orientation */
 		fprintf(pjl_file, "\033*r0F");
+
 		/* Raster power -- color and gray scaled before, but scale with the user provided power */
 		fprintf(pjl_file, "\033&y%dP", raster_power);
 
@@ -446,98 +439,92 @@ generate_raster(FILE *pjl_file, FILE *bitmap_file)
 
 		/* start at current position */
 		fprintf(pjl_file, "\033*r1A");
-		for (offx = width * (x_repeat - 1); offx >= 0; offx -= width) {
-			for (offy = height * (y_repeat - 1); offy >= 0; offy -= height) {
-				for (pass = 0; pass < passes; pass++) {
+		for (int offx = width * (x_repeat - 1); offx >= 0; offx -= width) {
+			for (int offy = height * (y_repeat - 1); offy >= 0; offy -= height) {
+				for (int pass = 0; pass < passes; pass++) {
 					// raster (basic)
-					int y;
 					char dir = 0;
 
 					fseek(bitmap_file, base_offset, SEEK_SET);
-					for (y = height - 1; y >= 0; y--) {
+					for (int y = height - 1; y >= 0; y--) {
 						int l;
 
 						switch (raster_mode) {
-						case 'c':      // colour (passes)
-							{
-								unsigned char *f = (unsigned char *) buf;
-								unsigned char *t = (unsigned char *) buf;
-								if (d > (int) sizeof (buf)) {
-									perror("Too wide");
-									return false;
-								}
-								l = fread ((char *)buf, 1, d, bitmap_file);
-								if (l != d) {
-									fprintf(stderr, "Bad bit data from gs %d/%d (y=%d)\n", l, d, y);
-									return false;
-								}
-								while (l--) {
-									// pack and pass check RGB
-									int n = 0;
-									int v = 0;
-									int p = 0;
-									int c = 0;
-									for (c = 0; c < 3; c++) {
-										if (*f > 240) {
-											p |= (1 << c);
-										} else {
-											n++;
-											v += *f;
-										}
-										f++;
-									}
-									if (n) {
-										v /= n;
+						case 'c': {      // colour (passes)
+							unsigned char *f = (unsigned char *) buf;
+							unsigned char *t = (unsigned char *) buf;
+							if (d > (int) sizeof (buf)) {
+								perror("Too wide");
+								return false;
+							}
+							l = fread ((char *)buf, 1, d, bitmap_file);
+							if (l != d) {
+								fprintf(stderr, "Bad bit data from gs %d/%d (y=%d)\n", l, d, y);
+								return false;
+							}
+							while (l--) {
+								// pack and pass check RGB
+								int n = 0;
+								int v = 0;
+								int p = 0;
+								int c = 0;
+								for (c = 0; c < 3; c++) {
+									if (*f > 240) {
+										p |= (1 << c);
 									} else {
-										p = 0;
-										v = 255;
+										n++;
+										v += *f;
 									}
-									if (p != pass) {
-										v = 255;
-									}
-									*t++ = 255 - v;
+									f++;
 								}
+								if (n) {
+									v /= n;
+								} else {
+									p = 0;
+									v = 255;
+								}
+								if (p != pass) {
+									v = 255;
+								}
+								*t++ = 255 - v;
 							}
+						}
 							break;
-						case 'g':      // grey level
-							{
-								/* BMP padded to 4 bytes per scan line */
-								int d = (h + 3) / 4 * 4;
-								if (d > (int) sizeof (buf)) {
-									fprintf(stderr, "Too wide\n");
-									return false;
-								}
-								l = fread((char *)buf, 1, d, bitmap_file);
-								if (l != d) {
-									fprintf (stderr, "Bad bit data from gs %d/%d (y=%d)\n", l, d, y);
-									return false;
-								}
-								for (l = 0; l < h; l++) {
-									if (invert)
-										buf[l] = (uint8_t) buf[l];
-									else
-										buf[l] = (255 - (uint8_t)buf[l]);
-								}
+						case 'g': {      // grey level
+							/* BMP padded to 4 bytes per scan line */
+							int d = (h + 3) / 4 * 4;
+							if (d > (int) sizeof (buf)) {
+								fprintf(stderr, "Too wide\n");
+								return false;
 							}
+							l = fread((char *)buf, 1, d, bitmap_file);
+							if (l != d) {
+								fprintf (stderr, "Bad bit data from gs %d/%d (y=%d)\n", l, d, y);
+								return false;
+							}
+							for (l = 0; l < h; l++) {
+								if (invert)
+									buf[l] = (uint8_t) buf[l];
+								else
+									buf[l] = (255 - (uint8_t)buf[l]);
+							}
+						}
 							break;
-						default:       // mono
-							{
-								static int i;
-								if (i++==0)
-									printf("mono\n");
-								int d = (h + 3) / 4 * 4;  // BMP padded to 4 bytes per scan line
-								if (d > (int) sizeof (buf))
-									{
-										perror("Too wide");
-										return false;
-									}
-								l = fread((char *) buf, 1, d, bitmap_file);
-								if (l != d)
-									{
-										fprintf(stderr, "Bad bit data from gs %d/%d (y=%d)\n", l, d, y);
-										return false;
-									}
+						default: {       // mono
+							static int i;
+							if (i++==0)
+								printf("mono\n");
+							int d = (h + 3) / 4 * 4;  // BMP padded to 4 bytes per scan line
+							if (d > (int) sizeof (buf)) {
+								perror("Too wide");
+								return false;
 							}
+							l = fread((char *) buf, 1, d, bitmap_file);
+							if (l != d) {
+								fprintf(stderr, "Bad bit data from gs %d/%d (y=%d)\n", l, d, y);
+								return false;
+							}
+						}
 						}
 
 						if (raster_mode == 'c' || raster_mode == 'g') {
@@ -550,18 +537,17 @@ generate_raster(FILE *pjl_file, FILE *bitmap_file)
 						}
 
 						/* find left/right of data */
-						for (l = 0; l < h && !buf[l]; l++) {
+						for (l = 0; l < h && !buf[l]; l++)
 							;
-						}
 
 						if (l < h) {
 							/* a line to print */
 							int r;
 							int n;
 							unsigned char pack[sizeof (buf) * 5 / 4 + 1];
-							for (r = h - 1; r > l && !buf[r]; r--) {
+							for (r = h - 1; r > l && !buf[r]; r--)
 								;
-							}
+
 							r++;
 							fprintf(pjl_file, "\033*p%dY", basey + offy + y);
 							fprintf(pjl_file, "\033*p%dX", basex + offx +
@@ -582,8 +568,7 @@ generate_raster(FILE *pjl_file, FILE *bitmap_file)
 							n = 0;
 							while (l < r) {
 								int p;
-								for (p = l; p < r && p < l + 128 && buf[p]
-										 == buf[l]; p++) {
+								for (p = l; p < r && p < l + 128 && buf[p] == buf[l]; p++) {
 									;
 								}
 								if (p - l >= 2) {
@@ -610,20 +595,21 @@ generate_raster(FILE *pjl_file, FILE *bitmap_file)
 							r = 0;
 							while (r < n)
 								fputc(pack[r++], pjl_file);
-							while (r & 7)
-								{
+							while (r & 7) {
 									r++;
 									fputc(0x80, pjl_file);
-								}
+							}
 						}
 					}
 				}
 			}
 		}
+
 		fprintf(pjl_file, "\033*rC");       // end raster
 		fputc(26, pjl_file);      // some end of file markers
 		fputc(4, pjl_file);
 	}
+
 	return true;
 }
 
