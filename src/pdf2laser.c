@@ -1254,7 +1254,8 @@ static int printer_connect(const char *host, const int timeout)
 {
 	int socket_descriptor = -1;
 
-	for (int i = 0; i < timeout; i++) {
+	int i;
+	for (i = 0; i < timeout; i++) {
 		struct addrinfo *res;
 		struct addrinfo *addr;
 		struct addrinfo base = { 0, PF_UNSPEC, SOCK_STREAM, 0, 0, NULL, NULL, NULL };
@@ -1295,6 +1296,7 @@ static int printer_connect(const char *host, const int timeout)
 		/* Sleep for a second then try again. */
 		sleep(1);
 	}
+
 	if (i >= timeout) {
 		fprintf(stderr, "Cannot connect to %s\n", host);
 		return -1;
