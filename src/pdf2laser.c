@@ -924,45 +924,31 @@ static int vector_optimize(vectors_t * const vectors)
 }
 
 
-static void
-output_vector(
-			  FILE * const pjl_file,
-			  const vector_t * v
-			  )
+static void output_vector(FILE * const pjl_file, const vector_t *v)
 {
 	int lx = 0;
 	int ly = 0;
 
-	while (v)
-		{
-			if (v->x1 != lx || v->y1 != ly)
-				{
-					// Stop the laser; we need to transit
-					// and then start the laser as we go to
-					// the next point.  Note initial ";"
-					fprintf(pjl_file, ";PU%d,%d;PD%d,%d",
-							v->y1,
-							v->x1,
-							v->y2,
-							v->x2
-							);
-				} else {
-				// This is the continuation of a line, so
-				// just add additional points
-				fprintf(pjl_file, ",%d,%d",
-						v->y2,
-						v->x2
-						);
-			}
-
-			// Changing power on the fly is not supported for now
-			// \todo: Check v->power and adjust ZS, XR, etc
-
-			// Move to the next vector, updating our current point
-			lx = v->x2;
-			ly = v->y2;
-			v = v->next;
+	while (v) {
+		if (v->x1 != lx || v->y1 != ly) {
+			// Stop the laser; we need to transit
+			// and then start the laser as we go to
+			// the next point.  Note initial ";"
+			fprintf(pjl_file, ";PU%d,%d;PD%d,%d", v->y1, v->x1, v->y2, v->x2);
+		} else {
+			// This is the continuation of a line, so
+			// just add additional points
+			fprintf(pjl_file, ",%d,%d", v->y2, v->x2);
 		}
+
+		// Changing power on the fly is not supported for now
+		// \todo: Check v->power and adjust ZS, XR, etc
+
+		// Move to the next vector, updating our current point
+		lx = v->x2;
+		ly = v->y2;
+		v = v->next;
+	}
 
 	// Stop the laser (note initial ";")
 	fprintf(pjl_file, ";PU;");
