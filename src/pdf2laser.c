@@ -294,14 +294,11 @@ static int big_to_little_endian(uint8_t *position, int nbytes)
  * @return Return true if the execution of ghostscript succeeds, false
  * otherwise.
  */
-static bool
-execute_ghostscript(
-					const char * const filename_bitmap,
-					const char * const filename_eps,
-					const char * const filename_vector,
-					const char * const bmp_mode,
-					int resolution
-					)
+static bool execute_ghostscript(const char * const filename_bitmap,
+								const char * const filename_eps,
+								const char * const filename_vector,
+								const char * const bmp_mode,
+								int resolution)
 {
 	char buf[8192];
 	snprintf(buf, sizeof(buf),
@@ -319,8 +316,7 @@ execute_ghostscript(
 			 bmp_mode,
 			 filename_bitmap,
 			 filename_eps,
-			 filename_vector
-			 );
+			 filename_vector);
 
 	if (debug)
 		printf("Executing: %s\n", buf);
