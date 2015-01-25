@@ -1529,49 +1529,46 @@ static int vector_param_set(int * const values, const char *arg )
  * @return An integer where 0 represents successful termination, any other
  * value represents an error code.
  */
-int
-main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
 	const char * host = "192.168.1.4";
 
-	while (1)
-		{
-			const char ch = getopt_long(
-										argc,
-										argv,
-										"Dp:P:n:d:r:R:v:V:g:G:b:B:m:f:s:aO:h",
-										long_options,
-										NULL
-										);
-			if (ch <= 0 )
-				break;
-			switch(ch)
-				{
-				case 'D': debug++; break;
-				case 'p': host = optarg; break;
-				case 'P': usage(EXIT_FAILURE, "Presets are not supported yet\n"); break;
-				case 'n': job_name = optarg; break;
-				case 'd': resolution = atoi(optarg); break;
-				case 'r': raster_speed = atoi(optarg); break;
-				case 'R': raster_power = atoi(optarg); break;
-				case 'v':
-					if (vector_param_set(vector_speed, optarg) < 0)
-						usage(EXIT_FAILURE, "unable to parse vector-speed");
-					break;
-				case 'V':
-					if (vector_param_set(vector_power, optarg) < 0)
-						usage(EXIT_FAILURE, "unable to parse vector-power");
-					break;
-				case 'm': raster_mode = tolower(*optarg); break;
-				case 'f': vector_freq = atoi(optarg); break;
-				case 's': screen_size = atoi(optarg); break;
-				case 'a': focus = AUTO_FOCUS; break;
-				case 'O': do_vector_optimize = 0; break;
-				case 'h': usage(EXIT_SUCCESS, ""); break;
-				case '@': fprintf(stdout, "%s\n", VERSION); exit(0); break;
-				default: usage(EXIT_FAILURE, "Unknown argument\n"); break;
-				}
+	while (1) {
+		const char ch = getopt_long(argc,
+									argv,
+									"Dp:P:n:d:r:R:v:V:g:G:b:B:m:f:s:aO:h",
+									long_options,
+									NULL
+									);
+		if (ch <= 0 )
+			break;
+
+		switch(ch) {
+		case 'D': debug++; break;
+		case 'p': host = optarg; break;
+		case 'P': usage(EXIT_FAILURE, "Presets are not supported yet\n"); break;
+		case 'n': job_name = optarg; break;
+		case 'd': resolution = atoi(optarg); break;
+		case 'r': raster_speed = atoi(optarg); break;
+		case 'R': raster_power = atoi(optarg); break;
+		case 'v':
+			if (vector_param_set(vector_speed, optarg) < 0)
+				usage(EXIT_FAILURE, "unable to parse vector-speed");
+			break;
+		case 'V':
+			if (vector_param_set(vector_power, optarg) < 0)
+				usage(EXIT_FAILURE, "unable to parse vector-power");
+			break;
+		case 'm': raster_mode = tolower(*optarg); break;
+		case 'f': vector_freq = atoi(optarg); break;
+		case 's': screen_size = atoi(optarg); break;
+		case 'a': focus = AUTO_FOCUS; break;
+		case 'O': do_vector_optimize = 0; break;
+		case 'h': usage(EXIT_SUCCESS, ""); break;
+		case '@': fprintf(stdout, "%s\n", VERSION); exit(0); break;
+		default: usage(EXIT_FAILURE, "Unknown argument\n"); break;
 		}
+	}
 
 	/* Perform a check over the global values to ensure that they have values
 	 * that are within a tolerated range.
@@ -1586,12 +1583,11 @@ main(int argc, char *argv[])
 	argv += optind;
 
 	// If they did not specify a user, get their name
-	if (!job_user)
-		{
-			uid_t uid = getuid();
-			struct passwd * pw = getpwuid(uid);
-			job_user = strdup(pw->pw_name);
-		}
+	if (!job_user) {
+		uid_t uid = getuid();
+		struct passwd * pw = getpwuid(uid);
+		job_user = strdup(pw->pw_name);
+	}
 
 	// If there is an argument after, there must be only one
 	// and it will be the input postcript / pdf
@@ -1602,14 +1598,13 @@ main(int argc, char *argv[])
 
 	// If no job name is specified, use just the filename if there
 	// are any / in the name.
-	if (!job_name)
-		{
-			job_name = strrchr(filename, '/');
-			if (!job_name)
-				job_name = filename;
-			else
-				job_name++; // skip the /
-		}
+	if (!job_name) {
+		job_name = strrchr(filename, '/');
+		if (!job_name)
+			job_name = filename;
+		else
+			job_name++; // skip the /
+	}
 
 	job_title = job_name;
 
@@ -1617,15 +1612,13 @@ main(int argc, char *argv[])
 	 * specified as a command line argument.
 	 */
 	FILE * file_cups = argc ? fopen(filename, "r") : stdin;
-	if (!file_cups)
-		{
-			perror(filename);
-			exit(EXIT_FAILURE);
-		}
+	if (!file_cups) {
+		perror(filename);
+		exit(EXIT_FAILURE);
+	}
 
 	// Report the settings on stdout
-	printf(
-		   "Job: %s (%s)\n"
+	printf("Job: %s (%s)\n"
 		   "Raster: speed=%d power=%d dpi=%d\n"
 		   "Vector: freq=%d speed=%d,%d,%d power=%d,%d,%d\n"
 		   "",
@@ -1640,8 +1633,7 @@ main(int argc, char *argv[])
 		   vector_speed[2],
 		   vector_power[0],
 		   vector_power[1],
-		   vector_power[2]
-		   );
+		   vector_power[2]);
 
 
 	/* Strings designating filenames. */
@@ -1672,7 +1664,6 @@ main(int argc, char *argv[])
 	FILE *file_pjl;
 	FILE *file_vector;
 
-
 	/* Check whether the incoming data is ps or pdf data. */
 	fread((char *)buf, 1, 4, file_cups);
 	rewind(file_cups);
@@ -1690,9 +1681,8 @@ main(int argc, char *argv[])
 		}
 
 		/* Write the cups data out to the file_pdf. */
-		while ((l = fread((char *)buf, 1, sizeof(buf), file_cups)) > 0) {
+		while ((l = fread((char *)buf, 1, sizeof(buf), file_cups)) > 0)
 			fwrite((char *)buf, 1, l, file_pdf);
-		}
 
 		fclose(file_cups);
 		fclose(file_pdf);
@@ -1705,6 +1695,7 @@ main(int argc, char *argv[])
 		if (debug) {
 			printf("executing: %s\n", buf);
 		}
+
 		if (system(buf)) {
 			fprintf(stderr, "Failure to execute pdf2ps. Quitting...");
 			return 1;
@@ -1730,6 +1721,7 @@ main(int argc, char *argv[])
 		perror(filename_eps);
 		return 1;
 	}
+
 	/* Convert postscript to encapsulated postscript. */
 	if (!ps_to_eps(file_ps, file_eps)) {
 		perror("Error converting postscript to encapsulated postscript.");
@@ -1751,13 +1743,11 @@ main(int argc, char *argv[])
 		raster_mode == 'g' ? "bmpgray" :
 		"bmpmono";
 
-	if(!execute_ghostscript(
-							filename_bitmap,
+	if(!execute_ghostscript(filename_bitmap,
 							filename_eps,
 							filename_vector,
 							raster_string,
-							resolution
-							)) {
+							resolution )) {
 		perror("Failure to execute ghostscript command.\n");
 		return 1;
 	}
@@ -1772,12 +1762,14 @@ main(int argc, char *argv[])
 		perror(filename_pjl);
 		return 1;
 	}
+
 	/* Execute the generation of the printer job language (pjl) file. */
 	if (!generate_pjl(file_bitmap, file_pjl, file_vector)) {
 		perror("Generation of pjl file failed.\n");
 		fclose(file_pjl);
 		return 1;
 	}
+
 	/* Close open file handles. */
 	fclose(file_bitmap);
 	fclose(file_pjl);
@@ -1802,11 +1794,13 @@ main(int argc, char *argv[])
 		perror(filename_pjl);
 		return 1;
 	}
+
 	/* Send print job to printer. */
 	if (!printer_send(host, file_pjl)) {
 		perror("Could not send pjl file to printer.\n");
 		return 1;
 	}
+
 	fclose(file_pjl);
 	if (!debug) {
 		if (unlink(filename_pjl)) {
