@@ -1345,14 +1345,14 @@ static bool printer_disconnect(int socket_descriptor)
 /**
  *
  */
-static bool
-printer_send(const char *host, FILE *pjl_file)
+static bool printer_send(const char *host, FILE *pjl_file)
 {
 	char localhost[HOSTNAME_NCHARS] = "";
 	unsigned char lpdres;
 	int socket_descriptor = -1;
 
 	gethostname(localhost, sizeof(localhost));
+
 	{
 		char *d = strchr(localhost, '.');
 		if (d) {
@@ -1377,6 +1377,7 @@ printer_send(const char *host, FILE *pjl_file)
 		fprintf (stderr, "Bad response from %s, %u\n", host, lpdres);
 		return false;
 	}
+
 	sprintf(buf, "H%s\n", localhost);
 	sprintf(buf + strlen(buf) + 1, "P%s\n", job_user);
 	sprintf(buf + strlen(buf) + 1, "J%s\n", job_title);
@@ -1384,6 +1385,7 @@ printer_send(const char *host, FILE *pjl_file)
 	sprintf(buf + strlen(buf) + 1, "UdfA%s%s\n", job_name, localhost);
 	sprintf(buf + strlen(buf) + 1, "N%s\n", job_title);
 	sprintf(buf + strlen(buf) + 1, "\002%d cfA%s%s\n", (int)strlen(buf), job_name, localhost);
+
 	write(socket_descriptor, buf + strlen(buf) + 1, strlen(buf + strlen(buf) + 1));
 
 	read(socket_descriptor, &lpdres, 1);
@@ -1391,12 +1393,15 @@ printer_send(const char *host, FILE *pjl_file)
 		fprintf(stderr, "Bad response from %s, %u\n", host, lpdres);
 		return false;
 	}
+
 	write(socket_descriptor, (char *)buf, strlen(buf) + 1);
 	read(socket_descriptor, &lpdres, 1);
+
 	if (lpdres) {
 		fprintf(stderr, "Bad response from %s, %u\n", host, lpdres);
 		return false;
 	}
+
 	{
 		{
 			struct stat file_stat;
@@ -1404,24 +1409,29 @@ printer_send(const char *host, FILE *pjl_file)
 				perror(buf);
 				return false;
 			}
-			sprintf((char *) buf, "\003%u dfA%s%s\n", (int) file_stat.st_size, job_name, localhost);
-			printf("job '%s': size %u\n", job_name, (int) file_stat.st_size);
+			sprintf((char*)buf, "\003%u dfA%s%s\n", (int)file_stat.st_size, job_name, localhost);
+			printf("job '%s': size %u\n", job_name, (int)file_stat.st_size);
 		}
+
 		write(socket_descriptor, (char *)buf, strlen(buf));
 		read(socket_descriptor, &lpdres, 1);
+
 		if (lpdres) {
 			fprintf(stderr, "Bad response from %s, %u\n", host, lpdres);
 			return false;
 		}
+
 		{
 			int l;
-			while ((l = fread((char *)buf, 1, sizeof (buf), pjl_file)) > 0) {
+			while ((l = fread((char*)buf, 1, sizeof (buf), pjl_file)) > 0) {
 				write(socket_descriptor, buf, l);
 			}
 		}
 	}
+
 	// dont wait for a response...
 	printer_disconnect(socket_descriptor);
+
 	return true;
 }
 
