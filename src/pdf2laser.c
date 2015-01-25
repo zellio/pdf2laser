@@ -268,15 +268,13 @@ static bool printer_send(const char *host, FILE *pjl_file);
  * @return An integer containing the little endian value of the successive
  * bytes.
  */
-static int
-big_to_little_endian(uint8_t *position, int nbytes)
+static int big_to_little_endian(uint8_t *position, int nbytes)
 {
-	int i;
 	int result = 0;
 
-	for (i = 0; i < nbytes; i++) {
+	for (int i = 0; i < nbytes; i++)
 		result += *(position + i) << (8 * i);
-	}
+
 	return result;
 }
 
