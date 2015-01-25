@@ -158,6 +158,22 @@
  * local types
  */
 
+typedef struct _vector vector_t;
+struct _vector {
+	vector_t * next;
+	vector_t ** prev;
+	int x1;
+	int y1;
+	int x2;
+	int y2;
+	int p;
+};
+
+typedef struct _vectors vectors_t ;
+struct _vectors {
+	vector_t *vectors;
+};
+
 
 /*************************************************************************
  * local variables
@@ -610,26 +626,6 @@ generate_raster(FILE *pjl_file, FILE *bitmap_file)
 	}
 	return true;
 }
-
-
-typedef struct _vector vector_t;
-struct _vector
-{
-	vector_t * next;
-	vector_t ** prev;
-	int x1;
-	int y1;
-	int x2;
-	int y2;
-	int p;
-};
-
-
-typedef struct
-{
-	vector_t * vectors;
-} vectors_t;
-
 
 static void
 vector_stats(
