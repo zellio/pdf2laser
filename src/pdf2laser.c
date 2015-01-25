@@ -886,37 +886,32 @@ static vector_t *vector_find_closest(vector_t *v, const int cx, const int cy)
  *
  * This does not split vectors.
  */
-static int
-vector_optimize(
-				vectors_t * const vectors
-				)
+static int vector_optimize(vectors_t * const vectors)
 {
 	int cx = 0;
 	int cy = 0;
 
-	vector_t * vs = NULL;
-	vector_t * vs_tail = NULL;
+	vector_t *vs = NULL;
+	vector_t *vs_tail = NULL;
 
-	while (vectors->vectors)
-		{
-			vector_t * v = vector_find_closest(vectors->vectors, cx, cy);
+	while (vectors->vectors) {
+		vector_t *v = vector_find_closest(vectors->vectors, cx, cy);
 
-			if (!vs)
-				{
-					// Nothing on the list yet
-					vs = vs_tail = v;
-				} else {
-				// Add it to the tail of the list
-				v->next = NULL;
-				v->prev = &vs_tail->next;
-				vs_tail->next = v;
-				vs_tail = v;
-			}
-
-			// Move the current point to the end of the line segment
-			cx = v->x2;
-			cy = v->y2;
+		if (!vs) {
+			// Nothing on the list yet
+			vs = vs_tail = v;
+		} else {
+			// Add it to the tail of the list
+			v->next = NULL;
+			v->prev = &vs_tail->next;
+			vs_tail->next = v;
+			vs_tail = v;
 		}
+
+		// Move the current point to the end of the line segment
+		cx = v->x2;
+		cy = v->y2;
+	}
 
 	vector_stats(vs);
 
