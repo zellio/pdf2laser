@@ -733,10 +733,7 @@ static void vector_create(vectors_t * const vectors,
  *
  * Exact duplictes will be deleted to try to avoid double hits..
  */
-static vectors_t *
-vectors_parse(
-			  FILE * const vector_file
-			  )
+static vectors_t *vectors_parse(FILE * const vector_file)
 {
 	vectors_t * const vectors = calloc(VECTOR_PASSES, sizeof(*vectors));
 	int mx = 0, my = 0;
@@ -747,83 +744,76 @@ vectors_parse(
 
 	char buf[256];
 
-	while (fgets(buf, sizeof(buf), vector_file))
-		{
-			//fprintf(stderr, "read '%s'\n", buf);
-			const char cmd = buf[0];
-			int x, y;
+	while (fgets(buf, sizeof(buf), vector_file)) {
+		//fprintf(stderr, "read '%s'\n", buf);
+		const char cmd = buf[0];
+		int x, y;
 
-			switch (cmd)
-				{
-				case 'P':
-					{
-						// note that they will be in bgr order in the file
-						int r, g, b;
-						sscanf(buf+1, ",%d,%d,%d", &b, &g, &r);
-						if (r == 0 && g != 0 && b == 0)
-							{
-								pass = 0;
-								power = g;
-							} else
-							if (r != 0 && g == 0 && b == 0)
-								{
-									pass = 1;
-									power = r;
-								} else
-								if (r == 0 && g == 0 && b != 0)
-									{
-										pass = 2;
-										power = b;
-									} else {
-									fprintf(stderr, "non-red/green/blue vector? %d,%d,%d\n", r, g, b);
-									exit(-1);
-								}
-						break;
+		switch (cmd) {
+		case 'P': {
+			// note that they will be in bgr order in the file
+			int r, g, b;
+			sscanf(buf + 1, ",%d,%d,%d", &b, &g, &r);
+			if (r == 0 && g != 0 && b == 0) {
+				pass = 0;
+				power = g;
+			} else
+				if (r != 0 && g == 0 && b == 0) {
+					pass = 1;
+					power = r;
+				} else {
+					if (r == 0 && g == 0 && b != 0) {
+						pass = 2;
+						power = b;
+					} else {
+						fprintf(stderr, "non-red/green/blue vector? %d,%d,%d\n", r, g, b);
+						exit(-1);
 					}
-				case 'M':
-					// Start a new line.
-					// This also implicitly sets the
-					// current laser position
-					sscanf(buf+1, "%d,%d", &mx, &my);
-					lx = mx;
-					ly = my;
-					break;
-				case 'L':
-					// Add a line segment from the current
-					// point to the new point, and update
-					// the current point to the new point.
-					sscanf(buf+1, "%d,%d", &x, &y);
-					vector_create(&vectors[pass], power, lx, ly, x, y);
-					count++;
-					lx = x;
-					ly = y;
-					break;
-				case 'C':
-					// Closing segment from the current point
-					// back to the starting point
-					vector_create(&vectors[pass], power, lx, ly, mx, my);
-					lx = mx;
-					lx = my;
-					break;
-				case 'X':
-					goto done;
-				default:
-					fprintf(stderr, "Unknown command '%c'", cmd);
-					return NULL;
 				}
+			break;
 		}
+		case 'M':
+			// Start a new line.
+			// This also implicitly sets the
+			// current laser position
+			sscanf(buf+1, "%d,%d", &mx, &my);
+			lx = mx;
+			ly = my;
+			break;
+		case 'L':
+			// Add a line segment from the current
+			// point to the new point, and update
+			// the current point to the new point.
+			sscanf(buf+1, "%d,%d", &x, &y);
+			vector_create(&vectors[pass], power, lx, ly, x, y);
+			count++;
+			lx = x;
+			ly = y;
+			break;
+		case 'C':
+			// Closing segment from the current point
+			// back to the starting point
+			vector_create(&vectors[pass], power, lx, ly, mx, my);
+			lx = mx;
+			lx = my;
+			break;
+		case 'X':
+			goto done;
+		default:
+			fprintf(stderr, "Unknown command '%c'", cmd);
+			return NULL;
+		}
+	}
 
  done:
 	printf("read %u segments\n", count);
-	for (int i = 0 ; i < VECTOR_PASSES ; i++)
-		{
-			printf("Vector pass %d: power=%d speed=%d\n",
-				   i,
-				   vector_power[i],
-				   vector_speed[i]
-				   );
-			vector_stats(vectors[i].vectors);
-		}
+	for (int i = 0 ; i < VECTOR_PASSES ; i++) {
+		printf("Vector pass %d: power=%d speed=%d\n",
+			   i,
+			   vector_power[i],
+			   vector_speed[i]);
+		vector_stats(vectors[i].vectors);
+	}
 
 	return vectors;
 }
