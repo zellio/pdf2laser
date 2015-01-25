@@ -673,38 +673,33 @@ static void vector_stats(vector_t *v)
 }
 
 
-static void
-vector_create(
-			  vectors_t * const vectors,
-			  int power,
-			  int x1,
-			  int y1,
-			  int x2,
-			  int y2
-			  )
+static void vector_create(vectors_t * const vectors,
+						  int power,
+						  int x1,
+						  int y1,
+						  int x2,
+						  int y2)
 {
 	// Find the end of the list and, if vector optimization is
 	// turned on, check for duplicates
 	vector_t ** iter = &vectors->vectors;
-	while (*iter)
-		{
-			vector_t * const p = *iter;
+	while (*iter) {
+		vector_t * const p = *iter;
 
-			if (do_vector_optimize)
-				{
-					if (p->x1 == x1 && p->y1 == y1
-						&&  p->x2 == x2 && p->y2 == y2)
-						return;
-					if (p->x1 == x2 && p->y1 == y2
-						&&  p->x2 == x1 && p->y2 == y1)
-						return;
-					if (x1 == x2
-						&&  y1 == y2)
-						return;
-				}
-
-			iter = &p->next;
+		if (do_vector_optimize) {
+			if (p->x1 == x1 && p->y1 == y1
+				&&  p->x2 == x2 && p->y2 == y2)
+				return;
+			if (p->x1 == x2 && p->y1 == y2
+				&&  p->x2 == x1 && p->y2 == y1)
+				return;
+			if (x1 == x2
+				&&  y1 == y2)
+				return;
 		}
+
+		iter = &p->next;
+	}
 
 	vector_t * const v = calloc(1, sizeof(*v));
 	if (!v)
@@ -721,7 +716,6 @@ vector_create(
 	v->prev = iter;
 	*iter = v;
 }
-
 
 
 /**
