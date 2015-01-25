@@ -1465,7 +1465,9 @@ static void usage(int rc, const char * const msg)
 		"    -h, --help                        Output a usage message and exit\n"
 		"    --version                         Output the version number and exit\n"
 		"";
+
 	fprintf(stderr, "%s%s\n", msg, usage_str);
+
 	exit(rc);
 }
 
