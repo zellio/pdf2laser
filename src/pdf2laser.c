@@ -11,7 +11,7 @@
 //          Trammell Hudson <hudson@osresearch.net>
 //          Zachary Elliott <contact@zell.io>
 // URL: https://github.com/zellio/pdf2laser
-// Version: 0.3.0
+// Version: 0.3.1
 
 /// Commentary:
 
@@ -35,6 +35,7 @@
 /// Code:
 
 #define _POSIX_SOURCE
+#define _POSIX_C_SOURCE 199309L
 #define _XOPEN_SOURCE 600
 
 
