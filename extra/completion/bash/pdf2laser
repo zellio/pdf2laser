@@ -6,8 +6,8 @@ _pdf2laser()
 
 	COMPREPLY=()
 
-    cur="${COMP_WORDS[COMP_CWORD]}"
-    prev="${COMP_WORDS[COMP_CWORD-1]}"
+	cur="${COMP_WORDS[COMP_CWORD]}"
+	prev="${COMP_WORDS[COMP_CWORD-1]}"
 
 	short_opts="-a -n -p -P -d -m -r -R -s -O -f -v -V -D -h"
 	long_opts="--autofocus --job --printer --preset --dpi --mode \
@@ -23,24 +23,23 @@ _pdf2laser()
 
 			return 0
 			;;
-
 		-m|--mode)
 			COMPREPLY=( $(compgen -W "mono grey colour" -- ${cur}) )
 			return 0
 			;;
 		*)
+			if [[ ${cur} == --* ]]; then
+				COMPREPLY=( $(compgen -W "${long_opts}" -- ${cur}) )
+				return 0
+			elif [[ ${cur} == -* ]]; then
+				COMPREPLY=( $(compgen -W "${short_opts}" -- ${cur}) )
+				return 0
+			fi
+
 			COMPREPLY=( $(compgen -f -d -- "${cur}") )
 			return 0
 			;;
 	esac
-
-	if [[ ${cur} == --* ]]; then
-		COMPREPLY=( $(compgen -W "${long_opts}" -- ${cur}) )
-		return 0
-	elif [[ ${cur} == -* ]]; then
-		COMPREPLY=( $(compgen -W "${short_opts}" -- ${cur}) )
-		return 0
-	fi
 }
 
-complete -F _pdf2laser pdf2laser
+ complete -F _pdf2laser pdf2laser
