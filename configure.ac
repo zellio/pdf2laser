@@ -3,7 +3,7 @@
 
 AC_PREREQ([2.69])
 
-AC_INIT([pdf2laser], [0.3.1], [https://github.com/zellio/pdf2laser/issues], [pdf2laser])
+AC_INIT([pdf2laser], [0.3.2], [https://github.com/zellio/pdf2laser/issues], [pdf2laser])
 AM_INIT_AUTOMAKE([-Wall])
 AC_CONFIG_SRCDIR([src/pdf2laser.c])
 AC_CONFIG_HEADERS([config.h])
@@ -28,6 +28,10 @@ AC_CHECK_FUNCS([alarm gethostname inet_ntoa socket sqrt strchr strdup strncasecm
 
 AC_CONFIG_FILES([src/Makefile
 doc/Makefile
+extra/Makefile
+extra/completion/Makefile
+extra/completion/bash/Makefile
+extra/completion/zsh/Makefile
 Makefile])
 
 AC_OUTPUT
