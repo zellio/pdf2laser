@@ -1,2 +1,2 @@
-bash_completion_dir = $(sysconfigdir)/bash_completion.d
-bash_completion_dir_DATA = pdf2laser
+bash_completion_dir = $(sysconfdir)/bash_completion.d
+bash_completion__DATA = pdf2laser
