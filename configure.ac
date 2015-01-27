@@ -28,6 +28,10 @@ AC_CHECK_FUNCS([alarm gethostname inet_ntoa socket sqrt strchr strdup strncasecm
 
 AC_CONFIG_FILES([src/Makefile
 doc/Makefile
+extra/Makefile
+extra/completion/Makefile
+extra/completion/bash/Makefile
+extra/completion/zsh/Makefile
 Makefile])
 
 AC_OUTPUT
