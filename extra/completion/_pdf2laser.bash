@@ -1,0 +1,46 @@
+#compdef pdf2laser
+
+_pdf2laser()
+{
+	local cur prev opts
+
+	COMPREPLY=()
+
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    prev="${COMP_WORDS[COMP_CWORD-1]}"
+
+	short_opts="-a -n -p -P -d -m -r -R -s -O -f -v -V -D -h"
+	long_opts="--autofocus --job --printer --preset --dpi --mode \
+		--raster-speed --raster-power --screen-size --no-optimize --frequency \
+		--vector-speed --vector-power --debug --help --version"
+
+	case "${prev}" in
+		-j|--job|-p|--printer|-P|--preset|-d|--dpi|-r|--raster-speed|\
+			-R|--raster-power|-s|--screen-size|-f|--frequency|\
+			-v|--vector-speed|-V|--vector-power)
+
+			# Stop completion on the flags that need arguments.
+
+			return 0
+			;;
+
+		-m|--mode)
+			COMPREPLY=( $(compgen -W "mono grey colour" -- ${cur}) )
+			return 0
+			;;
+		*)
+			COMPREPLY=( $(compgen -f -d -- "${cur}") )
+			return 0
+			;;
+	esac
+
+	if [[ ${cur} == --* ]]; then
+		COMPREPLY=( $(compgen -W "${long_opts}" -- ${cur}) )
+		return 0
+	elif [[ ${cur} == -* ]]; then
+		COMPREPLY=( $(compgen -W "${short_opts}" -- ${cur}) )
+		return 0
+	fi
+}
+
+complete -F _pdf2laser pdf2laser
