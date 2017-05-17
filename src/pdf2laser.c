@@ -1,7 +1,7 @@
 
 /// pdf2laser.c --- tool for printing to Epilog laser cuttpers
 
-// Copyright (C) 2015 Zachary Elliott <contact@zell.io>
+// Copyright (C) 2015-2017 Zachary Elliott <contact@zell.io>
 // Copyright (C) 2011-2015 Trammell Hudson <hudson@osresearch.net>
 // Copyright (C) 2008-2011 AS220 Labs <brandon@as220.org>
 // Copyright (C) 2002-2008 Andrews & Arnold Ltd <info@aaisp.net.uk>
@@ -34,9 +34,8 @@
 
 /// Code:
 
-#define _POSIX_SOURCE
-#define _POSIX_C_SOURCE 199309L
-#define _XOPEN_SOURCE 600
+#define _POSIX_C_SOURCE 200809L
+#define _XOPEN_SOURCE 700
 
 
 /*************************************************************************
