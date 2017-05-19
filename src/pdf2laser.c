@@ -1555,7 +1555,6 @@ static int vector_param_set(int * const values, const char *arg )
 int main(int argc, char *argv[])
 {
 	// Create tmp working directory
-
 	char tmpdir_template[1024] = { '\0' };
 	snprintf(tmpdir_template, 1024, "%s/%s.XXXXXX", TMP_DIRECTORY, basename(argv[0]));
 	char *tmpdir_name = mkdtemp(tmpdir_template);
@@ -1609,27 +1608,30 @@ int main(int argc, char *argv[])
 	 */
 	range_checks();
 
+	// ensure printer host is set
 	if (!host)
 		usage(EXIT_FAILURE, "Printer host must be specfied\n");
-
-	// Skip any of the processed arguments
-	argc -= optind;
-	argv += optind;
 
 	// If they did not specify a user, get their name
 	if (!job_user) {
 		uid_t uid = getuid();
 		struct passwd * pw = getpwuid(uid);
-		job_user = strdup(pw->pw_name);
+		job_user = strndup(pw->pw_name, 33);
 	}
+
+	// Skip any of the processed arguments
+	argc -= optind;
+	argv += optind;
 
 	// If there is an argument after, there must be only one
 	// and it will be the input postcript / pdf
 	if (argc > 1)
 		usage(EXIT_FAILURE, "Only one input file may be specified\n");
 
-	const char *source_filename = argc ? strndup(argv[0], 1024) : "stdin";
-	char *source_basename = argc ? basename(argv[0]) : "stdin";
+	const char *source_filename = argc ? strndup(argv[0], FILENAME_NCHARS) : "stdin";
+
+	char *source_basename = strndup(argv[0], FILENAME_NCHARS);
+	source_basename = basename(source_basename);
 
 	// If no job name is specified, use just the filename if there
 
@@ -1643,8 +1645,8 @@ int main(int argc, char *argv[])
 	/* Gather the postscript file from either standard input or a filename
 	 * specified as a command line argument.
 	 */
-	FILE * file_cups = argc ? fopen(source_filename, "r") : stdin;
-	if (!file_cups) {
+	FILE * fh_source_cups = argc ? fopen(source_filename, "r") : stdin;
+	if (!fh_source_cups) {
 		perror(source_filename);
 		exit(EXIT_FAILURE);
 	}
@@ -1667,14 +1669,21 @@ int main(int argc, char *argv[])
 		   vector_power[1],
 		   vector_power[2]);
 
+	char *target_base = strndup(source_basename, FILENAME_NCHARS);
+	char *last_dot = strrchr(target_base, '.');
+	if (last_dot != NULL)
+		*last_dot = '\0';
+
+	char target_basename[FILENAME_NCHARS] = { '\0' };
+
 	/* Strings designating filenames. */
-	char file_basename[FILENAME_NCHARS] = { '\0' };
-	char filename_bitmap[FILENAME_NCHARS] = { '\0' };
-	char filename_eps[FILENAME_NCHARS] = { '\0' };
-	char filename_pdf[FILENAME_NCHARS] = { '\0' };
-	char filename_pjl[FILENAME_NCHARS] = { '\0' };
-	char filename_ps[FILENAME_NCHARS] = { '\0' };
-	char filename_vector[FILENAME_NCHARS] = { '\0' };
+	//char target_basename[FILENAME_NCHARS] = { '\0' };
+	char target_bitmap[FILENAME_NCHARS] = { '\0' };
+	char target_eps[FILENAME_NCHARS] = { '\0' };
+	char target_pdf[FILENAME_NCHARS] = { '\0' };
+	char target_pjl[FILENAME_NCHARS] = { '\0' };
+	char target_ps[FILENAME_NCHARS] = { '\0' };
+	char target_vector[FILENAME_NCHARS] = { '\0' };
 
 	/* Temporary variables. */
 	int l;
@@ -1682,44 +1691,40 @@ int main(int argc, char *argv[])
 	/* Determine and set the names of all files that will be manipulated by the
 	 * program.
 	 */
-	// snprintf(file_basename, 1024, "%s", tmpdir_name);
-	sprintf(file_basename, "%s/%s-%d", tmpdir_name, FILE_BASENAME, getpid());
-	sprintf(filename_bitmap, "%s.bmp", file_basename);
-	sprintf(filename_eps, "%s.eps", file_basename);
-	sprintf(filename_pjl, "%s.pjl", file_basename);
-	sprintf(filename_vector, "%s.vector", file_basename);
+	snprintf(target_basename, FILENAME_NCHARS, "%s/%s", tmpdir_name, target_base);
+	snprintf(target_bitmap, FILENAME_NCHARS, "%s.bmp", target_basename);
+	snprintf(target_eps, FILENAME_NCHARS, "%s.eps", target_basename);
+	snprintf(target_pdf, FILENAME_NCHARS, "%s.pdf", target_basename);
+	snprintf(target_pjl, FILENAME_NCHARS, "%s.pjl", target_basename);
+	snprintf(target_ps, FILENAME_NCHARS, "%s.ps", target_basename);
+	snprintf(target_vector, FILENAME_NCHARS, "%s.vector", target_basename);
 
 	/* File handles. */
-	FILE *file_bitmap;
-	FILE *file_pdf;
-	FILE *file_ps;
-	FILE *file_pjl;
-	FILE *file_vector;
+	FILE *fh_bitmap;
+	FILE *fh_pdf;
+	FILE *fh_ps;
+	FILE *fh_pjl;
+	FILE *fh_vector;
 
 	/* Check whether the incoming data is ps or pdf data. */
-	fread((char *)buf, 1, 4, file_cups);
-	rewind(file_cups);
+	fread((char *)buf, 1, 4, fh_source_cups);
+	rewind(fh_source_cups);
 	if (strncasecmp((char *)buf, "%PDF", 4) == 0) {
 		/* We have a pdf file. */
 
-		/* Setup the filename for the output pdf file. */
-		sprintf(filename_pdf, "%s.pdf", file_basename);
-
 		/* Open the destination pdf file. */
-		file_pdf = fopen(filename_pdf, "w");
-		if (!file_pdf) {
-			perror(filename_pdf);
+		fh_pdf = fopen(target_pdf, "w");
+		if (!fh_pdf) {
+			perror(target_pdf);
 			return 1;
 		}
 
-		/* Write the cups data out to the file_pdf. */
-		while ((l = fread((char *)buf, 1, sizeof(buf), file_cups)) > 0)
-			fwrite((char *)buf, 1, l, file_pdf);
+		/* Write the cups data out to the fh_pdf. */
+		while ((l = fread((char *)buf, 1, sizeof(buf), fh_source_cups)) > 0)
+			fwrite((char *)buf, 1, l, fh_pdf);
 
-		fclose(file_cups);
-		fclose(file_pdf);
-
-		sprintf(filename_ps, "%s.ps", file_basename);
+		fclose(fh_source_cups);
+		fclose(fh_pdf);
 
 		fprintf(stderr, "Executing pdf2ps\n");
 		int gs_argc = 13;
@@ -1733,13 +1738,13 @@ int main(int argc, char *argv[])
 		gs_argv[6] = "-sDEVICE=ps2write";
 
 		gs_argv[7] = calloc(1024, sizeof(char));
-		snprintf(gs_argv[7], 1024, "-sOutputFile=%s.ps", file_basename);
+		snprintf(gs_argv[7], 1024, "-sOutputFile=%s.ps", target_basename);
 
 		gs_argv[8] = "-c";
 		gs_argv[9] = "save";
 		gs_argv[10] = "pop";
 		gs_argv[11] = "-f";
-		gs_argv[12] = strndup(filename_pdf, 1024);
+		gs_argv[12] = strndup(target_pdf, 1024);
 
 		int32_t rc;
 		void *minst;
@@ -1764,38 +1769,38 @@ int main(int argc, char *argv[])
 
 		if (!debug) {
 			/* Debug is disabled so remove generated pdf file. */
-			if (unlink(filename_pdf)) {
-				perror(filename_pdf);
+			if (unlink(target_pdf)) {
+				perror(target_pdf);
 			}
 		}
 
-		/* Set file_ps to the generated ps file. */
-		file_ps = fopen(filename_ps, "r");
+		/* Set fh_ps to the generated ps file. */
+		fh_ps = fopen(target_ps, "r");
 	} else {
-		/* Input file is postscript. Set the file_ps handle to file_cups. */
-		file_ps = file_cups;
+		/* Input file is postscript. Set the fh_ps handle to fh_source_cups. */
+		fh_ps = fh_source_cups;
 	}
 
 	/* Open the encapsulated postscript file for writing. */
-	FILE * const file_eps = fopen(filename_eps, "w");
-	if (!file_eps) {
-		perror(filename_eps);
+	FILE * const fh_eps = fopen(target_eps, "w");
+	if (!fh_eps) {
+		perror(target_eps);
 		return 1;
 	}
 
 	/* Convert postscript to encapsulated postscript. */
-	if (!ps_to_eps(file_ps, file_eps)) {
+	if (!ps_to_eps(fh_ps, fh_eps)) {
 		perror("Error converting postscript to encapsulated postscript.");
-		fclose(file_eps);
+		fclose(fh_eps);
 		return 1;
 	}
 
 	/* Cleanup after encapsulated postscript creation. */
-	fclose(file_eps);
-	if (file_ps != stdin) {
-		fclose(file_ps);
-		if (unlink(filename_ps)) {
-			perror(filename_ps);
+	fclose(fh_eps);
+	if (fh_ps != stdin) {
+		fclose(fh_ps);
+		if (unlink(target_ps)) {
+			perror(target_ps);
 		}
 	}
 
@@ -1806,9 +1811,9 @@ int main(int argc, char *argv[])
 
 
 	fprintf(stderr, "execute_ghostscript\n");
-	if(!execute_ghostscript(filename_bitmap,
-							filename_eps,
-							filename_vector,
+	if(!execute_ghostscript(target_bitmap,
+							target_eps,
+							target_vector,
 							raster_string,
 							resolution )) {
 		perror("Failure to execute ghostscript command.\n");
@@ -1818,62 +1823,62 @@ int main(int argc, char *argv[])
 	/* Open file handles needed by generation of the printer job language
 	 * file.
 	 */
-	file_bitmap = fopen(filename_bitmap, "r");
-	file_vector = fopen(filename_vector, "r");
-	file_pjl = fopen(filename_pjl, "w");
-	if (!file_pjl) {
-		perror(filename_pjl);
+	fh_bitmap = fopen(target_bitmap, "r");
+	fh_vector = fopen(target_vector, "r");
+	fh_pjl = fopen(target_pjl, "w");
+	if (!fh_pjl) {
+		perror(target_pjl);
 		return 1;
 	}
 
 	/* Execute the generation of the printer job language (pjl) file. */
-	if (!generate_pjl(file_bitmap, file_pjl, file_vector)) {
+	if (!generate_pjl(fh_bitmap, fh_pjl, fh_vector)) {
 		perror("Generation of pjl file failed.\n");
-		fclose(file_pjl);
+		fclose(fh_pjl);
 		return 1;
 	}
 
 	/* Close open file handles. */
-	fclose(file_bitmap);
-	fclose(file_pjl);
-	fclose(file_vector);
+	fclose(fh_bitmap);
+	fclose(fh_pjl);
+	fclose(fh_vector);
 
 	/* Cleanup unneeded files provided that debug mode is disabled. */
 	if (!debug) {
-		if (unlink(filename_bitmap)) {
-			perror(filename_bitmap);
+		if (unlink(target_bitmap)) {
+			perror(target_bitmap);
 		}
-		if (unlink(filename_eps)) {
-			perror(filename_eps);
+		if (unlink(target_eps)) {
+			perror(target_eps);
 		}
-		if (unlink(filename_vector)) {
-			perror(filename_vector);
+		if (unlink(target_vector)) {
+			perror(target_vector);
 		}
 	}
 
 	/* Open printer job language file. */
-	file_pjl = fopen(filename_pjl, "r");
-	if (!file_pjl) {
-		perror(filename_pjl);
+	fh_pjl = fopen(target_pjl, "r");
+	if (!fh_pjl) {
+		perror(target_pjl);
 		return 1;
 	}
 
-	/* Send print job to printer. */
-	if (!printer_send(host, file_pjl)) {
+	Send print job to printer.
+	if (!printer_send(host, fh_pjl)) {
 		perror("Could not send pjl file to printer.\n");
 		return 1;
 	}
 
-	fclose(file_pjl);
+	fclose(fh_pjl);
 	if (!debug) {
-		if (unlink(filename_pjl)) {
-			perror(filename_pjl);
+		if (unlink(target_pjl)) {
+			perror(target_pjl);
 		}
 	}
 
 	if (!debug) {
-		if (!rmdir(tmpdir_name)) {
-			perror("deleting tmpdir failed");
+		if (rmdir(tmpdir_name) == -1) {
+			perror("rmdir failed: ");
 			return 1;
 		}
 	}
