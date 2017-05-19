@@ -37,7 +37,6 @@
 #define _POSIX_C_SOURCE 200809L
 #define _XOPEN_SOURCE 700
 
-
 /*************************************************************************
  * includes
  */
@@ -60,6 +59,11 @@
 #include <unistd.h>
 #include <getopt.h>
 #include <pwd.h>
+
+#include <ghostscript/iapi.h>
+#include <ghostscript/ierrors.h>
+
+#include <libgen.h>
 
 #include "config.h"
 
@@ -294,6 +298,13 @@ static int big_to_little_endian(uint8_t *position, int nbytes)
 	return result;
 }
 
+FILE *fn_vector;
+static int GSDLLCALL gsdll_stdout(void *minst, const char *str, int len)
+{
+	fprintf(fn_vector, "%s", str);
+	return len;
+}
+
 /**
  * Execute ghostscript feeding it an ecapsulated postscript file which is then
  * converted into a bitmap image. As a byproduct output of the ghostscript
@@ -316,28 +327,52 @@ static bool execute_ghostscript(const char * const filename_bitmap,
 								const char * const bmp_mode,
 								int resolution)
 {
-	char buf[8192];
-	snprintf(buf, sizeof(buf),
-			 "gs"
-			 " -q"
-			 " -dBATCH"
-			 " -dNOPAUSE"
-			 " -r%d"
-			 " -sDEVICE=%s"
-			 " -sOutputFile=%s"
-			 " %s"
-			 " > %s"
-			 "",
-			 resolution,
-			 bmp_mode,
-			 filename_bitmap,
-			 filename_eps,
-			 filename_vector);
 
-	if (debug)
-		printf("Executing: %s\n", buf);
+	int gs_argc = 8;
+	char *gs_argv[8];
 
-	if (system(buf))
+	gs_argv[0] = "gs";
+	gs_argv[1] = "-q";
+	gs_argv[2] = "-dBATCH";
+	gs_argv[3] = "-dNOPAUSE";
+
+	gs_argv[4] = calloc(64, sizeof(char));
+	snprintf(gs_argv[4], 64, "-r%d", resolution);
+
+	gs_argv[5] = calloc(1024, sizeof(char));
+	snprintf(gs_argv[5], 1024, "-sDEVICE=%s", bmp_mode);
+
+	gs_argv[6] = calloc(1024, sizeof(char));
+	snprintf(gs_argv[6], 1024, "-sOutputFile=%s", filename_bitmap);
+
+	gs_argv[7] = calloc(1024, sizeof(char));
+	snprintf(gs_argv[7], 1024, "%s", filename_eps);
+
+	fn_vector = fopen(filename_vector, "w");
+
+	int32_t rc;
+
+	void *minst;
+	rc = gsapi_new_instance(&minst, NULL);
+
+	if (rc < 0)
+		return false;
+
+	rc = gsapi_set_arg_encoding(minst, GS_ARG_ENCODING_UTF8);
+	if (rc == 0) {
+		gsapi_set_stdio(minst, NULL, gsdll_stdout, NULL);
+		rc = gsapi_init_with_args(minst, gs_argc, gs_argv);
+	}
+
+    int32_t rc2 = gsapi_exit(minst);
+    if ((rc == 0) || (rc2 == gs_error_Quit))
+		rc = rc2;
+
+	fclose(fn_vector);
+
+	gsapi_delete_instance(minst);
+
+	if (rc)
 		return false;
 
 	return true;
@@ -1519,9 +1554,20 @@ static int vector_param_set(int * const values, const char *arg )
  */
 int main(int argc, char *argv[])
 {
+	// Create tmp working directory
+
+	char tmpdir_template[1024] = { '\0' };
+	snprintf(tmpdir_template, 1024, "%s/%s.XXXXXX", TMP_DIRECTORY, basename(argv[0]));
+	char *tmpdir_name = mkdtemp(tmpdir_template);
+
+	if (tmpdir_name == NULL) {
+		perror("mkdtemp failed");
+		return false;
+	}
+
 	const char * host = "192.168.1.4";
 
-	while (1) {
+	while (true) {
 		const char ch = getopt_long(argc,
 									argv,
 									"Dp:P:n:d:r:R:v:V:g:G:b:B:m:f:s:aO:h",
@@ -1582,16 +1628,14 @@ int main(int argc, char *argv[])
 	if (argc > 1)
 		usage(EXIT_FAILURE, "Only one input file may be specified\n");
 
-	const char * const filename = argc ? argv[0] : "stdin";
+	const char *source_filename = argc ? strndup(argv[0], 1024) : "stdin";
+	char *source_basename = argc ? basename(argv[0]) : "stdin";
 
 	// If no job name is specified, use just the filename if there
+
 	// are any / in the name.
 	if (!job_name) {
-		job_name = strrchr(filename, '/');
-		if (!job_name)
-			job_name = filename;
-		else
-			job_name++; // skip the /
+		job_name = source_basename;
 	}
 
 	job_title = job_name;
@@ -1599,9 +1643,9 @@ int main(int argc, char *argv[])
 	/* Gather the postscript file from either standard input or a filename
 	 * specified as a command line argument.
 	 */
-	FILE * file_cups = argc ? fopen(filename, "r") : stdin;
+	FILE * file_cups = argc ? fopen(source_filename, "r") : stdin;
 	if (!file_cups) {
-		perror(filename);
+		perror(source_filename);
 		exit(EXIT_FAILURE);
 	}
 
@@ -1623,15 +1667,14 @@ int main(int argc, char *argv[])
 		   vector_power[1],
 		   vector_power[2]);
 
-
 	/* Strings designating filenames. */
-	char file_basename[FILENAME_NCHARS];
-	char filename_bitmap[FILENAME_NCHARS];
-	char filename_eps[FILENAME_NCHARS];
-	char filename_pdf[FILENAME_NCHARS];
-	char filename_pjl[FILENAME_NCHARS];
-	char filename_ps[FILENAME_NCHARS];
-	char filename_vector[FILENAME_NCHARS];
+	char file_basename[FILENAME_NCHARS] = { '\0' };
+	char filename_bitmap[FILENAME_NCHARS] = { '\0' };
+	char filename_eps[FILENAME_NCHARS] = { '\0' };
+	char filename_pdf[FILENAME_NCHARS] = { '\0' };
+	char filename_pjl[FILENAME_NCHARS] = { '\0' };
+	char filename_ps[FILENAME_NCHARS] = { '\0' };
+	char filename_vector[FILENAME_NCHARS] = { '\0' };
 
 	/* Temporary variables. */
 	int l;
@@ -1639,7 +1682,8 @@ int main(int argc, char *argv[])
 	/* Determine and set the names of all files that will be manipulated by the
 	 * program.
 	 */
-	sprintf(file_basename, "%s/%s-%d", TMP_DIRECTORY, FILE_BASENAME, getpid());
+	// snprintf(file_basename, 1024, "%s", tmpdir_name);
+	sprintf(file_basename, "%s/%s-%d", tmpdir_name, FILE_BASENAME, getpid());
 	sprintf(filename_bitmap, "%s.bmp", file_basename);
 	sprintf(filename_eps, "%s.eps", file_basename);
 	sprintf(filename_pjl, "%s.pjl", file_basename);
@@ -1675,19 +1719,48 @@ int main(int argc, char *argv[])
 		fclose(file_cups);
 		fclose(file_pdf);
 
-		/* Setup the postscript output filename. */
 		sprintf(filename_ps, "%s.ps", file_basename);
 
-		/* Execute the command pdf2ps to convert the pdf file to ps. */
-		sprintf(buf, "pdf2ps %s %s", filename_pdf, filename_ps);
-		if (debug) {
-			printf("executing: %s\n", buf);
-		}
+		fprintf(stderr, "Executing pdf2ps\n");
+		int gs_argc = 13;
+		char *gs_argv[gs_argc];
+		gs_argv[0] = "gs";
+		gs_argv[1] = "-q";
+		gs_argv[2] = "-dNOPAUSE";
+		gs_argv[3] = "-dBATCH";
+		gs_argv[4] = "-P-";
+		gs_argv[5] = "-dSAFER";
+		gs_argv[6] = "-sDEVICE=ps2write";
 
-		if (system(buf)) {
-			fprintf(stderr, "Failure to execute pdf2ps. Quitting...");
-			return 1;
-		}
+		gs_argv[7] = calloc(1024, sizeof(char));
+		snprintf(gs_argv[7], 1024, "-sOutputFile=%s.ps", file_basename);
+
+		gs_argv[8] = "-c";
+		gs_argv[9] = "save";
+		gs_argv[10] = "pop";
+		gs_argv[11] = "-f";
+		gs_argv[12] = strndup(filename_pdf, 1024);
+
+		int32_t rc;
+		void *minst;
+
+		rc = gsapi_new_instance(&minst, NULL);
+		if (rc < 0)
+			return false;
+
+		rc = gsapi_set_arg_encoding(minst, GS_ARG_ENCODING_UTF8);
+		if (rc == 0)
+			rc = gsapi_init_with_args(minst, gs_argc, gs_argv);
+
+		int32_t rc2 = gsapi_exit(minst);
+
+		if ((rc == 0) || (rc2 == gs_error_Quit))
+			rc = rc2;
+
+		gsapi_delete_instance(minst);
+
+		if (rc)
+			return false;
 
 		if (!debug) {
 			/* Debug is disabled so remove generated pdf file. */
@@ -1697,7 +1770,7 @@ int main(int argc, char *argv[])
 		}
 
 		/* Set file_ps to the generated ps file. */
-		file_ps  = fopen(filename_ps, "r");
+		file_ps = fopen(filename_ps, "r");
 	} else {
 		/* Input file is postscript. Set the file_ps handle to file_cups. */
 		file_ps = file_cups;
@@ -1731,6 +1804,8 @@ int main(int argc, char *argv[])
 		raster_mode == 'g' ? "bmpgray" :
 		"bmpmono";
 
+
+	fprintf(stderr, "execute_ghostscript\n");
 	if(!execute_ghostscript(filename_bitmap,
 							filename_eps,
 							filename_vector,
@@ -1793,6 +1868,13 @@ int main(int argc, char *argv[])
 	if (!debug) {
 		if (unlink(filename_pjl)) {
 			perror(filename_pjl);
+		}
+	}
+
+	if (!debug) {
+		if (!rmdir(tmpdir_name)) {
+			perror("deleting tmpdir failed");
+			return 1;
 		}
 	}
 
