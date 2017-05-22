@@ -65,6 +65,8 @@
 
 #include <libgen.h>
 
+#include "pdf2laser_type.h"
+
 #include "config.h"
 
 /*************************************************************************
@@ -120,13 +122,6 @@
  * 'm' = mono mode
  * 'n' = no rasterization
  */
-typedef enum {
-	RASTER_MODE_COLOR = 'c',
-	RASTER_MODE_GREY_SCALE = 'g',
-	RASTER_MODE_MONO = 'm',
-	RASTER_MODE_NONE = 'n',
-} raster_mode;
-
 #define RASTER_MODE_DEFAULT (RASTER_MODE_MONO)
 
 /** Default power level for raster engraving */
@@ -166,21 +161,6 @@ typedef enum {
  * local types
  */
 
-typedef struct _vector vector_t;
-struct _vector {
-	vector_t * next;
-	vector_t ** prev;
-	int x1;
-	int y1;
-	int x2;
-	int y2;
-	int p;
-};
-
-typedef struct _vectors vectors_t ;
-struct _vectors {
-	vector_t *vectors;
-};
 
 
 /*************************************************************************

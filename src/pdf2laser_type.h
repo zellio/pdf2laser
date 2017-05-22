@@ -9,31 +9,28 @@ extern "C" {
 #endif
 
 typedef enum {
-	COLOR = 'c',
-	GREY_SCALE = 'g',
-	MONO = 'm',
-	NONE = 'n',
+	RASTER_MODE_COLOR = 'c',
+	RASTER_MODE_GREY_SCALE = 'g',
+	RASTER_MODE_MONO = 'm',
+	RASTER_MODE_NONE = 'n',
 } raster_mode;
 
-typedef struct pair pair_t;
-struct pair {
-	uint32_t x;
-	uint32_t y;
+typedef struct _vector vector_t;
+struct _vector {
+	vector_t * next;
+	vector_t ** prev;
+	int x1;
+	int y1;
+	int x2;
+	int y2;
+	int p;
 };
 
-typedef struct vector vector_t;
-struct vector {
-	pair_t start;
-	part_t end;
-	uint32_t p;
+typedef struct _vectors vectors_t ;
+struct _vectors {
+	vector_t *vectors;
 };
 
-typedef struct list list_t;
-struct list {
-	vector_t *vector;
-	list_t *next;
-	list_t *prev;
-};
 
 #ifdef __cplusplus
 };

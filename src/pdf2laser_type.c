@@ -1,26 +1,6 @@
 #include "pdf2laser_type.h"
 
 
-vector_t *vector_create(uint32_t x1, uint32_t y1,
-						uint32_t x2, uint32_t y2,
-						uint32_t p)
-{
-	vector_t *vector = calloc(1, sizeof(vector_t));
-
-	vector->start = calloc(1, sizeof(pair_t));
-	vector->start->x = x1;
-	vector->start->y = y1;
-
-	vector->end = calloc(1, sizeof(pair_t));
-	vector->end->x = x2;
-	vector->end->y = y2;
-
-	vector->p = p;
-
-	return vector;
-}
-
-
 /* #ifndef __PDF2LASER_TYPE_H__ */
 /* #define __PDF2LASER_TYPE_H__ 1 */
 
