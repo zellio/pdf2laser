@@ -117,119 +117,85 @@ bool printer_send(const char *host, FILE *pjl_file)
 
 	gethostname(localhost, sizeof(localhost));
 
-	{
-		char *first_dot = strchr(localhost, '.');
-		if (first_dot) {
-			*first_dot = '\0';
-		}
+	char *first_dot = strchr(localhost, '.');
+	if (first_dot) {
+		*first_dot = '\0';
 	}
 
 	if (debug)
 		printf("printer host: '%s'\n", host);
 
-	/* Connect to the printer. */
+	// Connect to the printer.
 	socket_descriptor = printer_connect(host, PRINTER_MAX_WAIT);
 
 	if (debug)
 		printf("printer host: '%s' fd %d\n", host, socket_descriptor);
 
-	{
-		uint32_t buffer_size = 102400;
-		char* buffer[buffer_size] = { '\0' };
-		char* ptr = buffer;
-		int32_t write_count = 0;
+	string_builder_t sb = string_builder_create();
 
-		// talk to printer
-		write_count = snprintf(buffer_ptr, buffer_size, "\002%s\n", queue);
-
-		write(socket_descriptor, buffer, strlen(buffer));
-		read(socket_descriptor, &lpdres, 1);
-		if (lpdres) {
-			fprintf (stderr, "Bad response from %s, %u\n", host, lpdres);
-			return false;
-		}
+	// Talk to printer
+	string_builder_add(sb, "\002%s\n", queue);
+	write(socket_descriptor, sb->string, sb->length);
+	read(socket_descriptor, &lpdres, 1);
+	if (lpdres) {
+		fprintf (stderr, "Bad response from %s, %u\n", host, lpdres);
+		return false;
 	}
 
-	{
-		uint32_t buffer_size = 102400;
-		char* buffer[buffer_size] = { '\0' };
-		char* ptr = buffer;
-		int32_t wc = 0;
+	string_builder_erase(sb);
 
-		wc = snprintf(buffer_ptr, buffer_size, "H%s\n", localhost);
-		buffer_size -= wc;
-		buffer_ptr += wc;
+	string_builder_add(sb, "H%s\n", localhost);
+	string_builder_add(sb, "P%s\n", job_user);
+	string_builder_add(sb, "J%s\n", job_title);
+	string_builder_add(sb, "ldfA%s%s\n", job_name, localhost);
+	string_builder_add(sb, "UdfA%s%s\n", job_name, localhost);
+	string_builder_add(sb, "N%s\n", job_title);
+	string_builder_add(sb, "\002%d cfA%s%s\n", (int32_t)(sb->length), job_name, localhost);
 
-		wc = snprintf(buffer_ptr, buffer_size, "P%s\n", job_user);
-		buffer_size -= wc;
-		buffer_ptr += wc;
+	write(socket_descriptor, buf + strlen(buf) + 1, strlen(buf + strlen(buf) + 1));
 
-		snprintf(buffer_ptr, buffer_size, "J%s\n", job_title);
-		buffer_size -= wc;
-		buffer_ptr += wc;
-
-		sprintf(buffer_ptr, buffer_size, "ldfA%s%s\n", job_name, localhost);
-		buffer_size -= wc;
-		buffer_ptr += wc;
-
-		sprintf(buffer_ptr, buffer_size, "UdfA%s%s\n", job_name, localhost);
-		buffer_size -= wc;
-		buffer_ptr += wc;
-
-		sprintf(buffer_ptr, buffer_size, "N%s\n", job_title);
-		buffer_size -= wc;
-		buffer_ptr += wc;
-
-		sprintf(buffer_ptr, buffer_size, "\002%d cfA%s%s\n", (int32_t)(102400 - buffer_size), job_name, localhost);
-		buffer_size -= wc;
-		buffer_ptr += wc;
-
-		write(socket_descriptor, buf + strlen(buf) + 1, strlen(buf + strlen(buf) + 1));
-
-		read(socket_descriptor, &lpdres, 1);
-		if (lpdres) {
-			fprintf(stderr, "Bad response from %s, %u\n", host, lpdres);
-			return false;
-		}
-
-		write(socket_descriptor, (char *)buf, strlen(buf) + 1);
-		read(socket_descriptor, &lpdres, 1);
-
-		if (lpdres) {
-			fprintf(stderr, "Bad response from %s, %u\n", host, lpdres);
-			return false;
-		}
+	read(socket_descriptor, &lpdres, 1);
+	if (lpdres) {
+		fprintf(stderr, "Bad response from %s, %u\n", host, lpdres);
+		return false;
 	}
 
-/* 	{ */
-/* 		{ */
-/* 			struct stat file_stat; */
-/* 			if (fstat(fileno(pjl_file), &file_stat)) { */
-/* 				perror(buf); */
-/* 				return false; */
-/* 			} */
-/* 			sprintf((char*)buf, "\003%u dfA%s%s\n", (int)file_stat.st_size, job_name, localhost); */
-/* 			printf("job '%s': size %u\n", job_name, (int)file_stat.st_size); */
-/* 		} */
+	write(socket_descriptor, sb->string, sb->length);
+	read(socket_descriptor, &lpdres, 1);
 
-/* 		write(socket_descriptor, (char *)buf, strlen(buf)); */
-/* 		read(socket_descriptor, &lpdres, 1); */
+	if (lpdres) {
+		fprintf(stderr, "Bad response from %s, %u\n", host, lpdres);
+		return false;
+	}
 
-/* 		if (lpdres) { */
-/* 			fprintf(stderr, "Bad response from %s, %u\n", host, lpdres); */
-/* 			return false; */
-/* 		} */
+	string_builder_erase(sb);
 
-/* 		{ */
-/* 			int l; */
-/* 			while ((l = fread((char*)buf, 1, sizeof (buf), pjl_file)) > 0) { */
-/* 				write(socket_descriptor, buf, l); */
-/* 			} */
-/* 		} */
-/* 	} */
+	struct stat file_stat;
+	if (fstat(fileno(pjl_file), &file_stat)) {
+		perror(buf);
+		return false;
+	}
 
-/* 	// dont wait for a response... */
-/* 	printer_disconnect(socket_descriptor); */
+	string_builder_add(sb, "\003%u dfA%s%s\n", (int32_t)file_stat.st_size, job_name, localhost);
+	printf("job '%s': size %u\n", job_name, (int32_t)file_stat.st_size);
 
-/* 	return true; */
+	write(socket_descriptor, sb->string, sb->length);
+	read(socket_descriptor, &lpdres, 1);
+
+	if (lpdres) {
+		fprintf(stderr, "Bad response from %s, %u\n", host, lpdres);
+		return false;
+	}
+
+	int l;
+	while ((l = fread((char*)buf, 1, sizeof (buf), pjl_file)) > 0) {
+		write(socket_descriptor, buf, l);
+	}
+
+	string_builder_free(sb);
+
+	// dont wait for a response...
+	printer_disconnect(socket_descriptor);
+
+	return true;
 }

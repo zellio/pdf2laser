@@ -27,6 +27,7 @@
 
 //#include <netinet/in.h>
 
+#include "pdf2laser_string_builder.h"
 
 #ifdef __cplusplus
 extern "C" {
