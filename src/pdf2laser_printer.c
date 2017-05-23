@@ -152,6 +152,11 @@ bool printer_send(const char *host, FILE *pjl_file)
 	string_builder_add(sb, "N%s\n", job_title);
 	string_builder_add(sb, "\002%d cfA%s%s\n", (int32_t)(sb->length), job_name, localhost);
 
+	// I'm still not sure what this is for. Can probably be remvoed, it seems
+	// to write the last string `\002%d cfA%s%s\n` to the printer because the
+	// previous sprintf lines were broken (wrt. string building). This stril
+	// is then later sent by the write further down in the file so probably
+	// can be safely removed.
 	write(socket_descriptor, buf + strlen(buf) + 1, strlen(buf + strlen(buf) + 1));
 
 	read(socket_descriptor, &lpdres, 1);
