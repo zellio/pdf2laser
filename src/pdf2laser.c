@@ -176,9 +176,6 @@ static int raster_repeat = RASTER_REPEAT;
 /** FIXME -- pixel size of screen, 0= threshold */
 static int screen_size = SCREEN_DEFAULT;
 
-/** Options for the printer. */
-static char *queue = "";
-
 // how many different vector power level groups
 #define VECTOR_PASSES 3
 
@@ -1603,7 +1600,7 @@ int main(int argc, char *argv[])
 	}
 
 	/* Send print job to printer. */
-	if (!printer_send(host, fh_pjl)) {
+	if (!printer_send(host, fh_pjl, job_user, job_title, job_name)) {
 		perror("Could not send pjl file to printer.\n");
 		return 1;
 	}

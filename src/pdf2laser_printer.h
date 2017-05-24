@@ -1,31 +1,17 @@
 #ifndef __PDF2LASER_PRINTER_H__
 #define __PDF2LASER_PRINTER_H__ 1
 
-/* #include <stdbool.h> */
-/* #include <stdio.h> */
-/* #include <sys/types.h> */
-/* #include <sys/socket.h> */
-/* #include <netdb.h> */
-
+#include <arpa/inet.h>
+#include <errno.h>
 #include <inttypes.h>
+#include <netdb.h>
 #include <stdbool.h>
 #include <stdio.h>
-
-#include <netdb.h>
-
-#include <unistd.h>
-
-#include <sys/socket.h>
-
-#include <arpa/inet.h>
-
-#include <errno.h>
-
-#include <string.h>
-
 #include <stdlib.h>
-
-//#include <netinet/in.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #include "pdf2laser_string_builder.h"
 
@@ -48,7 +34,7 @@ extern "C" {
 static int32_t printer_connect(const char *host, const uint32_t timeout);
 static bool printer_disconnect(int32_t socket_descriptor);
 
-bool printer_send(const char *host, FILE *pjl_file);
+bool printer_send(const char *host, FILE *pjl_file, const char *job_user, const char *job_title, const char *job_name);
 
 #ifdef __cplusplus
 };

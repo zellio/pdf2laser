@@ -1,7 +1,7 @@
 #include "pdf2laser_printer.h"
 
 bool debug = false;
-char *queue = NULL;
+char *queue = "";
 
 /**
  * Connect to a printer.
@@ -109,7 +109,7 @@ static bool printer_disconnect(int32_t socket_descriptor)
 /**
  *
  */
-bool printer_send(const char *host, FILE *pjl_file)
+bool printer_send(const char *host, FILE *pjl_file, const char *job_user, const char *job_title, const char *job_name)
 {
 	char localhost[HOSTNAME_NCHARS] = "";
 	uint8_t lpdres;
@@ -131,7 +131,7 @@ bool printer_send(const char *host, FILE *pjl_file)
 	if (debug)
 		printf("printer host: '%s' fd %d\n", host, socket_descriptor);
 
-	string_builder_t sb = string_builder_create();
+	string_builder_t *sb = string_builder_create();
 
 	// Talk to printer
 	string_builder_add(sb, "\002%s\n", queue);
@@ -157,7 +157,7 @@ bool printer_send(const char *host, FILE *pjl_file)
 	// previous sprintf lines were broken (wrt. string building). This stril
 	// is then later sent by the write further down in the file so probably
 	// can be safely removed.
-	write(socket_descriptor, buf + strlen(buf) + 1, strlen(buf + strlen(buf) + 1));
+	// write(socket_descriptor, buf + strlen(buf) + 1, strlen(buf + strlen(buf) + 1));
 
 	read(socket_descriptor, &lpdres, 1);
 	if (lpdres) {
@@ -177,7 +177,7 @@ bool printer_send(const char *host, FILE *pjl_file)
 
 	struct stat file_stat;
 	if (fstat(fileno(pjl_file), &file_stat)) {
-		perror(buf);
+		perror("Error reading pjl file\n");
 		return false;
 	}
 
@@ -192,12 +192,15 @@ bool printer_send(const char *host, FILE *pjl_file)
 		return false;
 	}
 
-	int l;
-	while ((l = fread((char*)buf, 1, sizeof (buf), pjl_file)) > 0) {
-		write(socket_descriptor, buf, l);
-	}
+	string_builder_destroy(sb);
 
-	string_builder_free(sb);
+	{
+		int l;
+		char buffer[102400] = { '\0' };
+		while ((l = fread((char*)buffer, 1, 102400, pjl_file)) > 0) {
+			write(socket_descriptor, buffer, l);
+		}
+	}
 
 	// dont wait for a response...
 	printer_disconnect(socket_descriptor);

@@ -14,7 +14,7 @@ extern "C" {
 }
 #endif
 
-#define STRING_BUILDER_MAX_SIZE (102400)
+#define STRING_BUILDER_MAX_LENGTH (102400)
 
 #define string_builder_to_char(x) ((x)->string)
 
@@ -23,13 +23,14 @@ struct string_builder {
 	char *string;
 	size_t length;
 	size_t max_length;
+	char *ptr;
 };
 
-string_builder_t *string_builder_create(size_t max_length);
+string_builder_t *string_builder_create(void);
 uint32_t string_builder_destroy(string_builder_t *self);
 
 string_builder_t *string_builder_erase(string_builder_t *self);
-string_builder_t *string_builder_add(string_builder_t *self, size_t size, const char *format, ...);
+string_builder_t *string_builder_add(string_builder_t *self, const char *format, ...);
 
 
 

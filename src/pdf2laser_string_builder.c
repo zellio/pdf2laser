@@ -8,7 +8,7 @@ string_builder_t *string_builder_create(void)
 
 	string_builder->max_length = STRING_BUILDER_MAX_LENGTH;
 	string_builder->length = 0;
-	string_builder->string = calloc(max_length, sizeof(char));
+	string_builder->string = calloc(string_builder->max_length, sizeof(char));
 	string_builder->ptr = string_builder->ptr;
 
 	return string_builder;
@@ -29,7 +29,7 @@ uint32_t string_builder_destroy(string_builder_t *self)
 
 string_builder_t *string_builder_erase(string_builder_t *self)
 {
-	memset(self->string, '\0', self->max_size);
+	memset(self->string, '\0', self->max_length);
 	self->length = 0;
 	self->ptr = self->string;
 	return self;
@@ -45,7 +45,7 @@ string_builder_t *string_builder_add(string_builder_t *self, const char *format,
 	self->length += wl;
 	self->ptr += wl;
 
-	va_end(args);
+	va_end(va_args);
 
 	return self;
 }
