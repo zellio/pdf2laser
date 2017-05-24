@@ -31,9 +31,6 @@ extern "C" {
 /** Maximum wait before timing out on connecting to the printer (in seconds). */
 #define PRINTER_MAX_WAIT (300)
 
-static int32_t printer_connect(const char *host, const uint32_t timeout);
-static bool printer_disconnect(int32_t socket_descriptor);
-
 bool printer_send(const char *host, FILE *pjl_file, const char *job_user, const char *job_title, const char *job_name);
 
 #ifdef __cplusplus
