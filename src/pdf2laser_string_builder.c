@@ -9,7 +9,7 @@ string_builder_t *string_builder_create(void)
 	string_builder->max_length = STRING_BUILDER_MAX_LENGTH;
 	string_builder->length = 0;
 	string_builder->string = calloc(string_builder->max_length, sizeof(char));
-	string_builder->ptr = string_builder->ptr;
+	string_builder->ptr = string_builder->string;
 
 	return string_builder;
 }
