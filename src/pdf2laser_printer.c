@@ -109,80 +109,15 @@ static bool printer_disconnect(int32_t socket_descriptor)
 /**
  *
  */
-bool printer_send(const char *host, FILE *pjl_file, const char *job_user, const char *job_title, const char *job_name)
+bool printer_send(const char *host, FILE *pjl_file, const char *job_name)
 {
-	char localhost[HOSTNAME_NCHARS] = "";
-	uint8_t lpdres;
-	uint32_t socket_descriptor = -1;
+	char local_hostname[1024];
+	char *first_dot;
 
-	gethostname(localhost, sizeof(localhost));
-
-	char *first_dot = strchr(localhost, '.');
-	if (first_dot) {
+	gethostname(local_hostname, 1024);
+	if ((first_dot = strchr(local_hostname, '.'))) {
 		*first_dot = '\0';
 	}
-
-	if (debug)
-		printf("printer host: '%s'\n", host);
-
-	// Connect to the printer.
-	socket_descriptor = printer_connect(host, PRINTER_MAX_WAIT);
-
-	if (debug)
-		printf("printer host: '%s' fd %d\n", host, socket_descriptor);
-
-	string_builder_t *sb = string_builder_create();
-
-	// Talk to printer
-	string_builder_add(sb, "\002%s\n", queue);
-	write(socket_descriptor, sb->string, sb->length);
-	read(socket_descriptor, &lpdres, 1);
-	if (lpdres) {
-		fprintf (stderr, "Bad response from %s, %u\n", host, lpdres);
-		return false;
-	}
-
-	string_builder_erase(sb);
-
-	string_builder_add(sb, "H%s\n", localhost);
-	string_builder_add(sb, "P%s\n", job_user);
-	string_builder_add(sb, "J%s\n", job_title);
-	string_builder_add(sb, "ldfA%s%s\n", job_name, localhost);
-	string_builder_add(sb, "UdfA%s%s\n", job_name, localhost);
-	string_builder_add(sb, "N%s\n", job_title);
-	string_builder_add(sb, "\002%d cfA%s%s\n", (int32_t)(sb->length), job_name, localhost);
-
-	/*	// i'm still not sure what this is for. Can probably be remvoed, it seems
-	// to write the last string `\002%d cfA%s%s\n` to the printer because the
-	// previous sprintf lines were broken (wrt. string building). This stril
-	// is then later sent by the write further down in the file so probably
-	// can be safely removed.
-	write(socket_descriptor, buf + strlen(buf) + 1, strlen(buf + strlen(buf) + 1));
-	read(socket_descriptor, &lpdres, 1);
-	if (lpdres) {
-		fprintf(stderr, "Bad response from %s, %u\n", host, lpdres);
-		return false;
-	}
-	*/
-
-	char buf[1024];
-	snprintf(buf, 1024, "\002%d cfA%s%s\n", (int32_t)sb->length, job_name, localhost);
-	write(socket_descriptor, buf, strlen(buf));
-	read(socket_descriptor, &lpdres, 1);
-	if (lpdres) {
-		fprintf(stderr, "Bad response from %s, %u\n", host, lpdres);
-		return false;
-	}
-
-	write(socket_descriptor, sb->string, sb->length);
-	read(socket_descriptor, &lpdres, 1);
-
-	if (lpdres) {
-		fprintf(stderr, "Bad response from %s, %u\n", host, lpdres);
-		return false;
-	}
-
-	string_builder_erase(sb);
 
 	struct stat file_stat;
 	if (fstat(fileno(pjl_file), &file_stat)) {
@@ -190,29 +125,23 @@ bool printer_send(const char *host, FILE *pjl_file, const char *job_user, const 
 		return false;
 	}
 
-	string_builder_add(sb, "\003%u dfA%s%s\n", (int32_t)file_stat.st_size, job_name, localhost);
-	printf("job '%s': size %u\n", job_name, (int32_t)file_stat.st_size);
+	char job_header[10240];
+	snprintf(job_header, 10240, "\002\r\n\003%ld dfA%s%s\r\n", file_stat.st_size, job_name, local_hostname);
 
-	write(socket_descriptor, sb->string, sb->length);
-	read(socket_descriptor, &lpdres, 1);
+	uint8_t lpdres;
+	int32_t p_sock = printer_connect(host, PRINTER_MAX_WAIT);
 
+	write(p_sock, job_header, strlen(job_header));
+	read(p_sock, &lpdres, 1);
 	if (lpdres) {
 		fprintf(stderr, "Bad response from %s, %u\n", host, lpdres);
 		return false;
 	}
 
-	string_builder_destroy(sb);
+	size_t read_length;
+	char buffer[102400];
+	while ((read_length = fread(buffer, 1, 102400, pjl_file)) > 0)
+		write(p_sock, buffer, read_length);
 
-	{
-		int l;
-		char buffer[102400] = { '\0' };
-		while ((l = fread((char*)buffer, 1, 102400, pjl_file)) > 0) {
-			write(socket_descriptor, buffer, l);
-		}
-	}
-
-	// dont wait for a response...
-	printer_disconnect(socket_descriptor);
-
-	return true;
+	return printer_disconnect(p_sock);
 }

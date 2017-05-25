@@ -891,7 +891,7 @@ int main(int argc, char *argv[])
 	}
 
 	/* Send print job to printer. */
-	if (!printer_send(host, fh_pjl, job_user, job_title, job_name)) {
+	if (!printer_send(host, fh_pjl, job_name)) {
 		perror("Could not send pjl file to printer.\n");
 		return 1;
 	}
