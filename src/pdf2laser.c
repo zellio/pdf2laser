@@ -150,9 +150,6 @@ static int height = BED_HEIGHT;
 /** Job name for the print. */
 static const char *job_name = NULL;
 
-/** Title for the job print. */
-static const char *job_title = NULL;
-
 /** Variable to track the resolution of the print. */
 static int resolution = RESOLUTION_DEFAULT;
 
@@ -1393,8 +1390,6 @@ int main(int argc, char *argv[])
 		job_name = source_basename;
 	}
 
-	job_title = job_name;
-
 	/* Gather the postscript file from either standard input or a filename
 	 * specified as a command line argument.
 	 */
@@ -1409,7 +1404,7 @@ int main(int argc, char *argv[])
 		   "Raster: speed=%d power=%d dpi=%d\n"
 		   "Vector: freq=%d speed=%d,%d,%d power=%d,%d,%d\n"
 		   "",
-		   job_title,
+		   job->name,
 		   job->raster->speed,
 		   job->raster->power,
 		   resolution,
