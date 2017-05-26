@@ -36,23 +36,34 @@ struct _vectors {
 
 typedef struct raster raster_t;
 struct raster {
+	uint32_t resolution;
 	raster_mode mode;
 	uint32_t speed;
 	uint32_t power;
-	uint8_t repeat;
+	//uint8_t repeat;
 	uint32_t screen_size;
+};
+
+typedef struct cut cut_t;
+struct cut {
+	bool optimize;
+	uint32_t frequency;
+	uint32_t speed;
+	uint32_t power;
 };
 
 typedef struct job job_t;
 struct job {
+	char *name;
 	bool focus;
 	uint8_t flip;
 	uint32_t height;
 	uint32_t width;
-	uint32_t resolution;
 
-	char *name;
 	raster_t *raster;
+
+	cut_t **cutv;
+	uint8_t cutc;
 };
 
 
