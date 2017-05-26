@@ -150,9 +150,6 @@ static int height = BED_HEIGHT;
 /** Job name for the print. */
 static const char *job_name = NULL;
 
-/** User name that submitted the print job. */
-static const char *job_user = NULL;
-
 /** Title for the job print. */
 static const char *job_title = NULL;
 
@@ -1375,13 +1372,6 @@ int main(int argc, char *argv[])
 	if (!host)
 		usage(EXIT_FAILURE, "Printer host must be specfied\n");
 
-	// If they did not specify a user, get their name
-	if (!job_user) {
-		uid_t uid = getuid();
-		struct passwd * pw = getpwuid(uid);
-		job_user = strndup(pw->pw_name, 33);
-	}
-
 	// Skip any of the processed arguments
 	argc -= optind;
 	argv += optind;
@@ -1415,12 +1405,11 @@ int main(int argc, char *argv[])
 	}
 
 	// Report the settings on stdout
-	printf("Job: %s (%s)\n"
+	printf("Job: %s\n"
 		   "Raster: speed=%d power=%d dpi=%d\n"
 		   "Vector: freq=%d speed=%d,%d,%d power=%d,%d,%d\n"
 		   "",
 		   job_title,
-		   job_user,
 		   job->raster->speed,
 		   job->raster->power,
 		   resolution,
