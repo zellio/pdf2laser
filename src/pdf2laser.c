@@ -988,15 +988,19 @@ static bool generate_pjl(FILE *bitmap_file, FILE *pjl_file, FILE *vector_file)
 	generate_vector(pjl_file, vector_file);
 
 	/* Footer for printer job language. */
+
 	/* Reset */
 	fprintf(pjl_file, "\033E");
+
 	/* Exit language. */
 	fprintf(pjl_file, "\033%%-12345X");
+
 	/* End job. */
 	fprintf(pjl_file, "@PJL EOJ \r\n");
+
 	/* Pad out the remainder of the file with 0 characters. */
-	for(int i = 0; i < 4096; i++)
-		fputc(0, pjl_file);
+	// for(int i = 0; i < 4096; i++)
+	//	fputc(0, pjl_file);
 
 	return true;
 }
