@@ -40,11 +40,11 @@ extern "C" {
 #endif
 
 static int big_to_little_endian(uint8_t *position, int bytes);
-static bool generate_raster(FILE *pjl_file, FILE *bitmap_file);
-static bool generate_vector(FILE *pjl_file, FILE *vector_file);
-static bool generate_pjl(FILE *bitmap_file, FILE *pjl_file, FILE *vector_file);
+static bool generate_raster(job_t *job, FILE *pjl_file, FILE *bitmap_file);
+static bool generate_vector(job_t *job, FILE *pjl_file, FILE *vector_file);
+static bool generate_pjl(job_t *job, FILE *bitmap_file, FILE *pjl_file, FILE *vector_file);
 static bool ps_to_eps(FILE *ps_file, FILE *eps_file);
-static void range_checks(void);
+static void range_checks(job_t *job);
 static void usage(int rc, const char* const msg);
 static int vector_param_set(int * const values, const char *arg);
 

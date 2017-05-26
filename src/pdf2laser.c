@@ -48,7 +48,7 @@
  */
 
 /** Default on whether or not auto-focus is enabled. */
-#define AUTO_FOCUS (1)
+#define AUTO_FOCUS true
 
 /** Default bed height (y-axis) in pts. */
 #define BED_HEIGHT (864)
@@ -230,10 +230,10 @@ static int big_to_little_endian(uint8_t *position, int nbytes)
 	return result;
 }
 
-FILE *fn_vector;
+FILE *fh_vector;
 static int GSDLLCALL gsdll_stdout(void *minst, const char *str, int len)
 {
-	fprintf(fn_vector, "%s", str);
+	fprintf(fh_vector, "%s", str);
 	return len;
 }
 
@@ -280,7 +280,7 @@ static bool execute_ghostscript(const char * const filename_bitmap,
 	gs_argv[7] = calloc(1024, sizeof(char));
 	snprintf(gs_argv[7], 1024, "%s", filename_eps);
 
-	fn_vector = fopen(filename_vector, "w");
+	fh_vector = fopen(filename_vector, "w");
 
 	int32_t rc;
 
@@ -300,7 +300,7 @@ static bool execute_ghostscript(const char * const filename_bitmap,
     if ((rc == 0) || (rc2 == gs_error_Quit))
 		rc = rc2;
 
-	fclose(fn_vector);
+	fclose(fh_vector);
 
 	gsapi_delete_instance(minst);
 
@@ -314,7 +314,7 @@ static bool execute_ghostscript(const char * const filename_bitmap,
 /**
  *
  */
-static bool generate_raster(FILE *pjl_file, FILE *bitmap_file)
+static bool generate_raster(job_t *job, FILE *pjl_file, FILE *bitmap_file)
 {
 	const int invert = 0;
 	int h;
@@ -908,7 +908,7 @@ static void output_vector(FILE * const pjl_file, const vector_t *v)
 }
 
 
-static bool generate_vector(FILE * const pjl_file, FILE * const vector_file)
+static bool generate_vector(job_t *job, FILE * const pjl_file, FILE * const vector_file)
 {
 	vectors_t * const vectors = vectors_parse(vector_file);
 
@@ -938,13 +938,13 @@ static bool generate_vector(FILE * const pjl_file, FILE * const vector_file)
 /**
  *
  */
-static bool generate_pjl(FILE *bitmap_file, FILE *pjl_file, FILE *vector_file)
+static bool generate_pjl(job_t *job, FILE *bitmap_file, FILE *pjl_file, FILE *vector_file)
 {
 	/* Print the printer job language header. */
-	fprintf(pjl_file, "\033%%-12345X@PJL JOB NAME=%s\r\n", job_title);
+	fprintf(pjl_file, "\033%%-12345X@PJL JOB NAME=%s\r\n", job->name);
 	fprintf(pjl_file, "\033E@PJL ENTER LANGUAGE=PCL\r\n");
 	/* Set autofocus on or off. */
-	fprintf(pjl_file, "\033&y%dA", focus);
+	fprintf(pjl_file, "\033&y%dA", job->focus);
 	/* Left (long-edge) offset registration.  Adjusts the position of the
 	 * logical page across the width of the page.
 	 */
@@ -955,37 +955,37 @@ static bool generate_pjl(FILE *bitmap_file, FILE *pjl_file, FILE *vector_file)
 	fprintf(pjl_file, "\033&l0Z");
 
 	/* Resolution of the print. */
-	fprintf(pjl_file, "\033&u%dD", resolution);
+	fprintf(pjl_file, "\033&u%dD", job->resolution);
 	/* X position = 0 */
 	fprintf(pjl_file, "\033*p0X");
 	/* Y position = 0 */
 	fprintf(pjl_file, "\033*p0Y");
 	/* PCL resolution. */
-	fprintf(pjl_file, "\033*t%dR", resolution);
+	fprintf(pjl_file, "\033*t%dR", job->resolution);
 
 	/* If raster power is enabled and raster mode is not 'n' then add that
 	 * information to the print job.
 	 */
-	if (raster_power && print_raster_mode != 'n') {
+	if (job->raster->power && job->raster->mode != 'n') {
 		/* FIXME unknown purpose. */
 		fprintf(pjl_file, "\033&y0C");
 
 		/* We're going to perform a raster print. */
-		generate_raster(pjl_file, bitmap_file);
+		generate_raster(job, pjl_file, bitmap_file);
 	}
 
 	/* If vector power is > 0 then add vector information to the print job. */
 	fprintf(pjl_file, "\033E@PJL ENTER LANGUAGE=PCL\r\n");
 	/* Page Orientation */
 	fprintf(pjl_file, "\033*r0F");
-	fprintf(pjl_file, "\033*r%dT", height * y_repeat);
-	fprintf(pjl_file, "\033*r%dS", width * x_repeat);
+	fprintf(pjl_file, "\033*r%dT", job->height * y_repeat);
+	fprintf(pjl_file, "\033*r%dS", job->width * x_repeat);
 	fprintf(pjl_file, "\033*r1A");
 	fprintf(pjl_file, "\033*rC");
 	fprintf(pjl_file, "\033%%1B");
 
 	/* We're going to perform a vector print. */
-	generate_vector(pjl_file, vector_file);
+	generate_vector(job, pjl_file, vector_file);
 
 	/* Footer for printer job language. */
 
@@ -1155,47 +1155,54 @@ static bool ps_to_eps(FILE *ps_file, FILE *eps_file)
  *
  * @return Nothing
  */
-static void range_checks(void)
+static void range_checks(job_t *job)
 {
-	if (raster_power > 100)
-		raster_power = 100;
-	else
-		if (raster_power < 0)
-			raster_power = 0;
+	if (job->raster->power > 100) {
+		job->raster->power = 100;
+	}
+	else if (job->raster->power < 0) {
+		job->raster->power = 0;
+	}
 
-	if (raster_speed > 100)
-		raster_speed = 100;
-	else
-		if (raster_speed < 1)
-			raster_speed = 1;
+	if (job->raster->speed > 100) {
+		job->raster->speed = 100;
+	}
+	else if (job->raster->speed < 1) {
+		job->raster->speed = 1;
+	}
 
-	if (resolution > 1200)
-		resolution = 1200;
-	else
-		if (resolution < 75)
-			resolution = 75;
+	if (job->resolution > 1200) {
+		job->resolution = 1200;
+	}
+	else if (job->resolution < 75) {
+		job->resolution = 75;
+	}
 
-	if (screen_size < 1)
-		screen_size = 1;
+	if (job->raster->screen_size < 1) {
+		job->raster->screen_size = 1;
+	}
 
-	if (vector_freq < 10)
+	if (vector_freq < 10) {
 		vector_freq = 10;
-	else
-		if (vector_freq > 5000)
-			vector_freq = 5000;
+	}
+	else if (vector_freq > 5000) {
+		vector_freq = 5000;
+	}
 
 	for (int i = 0 ; i < VECTOR_PASSES ; i++) {
-		if (vector_power[i] > 100)
+		if (vector_power[i] > 100) {
 			vector_power[i] = 100;
-		else
-			if (vector_power[i] < 0)
-				vector_power[i] = 0;
+		}
+		else if (vector_power[i] < 0) {
+			vector_power[i] = 0;
+		}
 
-		if (vector_speed[i] > 100)
+		if (vector_speed[i] > 100) {
 			vector_speed[i] = 100;
-		else
-			if (vector_speed[i] < 1)
-				vector_speed[i] = 1;
+		}
+		else if (vector_speed[i] < 1) {
+			vector_speed[i] = 1;
+		}
 	}
 }
 
@@ -1304,6 +1311,22 @@ int main(int argc, char *argv[])
 		return false;
 	}
 
+	job_t *job = &(job_t){
+		.flip = FLIP,
+		.height = BED_HEIGHT,
+		.width = BED_WIDTH,
+		.focus = false,
+		.resolution = RESOLUTION_DEFAULT,
+		.raster = &(raster_t){
+			.mode = RASTER_MODE_DEFAULT,
+			.speed = RASTER_SPEED_DEFAULT,
+			.power = RASTER_POWER_DEFAULT,
+			.repeat = RASTER_REPEAT,
+			.screen_size = SCREEN_DEFAULT,
+		},
+	};
+
+
 	const char * host = "192.168.1.4";
 
 	while (true) {
@@ -1320,10 +1343,10 @@ int main(int argc, char *argv[])
 		case 'D': debug++; break;
 		case 'p': host = optarg; break;
 		case 'P': usage(EXIT_FAILURE, "Presets are not supported yet\n"); break;
-		case 'n': job_name = optarg; break;
-		case 'd': resolution = atoi(optarg); break;
-		case 'r': raster_speed = atoi(optarg); break;
-		case 'R': raster_power = atoi(optarg); break;
+		case 'n': job->name = optarg; break;
+		case 'd': job->resolution = atoi(optarg); break;
+		case 'r': job->raster->speed = atoi(optarg); break;
+		case 'R': job->raster->power = atoi(optarg); break;
 		case 'v':
 			if (vector_param_set(vector_speed, optarg) < 0)
 				usage(EXIT_FAILURE, "unable to parse vector-speed");
@@ -1332,10 +1355,10 @@ int main(int argc, char *argv[])
 			if (vector_param_set(vector_power, optarg) < 0)
 				usage(EXIT_FAILURE, "unable to parse vector-power");
 			break;
-		case 'm': print_raster_mode = tolower(*optarg); break;
+		case 'm': job->raster->mode = tolower(*optarg); break;
 		case 'f': vector_freq = atoi(optarg); break;
-		case 's': screen_size = atoi(optarg); break;
-		case 'a': focus = AUTO_FOCUS; break;
+		case 's': job->raster->screen_size = atoi(optarg); break;
+		case 'a': job->focus = AUTO_FOCUS; break;
 		case 'O': do_vector_optimize = 0; break;
 		case 'h': usage(EXIT_SUCCESS, ""); break;
 		case '@': fprintf(stdout, "%s\n", VERSION); exit(0); break;
@@ -1346,7 +1369,7 @@ int main(int argc, char *argv[])
 	/* Perform a check over the global values to ensure that they have values
 	 * that are within a tolerated range.
 	 */
-	range_checks();
+	range_checks(job);
 
 	// ensure printer host is set
 	if (!host)
@@ -1398,8 +1421,8 @@ int main(int argc, char *argv[])
 		   "",
 		   job_title,
 		   job_user,
-		   raster_speed,
-		   raster_power,
+		   job->raster->speed,
+		   job->raster->power,
 		   resolution,
 		   vector_freq,
 		   vector_speed[0],
@@ -1545,8 +1568,8 @@ int main(int argc, char *argv[])
 	}
 
 	const char * const raster_string =
-		print_raster_mode == 'c' ? "bmp16m" :
-		print_raster_mode == 'g' ? "bmpgray" :
+		job->raster->mode == 'c' ? "bmp16m" :
+		job->raster->mode == 'g' ? "bmpgray" :
 		"bmpmono";
 
 
@@ -1572,7 +1595,7 @@ int main(int argc, char *argv[])
 	}
 
 	/* Execute the generation of the printer job language (pjl) file. */
-	if (!generate_pjl(fh_bitmap, fh_pjl, fh_vector)) {
+	if (!generate_pjl(job, fh_bitmap, fh_pjl, fh_vector)) {
 		perror("Generation of pjl file failed.\n");
 		fclose(fh_pjl);
 		return 1;

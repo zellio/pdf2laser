@@ -1,6 +1,9 @@
 #ifndef __PDF2LASER_TYPE_H__
 #define __PDF2LASER_TYPE_H__ 1
 
+#include <inttypes.h>
+#include <stdbool.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -29,6 +32,27 @@ struct _vector {
 typedef struct _vectors vectors_t ;
 struct _vectors {
 	vector_t *vectors;
+};
+
+typedef struct raster raster_t;
+struct raster {
+	raster_mode mode;
+	uint32_t speed;
+	uint32_t power;
+	uint8_t repeat;
+	uint32_t screen_size;
+};
+
+typedef struct job job_t;
+struct job {
+	bool focus;
+	uint8_t flip;
+	uint32_t height;
+	uint32_t width;
+	uint32_t resolution;
+
+	char *name;
+	raster_t *raster;
 };
 
 
