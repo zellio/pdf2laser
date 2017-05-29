@@ -40,7 +40,7 @@ struct raster {
 	raster_mode mode;
 	uint32_t speed;
 	uint32_t power;
-	//uint8_t repeat;
+	uint8_t repeat;
 	uint32_t screen_size;
 };
 
@@ -52,8 +52,8 @@ struct cut {
 	uint32_t power;
 };
 
-typedef struct job job_t;
-struct job {
+typedef struct print_job print_job_t;
+struct print_job {
 	char *name;
 	bool focus;
 	uint8_t flip;
@@ -62,8 +62,15 @@ struct job {
 
 	raster_t *raster;
 
+	int32_t vector_speed[3];
+	int32_t vector_power[3];
+	int32_t vector_frequency;
+	bool vector_optimize;
+
 	cut_t **cutv;
 	uint8_t cutc;
+
+	bool debug;
 };
 
 

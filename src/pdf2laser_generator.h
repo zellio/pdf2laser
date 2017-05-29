@@ -6,6 +6,10 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <math.h>
+#include <string.h>
+
+#include <ghostscript/iapi.h>
+#include <ghostscript/ierrors.h>
 
 #include "pdf2laser_type.h"
 
@@ -22,10 +26,10 @@ extern "C" {
 // how many different vector power level groups
 #define VECTOR_PASSES 3
 
-
-bool generate_raster(job_t *job, FILE *pjl_file, FILE *bitmap_file);
-bool generate_vector(job_t *job, FILE *pjl_file, FILE *vector_file);
-bool generate_pjl(job_t *job, FILE *bitmap_file, FILE *pjl_file, FILE *vector_file);
+bool generate_ps(const char *target_pdf, const char *target_ps);
+bool generate_raster(print_job_t *print_job, FILE *pjl_file, FILE *bitmap_file);
+bool generate_vector(print_job_t *print_job, FILE *pjl_file, FILE *vector_file);
+bool generate_pjl(print_job_t *print_job, FILE *bitmap_file, FILE *pjl_file, FILE *vector_file);
 
 #ifdef __cplusplus
 };

@@ -1,6 +1,6 @@
 #include "pdf2laser_printer.h"
 
-bool debug = false;
+//bool debug = false;
 char *queue = "";
 
 /**

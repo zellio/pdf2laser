@@ -58,7 +58,7 @@
 
 
 /** Default for debug mode. */
-#define DEBUG (0)
+#define DEBUG (false)
 
 /** Number of characters allowable for a filename. */
 #define FILENAME_NCHARS (1024)
@@ -66,7 +66,7 @@
 /** Default on whether or not the result is supposed to be flipped along the X
  * axis.
  */
-#define FLIP (0)
+#define FLIP (false)
 
 /** Additional offset for the X axis. */
 #define HPGLX (0)
@@ -134,7 +134,7 @@
 /* static char buf[102400]; */
 
 /** Determines whether or not debug is enabled. */
-static char debug = DEBUG;
+//static bool debug = DEBUG;
 
 /* /\** Variable to track whether or not the X axis should be flipped. *\/ */
 /* static char flip = FLIP; */
@@ -219,11 +219,11 @@ static int GSDLLCALL gsdll_stdout(void *minst, const char *str, int len)
  * @return Return true if the execution of ghostscript succeeds, false
  * otherwise.
  */
-static bool execute_ghostscript(const char * const filename_bitmap,
+static bool execute_ghostscript(print_job_t *print_job,
+								const char * const filename_bitmap,
 								const char * const filename_eps,
 								const char * const filename_vector,
-								const char * const bmp_mode,
-								int resolution)
+								const char * const bmp_mode)
 {
 
 	int gs_argc = 8;
@@ -235,7 +235,7 @@ static bool execute_ghostscript(const char * const filename_bitmap,
 	gs_argv[3] = "-dNOPAUSE";
 
 	gs_argv[4] = calloc(64, sizeof(char));
-	snprintf(gs_argv[4], 64, "-r%d", resolution);
+	snprintf(gs_argv[4], 64, "-r%d", print_job->raster->resolution);
 
 	gs_argv[5] = calloc(1024, sizeof(char));
 	snprintf(gs_argv[5], 1024, "-sDEVICE=%s", bmp_mode);
@@ -287,45 +287,20 @@ static bool execute_ghostscript(const char * const filename_bitmap,
  *
  * @return Return true if the function completes its task, false otherwise.
  */
-static bool ps_to_eps(FILE *ps_file, FILE *eps_file)
+static bool ps_to_eps(print_job_t *print_job, FILE *ps_file, FILE *eps_file)
 {
-	int xoffset = 0;
-	int yoffset = 0;
 
-	int l;
-	while (fgets((char *)buf, sizeof (buf), ps_file)) {
-		fprintf(eps_file, "%s", (char *)buf);
-		if (*buf != '%')
+	char *line = NULL;
+	size_t length = 0;
+	ssize_t length_read;
+
+	while ((length_read = getline(&line, &length, ps_file)) != -1) {
+		fprintf(eps_file, "%s", line);
+
+		if (*line != '%') {
 			break;
-
-		if (!strncasecmp((char *) buf, "%%PageBoundingBox:", 18)) {
-			int lower_left_x;
-			int lower_left_y;
-			int upper_right_x;
-			int upper_right_y;
-			if (sscanf((char *)buf + 14, "%d %d %d %d",
-					   &lower_left_x,
-					   &lower_left_y,
-					   &upper_right_x,
-					   &upper_right_y) == 4) {
-
-				xoffset = lower_left_x;
-				yoffset = lower_left_y;
-
-				width = (upper_right_x - lower_left_x);
-				height = (upper_right_y - lower_left_y);
-
-				fprintf(eps_file, "/setpagedevice{pop}def\n"); // use bbox
-
-				if (xoffset || yoffset)
-					fprintf(eps_file, "%d %d translate\n", -xoffset, -yoffset);
-
-				if (flip)
-					fprintf(eps_file, "%d 0 translate -1 1 scale\n", width);
-			}
 		}
-
-		if (!strncasecmp((char *) buf, "%!", 2)) {
+		else if (strncmp(line, "%!", 2) == 0) {
 			fprintf
 				(eps_file,
 				 "/=== {(        ) cvs print} def" // print a number
@@ -393,31 +368,65 @@ static bool ps_to_eps(FILE *ps_file, FILE *eps_file)
 				 "/showpage {(X)= showpage}bind def"
 				 "\n");
 
-			if (print_raster_mode != 'c' && print_raster_mode != 'g') {
-				if (screen_size == 0) {
+			if (print_job->raster->mode != 'c' && print_job->raster->mode != 'g') {
+				if (print_job->raster->screen_size == 0) {
 					fprintf(eps_file, "{0.5 ge{1}{0}ifelse}settransfer\n");
-				} else {
-					int s = screen_size;
-					if (resolution >= 600) {
+				}
+				else {
+					uint32_t screen_size = print_job->raster->screen_size;
+					if (print_job->raster->resolution >= 600) {
 						// adjust for overprint
 						fprintf(eps_file,
 								"{dup 0 ne{%d %d div add}if}settransfer\n",
-								resolution / 600, s);
+								print_job->raster->resolution / 600, screen_size);
 					}
-					fprintf(eps_file, "%d 30{%s}setscreen\n", resolution / s,
-							(screen_size > 0) ? "pop abs 1 exch sub" :
+					fprintf(eps_file, "%d 30{%s}setscreen\n", print_job->raster->resolution / screen_size,
+							(print_job->raster->screen_size > 0) ? "pop abs 1 exch sub" :
 							"180 mul cos exch 180 mul cos add 2 div");
 				}
 			}
 		}
+		else if (strncasecmp(line, "%%PageBoundingBox:", 18) == 0) {
+
+			int32_t x_offset = 0;
+			int32_t y_offset = 0;
+
+			int32_t x_lower_left, y_lower_left, x_upper_right, y_upper_right;
+
+			if (sscanf(line, "%%%%PageBoundingBox: %d %d %d %d",
+					   &x_lower_left,
+					   &y_lower_left,
+					   &x_upper_right,
+					   &y_upper_right) == 4) {
+
+				x_offset = x_lower_left;
+				y_offset = y_lower_left;
+
+				print_job->width = (x_upper_right - x_lower_left);
+				print_job->height = (y_upper_right - y_lower_left);
+
+				fprintf(eps_file, "/setpagedevice{pop}def\n"); // use bbox
+
+				if (x_offset || y_offset)
+					fprintf(eps_file, "%d %d translate\n", -x_offset, -y_offset);
+
+				if (print_job->flip)
+					fprintf(eps_file, "%d 0 translate -1 1 scale\n", print_job->width);
+			}
+		}
 	}
-	while ((l = fread ((char *) buf, 1, sizeof (buf), ps_file)) > 0)
-		fwrite ((char *) buf, 1, l, eps_file);
+
+	free(line);
+
+	{
+		size_t length;
+		uint8_t buffer[102400];
+		while ((length = fread(buffer, 1, 102400, ps_file)) > 0)
+			fwrite(buffer, 1, length, eps_file);
+	}
 
 	return true;
 }
-
-
 
 /**
  * Perform range validation checks on the major global variables to ensure
@@ -426,53 +435,53 @@ static bool ps_to_eps(FILE *ps_file, FILE *eps_file)
  *
  * @return Nothing
  */
-static void range_checks(job_t *job)
+static void range_checks(print_job_t *print_job)
 {
-	if (job->raster->power > 100) {
-		job->raster->power = 100;
+	if (print_job->raster->power > 100) {
+		print_job->raster->power = 100;
 	}
-	else if (job->raster->power < 0) {
-		job->raster->power = 0;
-	}
-
-	if (job->raster->speed > 100) {
-		job->raster->speed = 100;
-	}
-	else if (job->raster->speed < 1) {
-		job->raster->speed = 1;
+	else if (print_job->raster->power < 0) {
+		print_job->raster->power = 0;
 	}
 
-	if (job->raster->resolution > 1200) {
-		job->raster->resolution = 1200;
+	if (print_job->raster->speed > 100) {
+		print_job->raster->speed = 100;
 	}
-	else if (job->raster->resolution < 75) {
-		job->raster->resolution = 75;
-	}
-
-	if (job->raster->screen_size < 1) {
-		job->raster->screen_size = 1;
+	else if (print_job->raster->speed < 1) {
+		print_job->raster->speed = 1;
 	}
 
-	if (vector_freq < 10) {
-		vector_freq = 10;
+	if (print_job->raster->resolution > 1200) {
+		print_job->raster->resolution = 1200;
 	}
-	else if (vector_freq > 5000) {
-		vector_freq = 5000;
+	else if (print_job->raster->resolution < 75) {
+		print_job->raster->resolution = 75;
+	}
+
+	if (print_job->raster->screen_size < 1) {
+		print_job->raster->screen_size = 1;
+	}
+
+	if (print_job->vector_frequency < 10) {
+		print_job->vector_frequency = 10;
+	}
+	else if (print_job->vector_frequency > 5000) {
+		print_job->vector_frequency = 5000;
 	}
 
 	for (int i = 0 ; i < VECTOR_PASSES ; i++) {
-		if (vector_power[i] > 100) {
-			vector_power[i] = 100;
+		if (print_job->vector_power[i] > 100) {
+			print_job->vector_power[i] = 100;
 		}
-		else if (vector_power[i] < 0) {
-			vector_power[i] = 0;
+		else if (print_job->vector_power[i] < 0) {
+			print_job->vector_power[i] = 0;
 		}
 
-		if (vector_speed[i] > 100) {
-			vector_speed[i] = 100;
+		if (print_job->vector_speed[i] > 100) {
+			print_job->vector_speed[i] = 100;
 		}
-		else if (vector_speed[i] < 1) {
-			vector_speed[i] = 1;
+		else if (print_job->vector_speed[i] < 1) {
+			print_job->vector_speed[i] = 1;
 		}
 	}
 }
@@ -538,24 +547,24 @@ static const struct option long_options[] = {
  * Handle the case where we have been given floating point values,
  * even though we only want to deal with integers.
  */
-static int vector_param_set(int * const values, const char *arg )
+static int32_t vector_param_set(int32_t **value, const char *optarg)
 {
-	double v[3] = { 0, 0, 0 };
-	int rc = sscanf(arg, "%lf,%lf,%lf", &v[0], &v[1], &v[2]);
+	double values[3] = { 0.0, 0.0, 0.0 };
+	int32_t rc = sscanf(optarg, "%lf,%lf,%lf", &values[0], &values[1], &values[2]);
 
 	if (rc < 1)
 		return -1;
 
 	// convert to integer from the floating point representation
-	values[0] = v[0];
-	values[1] = v[1];
-	values[2] = v[2];
+	value[0] = (int32_t)values[0];
+	value[1] = (int32_t)values[1];
+	value[2] = (int32_t)values[2];
 
 	if (rc <= 1)
-		values[1] = values[0];
+		value[1] = value[0];
 
 	if (rc <= 2)
-		values[2] = values[1];
+		value[2] = value[1];
 
 	return rc;
 }
@@ -582,7 +591,7 @@ int main(int argc, char *argv[])
 		return false;
 	}
 
-	job_t *job = &(job_t){
+	print_job_t *print_job = &(print_job_t){
 		.flip = FLIP,
 		.height = BED_HEIGHT,
 		.width = BED_WIDTH,
@@ -595,12 +604,14 @@ int main(int argc, char *argv[])
 			.repeat = RASTER_REPEAT,
 			.screen_size = SCREEN_DEFAULT,
 		},
-		.cutc = 0,
-		.cutv = NULL,
+		.vector_speed = { 100, 100, 100 },
+		.vector_power = { 1, 1, 1 },
+		.vector_frequency = VECTOR_FREQUENCY_DEFAULT,
+		.vector_optimize = true,
+		.debug = DEBUG,
 	};
 
-
-	const char * host = "192.168.1.4";
+	const char *host = "192.168.1.4";
 
 	while (true) {
 		const char ch = getopt_long(argc,
@@ -612,27 +623,27 @@ int main(int argc, char *argv[])
 		if (ch <= 0 )
 			break;
 
-		switch(ch) {
-		case 'D': debug++; break;
+		switch (ch) {
+		case 'D': print_job->debug = true; break;
 		case 'p': host = optarg; break;
 		case 'P': usage(EXIT_FAILURE, "Presets are not supported yet\n"); break;
-		case 'n': job->name = optarg; break;
-		case 'd': job->raster->resolution = atoi(optarg); break;
-		case 'r': job->raster->speed = atoi(optarg); break;
-		case 'R': job->raster->power = atoi(optarg); break;
+		case 'n': print_job->name = optarg; break;
+		case 'd': print_job->raster->resolution = atoi(optarg); break;
+		case 'r': print_job->raster->speed = atoi(optarg); break;
+		case 'R': print_job->raster->power = atoi(optarg); break;
 		case 'v':
-			if (vector_param_set(vector_speed, optarg) < 0)
+			if (vector_param_set(&(print_job->vector_speed), optarg) < 0)
 				usage(EXIT_FAILURE, "unable to parse vector-speed");
 			break;
 		case 'V':
-			if (vector_param_set(vector_power, optarg) < 0)
+			if (vector_param_set(&(print_job->vector_power), optarg) < 0)
 				usage(EXIT_FAILURE, "unable to parse vector-power");
 			break;
-		case 'm': job->raster->mode = tolower(*optarg); break;
-		case 'f': vector_freq = atoi(optarg); break;
-		case 's': job->raster->screen_size = atoi(optarg); break;
-		case 'a': job->focus = AUTO_FOCUS; break;
-		case 'O': do_vector_optimize = false; break;
+		case 'm': print_job->raster->mode = tolower(*optarg); break;
+		case 'f': print_job->vector_frequency = atoi(optarg); break;
+		case 's': print_job->raster->screen_size = atoi(optarg); break;
+		case 'a': print_job->focus = AUTO_FOCUS; break;
+		case 'O': print_job->vector_optimize = false; break;
 		case 'h': usage(EXIT_SUCCESS, ""); break;
 		case '@': fprintf(stdout, "%s\n", VERSION); exit(0); break;
 		default: usage(EXIT_FAILURE, "Unknown argument\n"); break;
@@ -642,7 +653,7 @@ int main(int argc, char *argv[])
 	/* Perform a check over the global values to ensure that they have values
 	 * that are within a tolerated range.
 	 */
-	range_checks(job);
+	range_checks(print_job);
 
 	// ensure printer host is set
 	if (!host)
@@ -665,17 +676,8 @@ int main(int argc, char *argv[])
 	// If no job name is specified, use just the filename if there
 
 	// are any / in the name.
-	if (!job_name) {
-		job_name = source_basename;
-	}
-
-	/* Gather the postscript file from either standard input or a filename
-	 * specified as a command line argument.
-	 */
-	FILE * fh_source_cups = argc ? fopen(source_filename, "r") : stdin;
-	if (!fh_source_cups) {
-		perror(source_filename);
-		exit(EXIT_FAILURE);
+	if (!print_job->name) {
+		print_job->name = source_basename;
 	}
 
 	// Report the settings on stdout
@@ -683,17 +685,17 @@ int main(int argc, char *argv[])
 		   "Raster: speed=%d power=%d dpi=%d\n"
 		   "Vector: freq=%d speed=%d,%d,%d power=%d,%d,%d\n"
 		   "",
-		   job->name,
-		   job->raster->speed,
-		   job->raster->power,
-		   job->raster->resolution,
-		   vector_freq,
-		   vector_speed[0],
-		   vector_speed[1],
-		   vector_speed[2],
-		   vector_power[0],
-		   vector_power[1],
-		   vector_power[2]);
+		   print_job->name,
+		   print_job->raster->speed,
+		   print_job->raster->power,
+		   print_job->raster->resolution,
+		   print_job->vector_frequency,
+		   print_job->vector_speed[0],
+		   print_job->vector_speed[1],
+		   print_job->vector_speed[2],
+		   print_job->vector_power[0],
+		   print_job->vector_power[1],
+		   print_job->vector_power[2]);
 
 	char *target_base = strndup(source_basename, FILENAME_NCHARS);
 	char *last_dot = strrchr(target_base, '.');
@@ -710,9 +712,6 @@ int main(int argc, char *argv[])
 	char target_pjl[FILENAME_NCHARS] = { '\0' };
 	char target_ps[FILENAME_NCHARS] = { '\0' };
 	char target_vector[FILENAME_NCHARS] = { '\0' };
-
-	/* Temporary variables. */
-	int l;
 
 	/* Determine and set the names of all files that will be manipulated by the
 	 * program.
@@ -732,79 +731,39 @@ int main(int argc, char *argv[])
 	FILE *fh_pjl;
 	FILE *fh_vector;
 
-	/* Check whether the incoming data is ps or pdf data. */
-	fread((char *)buf, 1, 4, fh_source_cups);
-	rewind(fh_source_cups);
-	if (strncasecmp((char *)buf, "%PDF", 4) == 0) {
-		/* We have a pdf file. */
-
-		/* Open the destination pdf file. */
+	if (strncmp(source_filename, "stdin", 5) == 0) {
 		fh_pdf = fopen(target_pdf, "w");
 		if (!fh_pdf) {
 			perror(target_pdf);
 			return 1;
 		}
 
-		/* Write the cups data out to the fh_pdf. */
-		while ((l = fread((char *)buf, 1, sizeof(buf), fh_source_cups)) > 0)
-			fwrite((char *)buf, 1, l, fh_pdf);
-
-		fclose(fh_source_cups);
-		fclose(fh_pdf);
-
-		fprintf(stderr, "Executing pdf2ps\n");
-		int gs_argc = 13;
-		char *gs_argv[gs_argc];
-		gs_argv[0] = "gs";
-		gs_argv[1] = "-q";
-		gs_argv[2] = "-dNOPAUSE";
-		gs_argv[3] = "-dBATCH";
-		gs_argv[4] = "-P-";
-		gs_argv[5] = "-dSAFER";
-		gs_argv[6] = "-sDEVICE=ps2write";
-
-		gs_argv[7] = calloc(1024, sizeof(char));
-		snprintf(gs_argv[7], 1024, "-sOutputFile=%s.ps", target_basename);
-
-		gs_argv[8] = "-c";
-		gs_argv[9] = "save";
-		gs_argv[10] = "pop";
-		gs_argv[11] = "-f";
-		gs_argv[12] = strndup(target_pdf, 1024);
-
-		int32_t rc;
-		void *minst;
-
-		rc = gsapi_new_instance(&minst, NULL);
-		if (rc < 0)
-			return false;
-
-		rc = gsapi_set_arg_encoding(minst, GS_ARG_ENCODING_UTF8);
-		if (rc == 0)
-			rc = gsapi_init_with_args(minst, gs_argc, gs_argv);
-
-		int32_t rc2 = gsapi_exit(minst);
-
-		if ((rc == 0) || (rc2 == gs_error_Quit))
-			rc = rc2;
-
-		gsapi_delete_instance(minst);
-
-		if (rc)
-			return false;
-
-		if (!debug) {
-			/* Debug is disabled so remove generated pdf file. */
-			if (unlink(target_pdf)) {
-				perror(target_pdf);
-			}
+		{
+			uint8_t buffer[102400];
+			size_t rc;
+			while ((rc = fread(buffer, 1, 102400, stdin)) > 0)
+				fwrite(buffer, 1, rc, fh_pdf);
 		}
 
-		/* Set fh_ps to the generated ps file. */
-		fh_ps = fopen(target_ps, "r");
-	} else {
-		/* Input file is postscript. Set the fh_ps handle to fh_source_cups. */
-		fh_ps = fh_source_cups;
+		fclose(fh_pdf);
+	}
+
+	if (!generate_ps(source_filename, target_ps)) {
+		perror("Error converting pdf to postscript.");
+		return 1;
+	}
+
+	if (!print_job->debug) {
+		/* Debug is disabled so remove generated pdf file. */
+		if (unlink(target_pdf)) {
+			perror(target_pdf);
+		}
+	}
+
+	fh_ps = fopen(target_ps, "r");
+	if (!fh_ps) {
+		perror("Error opening postscript file.");
+		return 1;
 	}
 
 	/* Open the encapsulated postscript file for writing. */
@@ -815,7 +774,7 @@ int main(int argc, char *argv[])
 	}
 
 	/* Convert postscript to encapsulated postscript. */
-	if (!ps_to_eps(fh_ps, fh_eps)) {
+	if (!ps_to_eps(print_job, fh_ps, fh_eps)) {
 		perror("Error converting postscript to encapsulated postscript.");
 		fclose(fh_eps);
 		return 1;
@@ -831,17 +790,17 @@ int main(int argc, char *argv[])
 	}
 
 	const char * const raster_string =
-		job->raster->mode == 'c' ? "bmp16m" :
-		job->raster->mode == 'g' ? "bmpgray" :
+		print_job->raster->mode == 'c' ? "bmp16m" :
+		print_job->raster->mode == 'g' ? "bmpgray" :
 		"bmpmono";
 
 
 	fprintf(stderr, "execute_ghostscript\n");
-	if(!execute_ghostscript(target_bitmap,
+	if(!execute_ghostscript(print_job,
+							target_bitmap,
 							target_eps,
 							target_vector,
-							raster_string,
-							resolution )) {
+							raster_string)) {
 		perror("Failure to execute ghostscript command.\n");
 		return 1;
 	}
@@ -858,7 +817,7 @@ int main(int argc, char *argv[])
 	}
 
 	/* Execute the generation of the printer job language (pjl) file. */
-	if (!generate_pjl(job, fh_bitmap, fh_pjl, fh_vector)) {
+	if (!generate_pjl(print_job, fh_bitmap, fh_pjl, fh_vector)) {
 		perror("Generation of pjl file failed.\n");
 		fclose(fh_pjl);
 		return 1;
@@ -870,7 +829,7 @@ int main(int argc, char *argv[])
 	fclose(fh_vector);
 
 	/* Cleanup unneeded files provided that debug mode is disabled. */
-	if (!debug) {
+	if (!print_job->debug) {
 		if (unlink(target_bitmap)) {
 			perror(target_bitmap);
 		}
@@ -890,19 +849,19 @@ int main(int argc, char *argv[])
 	}
 
 	/* Send print job to printer. */
-	if (!printer_send(host, fh_pjl, job_name)) {
+	if (!printer_send(host, fh_pjl, print_job->name)) {
 		perror("Could not send pjl file to printer.\n");
 		return 1;
 	}
 
 	fclose(fh_pjl);
-	if (!debug) {
+	if (!print_job->debug) {
 		if (unlink(target_pjl)) {
 			perror(target_pjl);
 		}
 	}
 
-	if (!debug) {
+	if (!print_job->debug) {
 		if (rmdir(tmpdir_name) == -1) {
 			perror("rmdir failed: ");
 			return 1;

@@ -28,6 +28,7 @@
 
 #include "pdf2laser_type.h"
 #include "pdf2laser_printer.h"
+#include "pdf2laser_generator.h"
 
 #include "config.h"
 
@@ -38,11 +39,12 @@ extern "C" {
 }
 #endif
 
-static int big_to_little_endian(uint8_t *position, int bytes);
-static bool ps_to_eps(FILE *ps_file, FILE *eps_file);
-static void range_checks(job_t *job);
+#define VECTOR_PASSES 3
+
+static bool ps_to_eps(print_job_t *print_job, FILE *ps_file, FILE *eps_file);
+static void range_checks(print_job_t *print_job);
 static void usage(int rc, const char* const msg);
-static int vector_param_set(int * const values, const char *arg);
+static int32_t vector_param_set(int32_t **value, const char *optarg);
 
 int main(int argc, char *argv[]);
 

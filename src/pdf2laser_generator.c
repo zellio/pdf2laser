@@ -1,6 +1,6 @@
 #include "pdf2laser_generator.h"
 
-bool debug = false;
+// bool debug = false;
 
 /**
  * Convert a big endian value stored in the array starting at the given pointer
@@ -26,7 +26,56 @@ static int32_t big_to_little_endian(uint8_t *position, size_t nbytes)
 /**
  *
  */
-bool generate_raster(job_t *job, FILE *pjl_file, FILE *bitmap_file)
+bool generate_ps(const char *target_pdf, const char *target_ps)
+{
+	fprintf(stderr, "Executing pdf2ps\n");
+	int gs_argc = 13;
+	char *gs_argv[gs_argc];
+	gs_argv[0] = "gs";
+	gs_argv[1] = "-q";
+	gs_argv[2] = "-dNOPAUSE";
+	gs_argv[3] = "-dBATCH";
+	gs_argv[4] = "-P-";
+	gs_argv[5] = "-dSAFER";
+	gs_argv[6] = "-sDEVICE=ps2write";
+
+	gs_argv[7] = calloc(1024, sizeof(char));
+	snprintf(gs_argv[7], 1024, "-sOutputFile=%s", target_ps);
+
+	gs_argv[8] = "-c";
+	gs_argv[9] = "save";
+	gs_argv[10] = "pop";
+	gs_argv[11] = "-f";
+	gs_argv[12] = strndup(target_pdf, 1024);
+
+	int32_t rc;
+	void *minst;
+
+	rc = gsapi_new_instance(&minst, NULL);
+	if (rc < 0)
+		return false;
+
+	rc = gsapi_set_arg_encoding(minst, GS_ARG_ENCODING_UTF8);
+	if (rc == 0)
+		rc = gsapi_init_with_args(minst, gs_argc, gs_argv);
+
+	int32_t rc2 = gsapi_exit(minst);
+
+	if ((rc == 0) || (rc2 == gs_error_Quit))
+		rc = rc2;
+
+	gsapi_delete_instance(minst);
+
+	if (rc)
+		return false;
+
+	return true;
+}
+
+/**
+ *
+ */
+bool generate_raster(print_job_t *print_job, FILE *pjl_file, FILE *bitmap_file)
 {
 	/* const int invert = 0; */
 	/* int h; */
@@ -55,7 +104,7 @@ bool generate_raster(job_t *job, FILE *pjl_file, FILE *bitmap_file)
 	/* basey = basey * resolution / POINTS_PER_INCH; */
 
 	// We don't actually allow repeats of the raster print directive
-	//uint8_t repeat = job->raster->repeat;
+	//uint8_t repeat = print_job->raster->repeat;
 	//while ((repeat -= 1)) {
 	/* repeated (over printed) */
 	//int64_t base_offset;
@@ -68,7 +117,7 @@ bool generate_raster(job_t *job, FILE *pjl_file, FILE *bitmap_file)
 	int32_t h, d;
 
 	int32_t passes = 1;
-	if (job->raster->mode == 'c') {
+	if (print_job->raster->mode == 'c') {
 		passes = 7;
 	}
 
@@ -87,7 +136,7 @@ bool generate_raster(job_t *job, FILE *pjl_file, FILE *bitmap_file)
 	/* Bytes 10 - 13 base offset for the beginning of the bitmap data. */
 	int32_t base_offset = big_to_little_endian(bitmap_header + 10, 4);
 
-	if (job->raster->mode == 'c' || job->raster->mode == 'g') {
+	if (print_job->raster->mode == 'c' || print_job->raster->mode == 'g') {
 		/* colour/grey are byte per pixel power levels */
 		h = width;
 		/* BMP padded to 4 bytes per scan line */
@@ -99,30 +148,30 @@ bool generate_raster(job_t *job, FILE *pjl_file, FILE *bitmap_file)
 		d = (h + 3) / 4 * 4;
 	}
 
-	if (debug)
+	if (print_job->debug)
 		printf("Width %d Height %d Bytes %d Line %d\n", width, height, h, d);
 
 	/* Raster Orientation */
 	fprintf(pjl_file, "\033*r0F");
 
 	/* Raster power -- color and gray scaled before, but scale with the user provided power */
-	fprintf(pjl_file, "\033&y%dP", job->raster->power);
+	fprintf(pjl_file, "\033&y%dP", print_job->raster->power);
 
 	/* Raster speed */
-	fprintf(pjl_file, "\033&z%dS", job->raster->speed);
+	fprintf(pjl_file, "\033&z%dS", print_job->raster->speed);
 	fprintf(pjl_file, "\033*r%dT", height);
 	fprintf(pjl_file, "\033*r%dS", width);
 	/* Raster compression */
-	fprintf(pjl_file, "\033*b%dM", (job->raster->mode == 'c' || job->raster->mode == 'g') ? 7 : 2);
+	fprintf(pjl_file, "\033*b%dM", (print_job->raster->mode == 'c' || print_job->raster->mode == 'g') ? 7 : 2);
 	/* Raster direction (1 = up) */
 	fprintf(pjl_file, "\033&y1O");
 
-	if (debug) {
+	if (print_job->debug) {
 		/* Output raster debug information */
 		printf("Raster power=%d speed=%d\n",
-			   ((job->raster->mode == 'c' || job->raster->mode == 'g') ?
-				100 : job->raster->power),
-			   job->raster->speed);
+			   ((print_job->raster->mode == 'c' || print_job->raster->mode == 'g') ?
+				100 : print_job->raster->power),
+			   print_job->raster->speed);
 	}
 
 	/* start at current position */
@@ -137,7 +186,7 @@ bool generate_raster(job_t *job, FILE *pjl_file, FILE *bitmap_file)
 				for (int y = height - 1; y >= 0; y--) {
 					int l;
 
-					switch (job->raster->mode) {
+					switch (print_job->raster->mode) {
 					case 'c': {      // colour (passes)
 						unsigned char *f = (unsigned char *) buf;
 						unsigned char *t = (unsigned char *) buf;
@@ -215,12 +264,12 @@ bool generate_raster(job_t *job, FILE *pjl_file, FILE *bitmap_file)
 					}
 					}
 
-					if (job->raster->mode == 'c' || job->raster->mode == 'g') {
+					if (print_job->raster->mode == 'c' || print_job->raster->mode == 'g') {
 						for (l = 0; l < h; l++) {
 							/* Raster value is multiplied by the
 							 * power scale.
 							 */
-							buf[l] = (uint8_t)buf[l] * job->raster->power / 255;
+							buf[l] = (uint8_t)buf[l] * print_job->raster->power / 255;
 						}
 					}
 
@@ -239,7 +288,7 @@ bool generate_raster(job_t *job, FILE *pjl_file, FILE *bitmap_file)
 						r++;
 						fprintf(pjl_file, "\033*p%dY", basey + offy + y);
 						fprintf(pjl_file, "\033*p%dX", basex + offx +
-								((job->raster->mode == 'c' || job->raster->mode == 'g') ? l : l * 8));
+								((print_job->raster->mode == 'c' || print_job->raster->mode == 'g') ? l : l * 8));
 						if (dir) {
 							fprintf(pjl_file, "\033*b%dA", -(r - l));
 							// reverse bytes!
@@ -347,7 +396,8 @@ static void vector_stats(vector_t *v)
 }
 
 
-static void vector_create(vectors_t * const vectors,
+static void vector_create(print_job_t *print_job,
+						  vectors_t * const vectors,
 						  int power,
 						  int x1,
 						  int y1,
@@ -360,7 +410,7 @@ static void vector_create(vectors_t * const vectors,
 	while (*iter) {
 		vector_t * const p = *iter;
 
-		if (do_vector_optimize) {
+		if (print_job->vector_optimize) {
 			if (p->x1 == x1 && p->y1 == y1
 				&&  p->x2 == x2 && p->y2 == y2)
 				return;
@@ -407,7 +457,7 @@ static void vector_create(vectors_t * const vectors,
  *
  * Exact duplictes will be deleted to try to avoid double hits..
  */
-static vectors_t *vectors_parse(FILE * const vector_file)
+static vectors_t *vectors_parse(print_job_t *print_job, FILE * const vector_file)
 {
 	vectors_t * const vectors = calloc(VECTOR_PASSES, sizeof(*vectors));
 	int mx = 0, my = 0;
@@ -459,7 +509,7 @@ static vectors_t *vectors_parse(FILE * const vector_file)
 			// point to the new point, and update
 			// the current point to the new point.
 			sscanf(buf+1, "%d,%d", &x, &y);
-			vector_create(&vectors[pass], power, lx, ly, x, y);
+			vector_create(print_job, &vectors[pass], power, lx, ly, x, y);
 			count++;
 			lx = x;
 			ly = y;
@@ -467,7 +517,7 @@ static vectors_t *vectors_parse(FILE * const vector_file)
 		case 'C':
 			// Closing segment from the current point
 			// back to the starting point
-			vector_create(&vectors[pass], power, lx, ly, mx, my);
+			vector_create(print_job, &vectors[pass], power, lx, ly, mx, my);
 			lx = mx;
 			lx = my;
 			break;
@@ -484,8 +534,8 @@ static vectors_t *vectors_parse(FILE * const vector_file)
 	for (int i = 0 ; i < VECTOR_PASSES ; i++) {
 		printf("Vector pass %d: power=%d speed=%d\n",
 			   i,
-			   vector_power[i],
-			   vector_speed[i]);
+			   print_job->vector_power[i],
+			   print_job->vector_speed[i]);
 		vector_stats(vectors[i].vectors);
 	}
 
@@ -500,7 +550,7 @@ static vectors_t *vectors_parse(FILE * const vector_file)
  */
 static vector_t *vector_find_closest(vector_t *v, const int cx, const int cy)
 {
-	long best_dist = LONG_MAX;
+	long best_dist = INT64_MAX;
 	vector_t * best = NULL;
 	int do_reverse = 0;
 
@@ -629,23 +679,23 @@ static void output_vector(FILE * const pjl_file, const vector_t *v)
 }
 
 
-bool generate_vector(job_t *job, FILE * const pjl_file, FILE * const vector_file)
+bool generate_vector(print_job_t *print_job, FILE * const pjl_file, FILE * const vector_file)
 {
-	vectors_t * const vectors = vectors_parse(vector_file);
+	vectors_t * const vectors = vectors_parse(print_job, vector_file);
 
 	fprintf(pjl_file, "IN;");
-	fprintf(pjl_file, "XR%04d;", vector_freq);
+	fprintf(pjl_file, "XR%04d;", print_job->vector_frequency);
 
 	// \note: step and repeat is no longer supported
 
 	for (int i = 0; i < VECTOR_PASSES; i++) {
-		if (do_vector_optimize)
+		if (print_job->vector_optimize)
 			vector_optimize(&vectors[i]);
 
 		const vector_t * v = vectors[i].vectors;
 
-		fprintf(pjl_file, "YP%03d;", vector_power[i]);
-		fprintf(pjl_file, "ZS%03d", vector_speed[i]); // note: no ";"
+		fprintf(pjl_file, "YP%03d;", print_job->vector_power[i]);
+		fprintf(pjl_file, "ZS%03d", print_job->vector_speed[i]); // note: no ";"
 		output_vector(pjl_file, v);
 	}
 
@@ -659,13 +709,13 @@ bool generate_vector(job_t *job, FILE * const pjl_file, FILE * const vector_file
 /**
  *
  */
-bool generate_pjl(job_t *job, FILE *bitmap_file, FILE *pjl_file, FILE *vector_file)
+bool generate_pjl(print_job_t *print_job, FILE *bitmap_file, FILE *pjl_file, FILE *vector_file)
 {
 	/* Print the printer job language header. */
-	fprintf(pjl_file, "\033%%-12345X@PJL JOB NAME=%s\r\n", job->name);
+	fprintf(pjl_file, "\033%%-12345X@PJL JOB NAME=%s\r\n", print_job->name);
 	fprintf(pjl_file, "\033E@PJL ENTER LANGUAGE=PCL\r\n");
 	/* Set autofocus on or off. */
-	fprintf(pjl_file, "\033&y%dA", job->focus);
+	fprintf(pjl_file, "\033&y%dA", print_job->focus);
 	/* Left (long-edge) offset registration.  Adjusts the position of the
 	 * logical page across the width of the page.
 	 */
@@ -676,37 +726,37 @@ bool generate_pjl(job_t *job, FILE *bitmap_file, FILE *pjl_file, FILE *vector_fi
 	fprintf(pjl_file, "\033&l0Z");
 
 	/* Resolution of the print. */
-	fprintf(pjl_file, "\033&u%dD", job->raster->resolution);
+	fprintf(pjl_file, "\033&u%dD", print_job->raster->resolution);
 	/* X position = 0 */
 	fprintf(pjl_file, "\033*p0X");
 	/* Y position = 0 */
 	fprintf(pjl_file, "\033*p0Y");
 	/* PCL resolution. */
-	fprintf(pjl_file, "\033*t%dR", job->raster->resolution);
+	fprintf(pjl_file, "\033*t%dR", print_job->raster->resolution);
 
 	/* If raster power is enabled and raster mode is not 'n' then add that
 	 * information to the print job.
 	 */
-	if (job->raster->power && job->raster->mode != 'n') {
+	if (print_job->raster->power && print_job->raster->mode != 'n') {
 		/* FIXME unknown purpose. */
 		fprintf(pjl_file, "\033&y0C");
 
 		/* We're going to perform a raster print. */
-		generate_raster(job, pjl_file, bitmap_file);
+		generate_raster(print_job, pjl_file, bitmap_file);
 	}
 
 	/* If vector power is > 0 then add vector information to the print job. */
 	fprintf(pjl_file, "\033E@PJL ENTER LANGUAGE=PCL\r\n");
 	/* Page Orientation */
 	fprintf(pjl_file, "\033*r0F");
-	fprintf(pjl_file, "\033*r%dT", job->height * y_repeat);
-	fprintf(pjl_file, "\033*r%dS", job->width * x_repeat);
+	fprintf(pjl_file, "\033*r%dT", print_job->height);
+	fprintf(pjl_file, "\033*r%dS", print_job->width);
 	fprintf(pjl_file, "\033*r1A");
 	fprintf(pjl_file, "\033*rC");
 	fprintf(pjl_file, "\033%%1B");
 
 	/* We're going to perform a vector print. */
-	generate_vector(job, pjl_file, vector_file);
+	generate_vector(print_job, pjl_file, vector_file);
 
 	/* Footer for printer job language. */
 
