@@ -185,6 +185,7 @@ bool vector_list_contains(vector_list_t *self, vector_t *vector)
 		if (vector_compare(vector, v) == 0) {
 			return true;
 		}
+		v = v->next;
 	}
 	return false;
 }
