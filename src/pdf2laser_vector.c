@@ -1,16 +1,16 @@
 #include "pdf2laser_vector.h"
 
-pair_t *pair_create(int32_t x, int32_t y)
+point_t *point_create(int32_t x, int32_t y)
 {
-	pair_t *pair = calloc(1, sizeof(pair_t));
+	point_t *point = calloc(1, sizeof(point_t));
 
-	pair->x = x;
-	pair->y = y;
+	point->x = x;
+	point->y = y;
 
-	return pair;
+	return point;
 }
 
-bool pair_destroy(pair_t *self)
+bool point_destroy(point_t *self)
 {
 	if (self == NULL)
 		return false;
@@ -20,7 +20,7 @@ bool pair_destroy(pair_t *self)
 	return true;
 }
 
-int32_t pair_compare(pair_t *self, pair_t *other)
+int32_t point_compare(point_t *self, point_t *other)
 {
 	if (self->x > other->x || self->y > other->y)
 		return 1;
@@ -32,14 +32,12 @@ int32_t pair_compare(pair_t *self, pair_t *other)
 }
 
 vector_t *vector_create(int32_t start_x, int32_t start_y,
-						int32_t end_x, int32_t end_y,
-						int32_t power)
+						int32_t end_x, int32_t end_y)
 {
 	vector_t *vector = calloc(1, sizeof(vector_t));
 
-	vector->start = pair_create(start_x, start_y);
-	vector->end = pair_create(end_x, end_y);
-	vector->power = power;
+	vector->start = point_create(start_x, start_y);
+	vector->end = point_create(end_x, end_y);
 
 	return vector;
 }
@@ -50,10 +48,10 @@ bool vector_destroy(vector_t *self)
 		return false;
 
 	if (self->start != NULL)
-		pair_destroy(self->start);
+		point_destroy(self->start);
 
 	if (self->end != NULL)
-		pair_destroy(self->end);
+		point_destroy(self->end);
 
 	free(self);
 
@@ -62,10 +60,10 @@ bool vector_destroy(vector_t *self)
 
 int32_t vector_compare(vector_t *self, vector_t *other)
 {
-	int32_t ssc = pair_compare(self->start, other->start);
-	int32_t eec = pair_compare(self->end, other->end);
-	int32_t sec = pair_compare(self->start, other->end);
-	int32_t esc = pair_compare(self->end, other->start);
+	int32_t ssc = point_compare(self->start, other->start);
+	int32_t eec = point_compare(self->end, other->end);
+	int32_t sec = point_compare(self->start, other->end);
+	int32_t esc = point_compare(self->end, other->start);
 
 	if ((!ssc && !eec) || (!sec && !esc)) {
 		return 0;

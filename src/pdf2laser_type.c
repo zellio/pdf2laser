@@ -18,15 +18,15 @@
 /* 	NONE = 'n', */
 /* } raster_mode; */
 
-/* typedef struct pair pair_t; */
-/* struct pair { */
+/* typedef struct point point_t; */
+/* struct point { */
 /* 	uint32_t x; */
 /* 	uint32_t y; */
 /* }; */
 
 /* typedef struct vector vector_t; */
 /* struct vector { */
-/* 	pair_t start; */
+/* 	point_t start; */
 /* 	part_t end; */
 /* 	uint32_t p; */
 /* }; */

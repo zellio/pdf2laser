@@ -12,22 +12,23 @@ extern "C" {
 }
 #endif
 
-typedef struct pair pair_t;
-struct pair {
+typedef struct point point_t;
+struct point {
 	int32_t x;
 	int32_t y;
 };
 
 typedef struct vector vector_t;
 struct vector {
-	pair_t *start;
-	pair_t *end;
-	int32_t power;
+	point_t *start;
+	point_t *end;
+
+	vector_t *next;
+	vector_t *prev;
 };
 
 vector_t *vector_create(int32_t start_x, int32_t start_y,
-						int32_t end_x, int32_t end_y,
-						int32_t power);
+						int32_t end_x, int32_t end_y);
 
 bool vector_destroy(vector_t *self);
 

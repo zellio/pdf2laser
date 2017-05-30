@@ -77,37 +77,8 @@ bool generate_ps(const char *target_pdf, const char *target_ps)
  */
 bool generate_raster(print_job_t *print_job, FILE *pjl_file, FILE *bitmap_file)
 {
-	/* const int invert = 0; */
-	/* int h; */
-	/* int d; */
-	/* int basex = 0; */
-	/* int basey = 0; */
-	/* //int repeat; */
-
 	uint8_t bitmap_header[BITMAP_HEADER_NBYTES];
 	char buf[102400];
-
-	/* if (x_center) */
-	/* 	basex = x_center - width / 2; */
-
-	/* if (y_center) */
-	/* 	basey = y_center - height / 2; */
-
-	/* if (basex < 0) */
-	/* 	basex = 0; */
-
-	/* if (basey < 0) */
-	/* 	basey = 0; */
-
-	/* // rasterises */
-	/* basex = basex * resolution / POINTS_PER_INCH; */
-	/* basey = basey * resolution / POINTS_PER_INCH; */
-
-	// We don't actually allow repeats of the raster print directive
-	//uint8_t repeat = print_job->raster->repeat;
-	//while ((repeat -= 1)) {
-	/* repeated (over printed) */
-	//int64_t base_offset;
 
 	bool invert = false;
 
@@ -350,97 +321,6 @@ bool generate_raster(print_job_t *print_job, FILE *pjl_file, FILE *bitmap_file)
 	return true;
 }
 
-static void vector_stats(vector_t *v)
-{
-	int lx = 0;
-	int ly = 0;
-	long cut_len_sum = 0;
-	int cuts = 0;
-
-	long transit_len_sum = 0;
-	int transits = 0;
-
-	while (v) {
-		long t_dx = lx - v->x1;
-		long t_dy = ly - v->y1;
-
-		long transit_len = sqrt(t_dx * t_dx + t_dy * t_dy);
-		if (transit_len != 0) {
-			transits++;
-			transit_len_sum += transit_len;
-
-			if (0)
-				fprintf(stderr, "mov %8u %8u -> %8u %8u\n", lx, ly, v->x1, v->y1);
-		}
-
-		long c_dx = v->x1 - v->x2;
-		long c_dy = v->y1 - v->y2;
-
-		long cut_len = sqrt(c_dx*c_dx + c_dy*c_dy);
-		if (cut_len != 0) {
-			cuts++;
-			cut_len_sum += cut_len;
-
-			if (0)
-				fprintf(stderr, "cut %8u %8u -> %8u %8u\n", v->x1, v->y1, v->x2, v->y2);
-		}
-
-		// Advance the point
-		lx = v->x2;
-		ly = v->y2;
-		v = v->next;
-	}
-
-	printf("Cuts: %u len %lu\n", cuts, cut_len_sum);
-	printf("Move: %u len %lu\n", transits, transit_len_sum);
-}
-
-
-static void vector_create(print_job_t *print_job,
-						  vectors_t * const vectors,
-						  int power,
-						  int x1,
-						  int y1,
-						  int x2,
-						  int y2)
-{
-	// Find the end of the list and, if vector optimization is
-	// turned on, check for duplicates
-	vector_t ** iter = &vectors->vectors;
-	while (*iter) {
-		vector_t * const p = *iter;
-
-		if (print_job->vector_optimize) {
-			if (p->x1 == x1 && p->y1 == y1
-				&&  p->x2 == x2 && p->y2 == y2)
-				return;
-			if (p->x1 == x2 && p->y1 == y2
-				&&  p->x2 == x1 && p->y2 == y1)
-				return;
-			if (x1 == x2
-				&&  y1 == y2)
-				return;
-		}
-
-		iter = &p->next;
-	}
-
-	vector_t * const v = calloc(1, sizeof(*v));
-	if (!v)
-		return;
-
-	v->p = power;
-	v->x1 = x1;
-	v->y1 = y1;
-	v->x2 = x2;
-	v->y2 = y2;
-
-	// Append it to the now known end of the list
-	v->next = NULL;
-	v->prev = iter;
-	*iter = v;
-}
-
 
 /**
  * Generate a list of vectors.
@@ -457,221 +337,161 @@ static void vector_create(print_job_t *print_job,
  *
  * Exact duplictes will be deleted to try to avoid double hits..
  */
-static vectors_t *vectors_parse(print_job_t *print_job, FILE * const vector_file)
+bool vectors_parse(print_job_t *print_job, FILE * const vector_file)
 {
-	vectors_t * const vectors = calloc(VECTOR_PASSES, sizeof(*vectors));
-	int mx = 0, my = 0;
-	int lx = 0, ly = 0;
-	int pass = 0;
-	int power = 100;
-	int count = 0;
+	print_job->vectors = calloc(3, sizeof(vector_list_t*));
+	for (int32_t i = 0; i < VECTOR_PASSES; i++) {
+		print_job->vectors[i] = vector_list_create();
+	}
 
-	char buf[256];
+	vector_list_t *current_list = NULL;
 
-	while (fgets(buf, sizeof(buf), vector_file)) {
-		//fprintf(stderr, "read '%s'\n", buf);
-		const char cmd = buf[0];
-		int x, y;
+	int32_t vector_count = 0;
+	int32_t pass, power, x_start, y_start, x_current, y_current;
 
-		switch (cmd) {
+	char *line = NULL;
+	size_t length = 0;
+	ssize_t length_read = 0;
+
+	while ((length_read = getline(&line, &length, vector_file)) != -1) {
+
+		switch (*line) {
 		case 'P': {
-			// note that they will be in bgr order in the file
-			int r, g, b;
-			sscanf(buf + 1, ",%d,%d,%d", &b, &g, &r);
-			if (r == 0 && g != 0 && b == 0) {
-				pass = 0;
-				power = g;
-			} else
-				if (r != 0 && g == 0 && b == 0) {
-					pass = 1;
-					power = r;
-				} else {
-					if (r == 0 && g == 0 && b != 0) {
-						pass = 2;
-						power = b;
-					} else {
-						fprintf(stderr, "non-red/green/blue vector? %d,%d,%d\n", r, g, b);
-						exit(-1);
-					}
-				}
+			// Note: Colours are stored as blue, green, red in the vector file
+			int32_t red, green, blue;
+			sscanf(line, "P,%d,%d,%d", &blue, &green, &red);
+
+			if (!red && green && !blue) {
+				current_list = print_job->vectors[0];
+				current_list->pass = 0;
+				current_list->power = green;
+			}
+			else if (red && !green && !blue) {
+				current_list = print_job->vectors[1];
+				current_list->pass = 1;
+				current_list->power = green;
+			}
+			else if (!red && !green && blue) {
+				current_list = print_job->vectors[2];
+				current_list->pass = 2;
+				current_list->power = green;
+			}
+			else {
+				fprintf(stderr, "non-red/green/blue vector? %d,%d,%d\n", red, green, blue);
+				exit(-1);
+			}
 			break;
 		}
-		case 'M':
-			// Start a new line.
-			// This also implicitly sets the
-			// current laser position
-			sscanf(buf+1, "%d,%d", &mx, &my);
-			lx = mx;
-			ly = my;
+		case 'M': {
+			// Start of new line. Implicitly sets current laser position.
+			sscanf(line, "M%d,%d", &x_start, &y_start);
+			x_current = x_start;
+			y_current = y_start;
 			break;
-		case 'L':
-			// Add a line segment from the current
-			// point to the new point, and update
-			// the current point to the new point.
-			sscanf(buf+1, "%d,%d", &x, &y);
-			vector_create(print_job, &vectors[pass], power, lx, ly, x, y);
-			count++;
-			lx = x;
-			ly = y;
+		}
+		case 'L': {
+			int32_t x_next, y_next;
+			sscanf(line, "L%d,%d", &x_next, &y_next);
+			vector_t *vector = vector_create(x_current, y_current, x_next, y_next);
+			if (print_job->vector_optimize) {
+				vector_t *v = current_list->head;
+				while (v) {
+					if (vector_compare(vector, v) == 0) {
+						free(vector);
+						vector = NULL;
+						v = NULL;
+					}
+					else {
+						v = v->next;
+					}
+				}
+			}
+			if (vector) {
+				vector_list_append(current_list, vector);
+				vector_count += 1;
+			}
+			x_current = x_next;
+			y_current = y_next;
 			break;
-		case 'C':
-			// Closing segment from the current point
-			// back to the starting point
-			vector_create(print_job, &vectors[pass], power, lx, ly, mx, my);
-			lx = mx;
-			lx = my;
+		}
+		case 'C': {
+			// Closing statment from current point to starting point.
+			vector_t *vector = vector_create(x_current, y_current, x_start, y_start);
+			if (print_job->vector_optimize) {
+				vector_t *v = current_list->head;
+				while (v) {
+					if (vector_compare(vector, v) == 0) {
+						free(vector);
+						vector = NULL;
+						v = NULL;
+					}
+					else {
+						v = v->next;
+					}
+				}
+			}
+			if (vector)
+				vector_list_append(current_list, vector);
+			x_current = x_start;
+			y_current = y_start;
 			break;
+		}
 		case 'X':
-			goto done;
+			goto vector_parse_complete;
 		default:
-			fprintf(stderr, "Unknown command '%c'", cmd);
+			fprintf(stderr, "Unknown command '%c'", *line);
 			return NULL;
 		}
 	}
 
- done:
-	printf("read %u segments\n", count);
+ vector_parse_complete:
+	printf("read %u segments\n", vector_count);
 	for (int i = 0 ; i < VECTOR_PASSES ; i++) {
 		printf("Vector pass %d: power=%d speed=%d\n",
 			   i,
 			   print_job->vector_power[i],
 			   print_job->vector_speed[i]);
-		vector_stats(vectors[i].vectors);
+		vector_list_stats(print_job->vectors[i]);
 	}
 
-	return vectors;
+	return true;
+}
+
+vector_t *vector_flip(vector_t *self)
+{
+	point_t *start = self->start;
+	self->start = self->end;
+	self->end = start;
+	return self;
 }
 
 
-/** Find the closest vector to a given point and remove it from the list.
- *
- * This might reverse a vector if it is closest to draw it in reverse
- * order.
- */
-static vector_t *vector_find_closest(vector_t *v, const int cx, const int cy)
+
+static void output_vector(vector_list_t *list, FILE * const pjl_file)
 {
-	long best_dist = INT64_MAX;
-	vector_t * best = NULL;
-	int do_reverse = 0;
+	int32_t current_x = 0;
+	int32_t current_y = 0;
+	vector_t *vector = list->head;
+	while (vector) {
 
-	while (v) {
-		long dx1 = cx - v->x1;
-		long dy1 = cy - v->y1;
-		long dist1 = dx1*dx1 + dy1*dy1;
-
-		if (dist1 < best_dist) {
-			best = v;
-			best_dist = dist1;
-			do_reverse = 0;
+		if (point_compare(vector->start, &(point_t){ current_x, current_y }) != 0) {
+			// Stop the laser; we need to transit and then start the laser as
+			// we go to the next point.  Note initial ";"
+			fprintf(pjl_file, ";PU%d,%d;PD%d,%d", vector->start->y, vector->start->x, vector->end->y, vector->end->x);
 		}
-
-		long dx2 = cx - v->x2;
-		long dy2 = cy - v->y2;
-		long dist2 = dx2*dx2 + dy2*dy2;
-		if (dist2 < best_dist) {
-			best = v;
-			best_dist = dist2;
-			do_reverse = 1;
-		}
-
-		v = v->next;
-	}
-
-	if (!best)
-		return NULL;
-
-	// Remove it from the list
-	*best->prev = best->next;
-	if (best->next)
-		best->next->prev = best->prev;
-
-	// If reversing is required, flip the x1/x2 and y1/y2
-	if (do_reverse) {
-		int x1 = best->x1;
-		int y1 = best->y1;
-		best->x1 = best->x2;
-		best->y1 = best->y2;
-		best->x2 = x1;
-		best->y2 = y1;
-	}
-
-	best->next = NULL;
-	best->prev = NULL;
-
-	return best;
-}
-
-
-/**
- * Optimize the cut order to minimize transit time.
- *
- * Simplistic greedy algorithm: look for the closest vector that starts
- * or ends at the same point as the current point.
- *
- * This does not split vectors.
- */
-static int vector_optimize(vectors_t * const vectors)
-{
-	int cx = 0;
-	int cy = 0;
-
-	vector_t *vs = NULL;
-	vector_t *vs_tail = NULL;
-
-	while (vectors->vectors) {
-		vector_t *v = vector_find_closest(vectors->vectors, cx, cy);
-
-		if (!vs) {
-			// Nothing on the list yet
-			vs = vs_tail = v;
-		} else {
-			// Add it to the tail of the list
-			v->next = NULL;
-			v->prev = &vs_tail->next;
-			vs_tail->next = v;
-			vs_tail = v;
-		}
-
-		// Move the current point to the end of the line segment
-		cx = v->x2;
-		cy = v->y2;
-	}
-
-	vector_stats(vs);
-
-	// Now replace the list in the vectors object with this new one
-	vectors->vectors = vs;
-	if (vs)
-		vs->prev = &vectors->vectors;
-
-	return 0;
-}
-
-
-static void output_vector(FILE * const pjl_file, const vector_t *v)
-{
-	int lx = 0;
-	int ly = 0;
-
-	while (v) {
-		if (v->x1 != lx || v->y1 != ly) {
-			// Stop the laser; we need to transit
-			// and then start the laser as we go to
-			// the next point.  Note initial ";"
-			fprintf(pjl_file, ";PU%d,%d;PD%d,%d", v->y1, v->x1, v->y2, v->x2);
-		} else {
-			// This is the continuation of a line, so
-			// just add additional points
-			fprintf(pjl_file, ",%d,%d", v->y2, v->x2);
+		else {
+			// This is the continuation of a line, so just add additional
+			// points
+			fprintf(pjl_file, ",%d,%d", vector->end->y, vector->end->x);
 		}
 
 		// Changing power on the fly is not supported for now
 		// \todo: Check v->power and adjust ZS, XR, etc
 
 		// Move to the next vector, updating our current point
-		lx = v->x2;
-		ly = v->y2;
-		v = v->next;
+		current_x = vector->end->x;
+		current_y = vector->end->y;
+		vector = vector->next;
 	}
 
 	// Stop the laser (note initial ";")
@@ -681,7 +501,8 @@ static void output_vector(FILE * const pjl_file, const vector_t *v)
 
 bool generate_vector(print_job_t *print_job, FILE * const pjl_file, FILE * const vector_file)
 {
-	vectors_t * const vectors = vectors_parse(print_job, vector_file);
+	// this mutates vectors parser in print_job
+	vectors_parse(print_job, vector_file);
 
 	fprintf(pjl_file, "IN;");
 	fprintf(pjl_file, "XR%04d;", print_job->vector_frequency);
@@ -689,14 +510,17 @@ bool generate_vector(print_job_t *print_job, FILE * const pjl_file, FILE * const
 	// \note: step and repeat is no longer supported
 
 	for (int i = 0; i < VECTOR_PASSES; i++) {
-		if (print_job->vector_optimize)
-			vector_optimize(&vectors[i]);
+		if (print_job->vector_optimize) {
+			vector_list_t *vl = print_job->vectors[i];
+			print_job->vectors[i] = vector_list_optimize(vl);
+			free(vl);
+		}
 
-		const vector_t * v = vectors[i].vectors;
+		//const vector_t *v = vectors[i].vectors;
 
 		fprintf(pjl_file, "YP%03d;", print_job->vector_power[i]);
 		fprintf(pjl_file, "ZS%03d", print_job->vector_speed[i]); // note: no ";"
-		output_vector(pjl_file, v);
+		output_vector(print_job->vectors[i], pjl_file);
 	}
 
 	fprintf(pjl_file, "\033%%0B"); // end HLGL

@@ -4,6 +4,9 @@
 #include <inttypes.h>
 #include <stdbool.h>
 
+#include "pdf2laser_vector.h"
+#include "pdf2laser_vector_list.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -17,22 +20,6 @@ typedef enum {
 	RASTER_MODE_MONO = 'm',
 	RASTER_MODE_NONE = 'n',
 } raster_mode;
-
-typedef struct _vector vector_t;
-struct _vector {
-	vector_t * next;
-	vector_t ** prev;
-	int x1;
-	int y1;
-	int x2;
-	int y2;
-	int p;
-};
-
-typedef struct _vectors vectors_t ;
-struct _vectors {
-	vector_t *vectors;
-};
 
 typedef struct raster raster_t;
 struct raster {
@@ -66,6 +53,8 @@ struct print_job {
 	int32_t vector_power[3];
 	int32_t vector_frequency;
 	bool vector_optimize;
+
+	vector_list_t **vectors;
 
 	cut_t **cutv;
 	uint8_t cutc;

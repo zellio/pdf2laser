@@ -609,6 +609,7 @@ int main(int argc, char *argv[])
 		.vector_power = { 1, 1, 1 },
 		.vector_frequency = VECTOR_FREQUENCY_DEFAULT,
 		.vector_optimize = true,
+		.vectors = NULL,
 		.debug = DEBUG,
 	};
 

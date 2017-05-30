@@ -12,6 +12,7 @@
 #include <ghostscript/ierrors.h>
 
 #include "pdf2laser_type.h"
+#include "pdf2laser_vector.h"
 
 #ifdef __cplusplus
 extern "C" {
