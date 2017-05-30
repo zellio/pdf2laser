@@ -13,8 +13,6 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "pdf2laser_string_builder.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif

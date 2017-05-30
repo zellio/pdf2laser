@@ -177,7 +177,6 @@ vector_list_t *vector_list_optimize(vector_list_t *self)
 	return list;
 }
 
-
 bool vector_list_contains(vector_list_t *self, vector_t *vector)
 {
 	vector_t *v = self->head;

@@ -25,18 +25,10 @@ typedef struct raster raster_t;
 struct raster {
 	uint32_t resolution;
 	raster_mode mode;
-	uint32_t speed;
-	uint32_t power;
-	uint8_t repeat;
-	uint32_t screen_size;
-};
-
-typedef struct cut cut_t;
-struct cut {
-	bool optimize;
-	uint32_t frequency;
-	uint32_t speed;
-	uint32_t power;
+	int32_t speed;
+	int32_t power;
+	int8_t repeat;
+	int32_t screen_size;
 };
 
 typedef struct print_job print_job_t;
@@ -49,15 +41,10 @@ struct print_job {
 
 	raster_t *raster;
 
-	//int32_t vector_speed[3];
-	//int32_t vector_power[3];
 	int32_t vector_frequency;
 	bool vector_optimize;
 
 	vector_list_t **vectors;
-
-	cut_t **cutv;
-	uint8_t cutc;
 
 	bool debug;
 };

@@ -120,82 +120,6 @@
 #define VECTOR_SPEED_DEFAULT (30)
 
 
-/*************************************************************************
- * local types
- */
-
-
-
-/*************************************************************************
- * local variables
- */
-
-/* /\** Temporary buffer for building out strings. *\/ */
-/* static char buf[102400]; */
-
-/** Determines whether or not debug is enabled. */
-//static bool debug = DEBUG;
-
-/* /\** Variable to track whether or not the X axis should be flipped. *\/ */
-/* static char flip = FLIP; */
-
-/* /\** Height of the image (y-axis). By default this is the bed's height. *\/ */
-/* static int height = BED_HEIGHT; */
-
-/* /\** Job name for the print. *\/ */
-/* static const char *job_name = NULL; */
-
-/* /\** Variable to track the resolution of the print. *\/ */
-/* static int resolution = RESOLUTION_DEFAULT; */
-
-/* /\** Variable to track the mode for rasterization. One of color 'c', or */
-/*  * grey-scale 'g', mono 'm', or none 'n' */
-/*  *\/ */
-/* static raster_mode print_raster_mode = RASTER_MODE_DEFAULT; */
-
-/* /\** Variable to track the raster speed. *\/ */
-/* static int raster_speed = RASTER_SPEED_DEFAULT; */
-
-/* /\** Variable to track the raster power. *\/ */
-/* static int raster_power = RASTER_POWER_DEFAULT; */
-
-/* /\** Variable to track whether or not a rasterization should be repeated. *\/ */
-/* static int raster_repeat = RASTER_REPEAT; */
-
-/* /\** FIXME -- pixel size of screen, 0= threshold *\/ */
-/* static int screen_size = SCREEN_DEFAULT; */
-
-/* /\** Variable to track the vector speed. *\/ */
-/* static int vector_speed[VECTOR_PASSES] = { 100, 100, 100 }; */
-
-/* /\** Variable to track the vector power. *\/ */
-/* static int vector_power[VECTOR_PASSES] = { 1, 1, 1 }; */
-
-/* /\** Variable to track the vector frequency. FIXME *\/ */
-/* static int vector_freq = VECTOR_FREQUENCY_DEFAULT; */
-
-/* /\** Width of the image (x-axis). By default this is the bed's width. *\/ */
-/* static int width = BED_WIDTH;            // default bed */
-
-/* /\** X re-center (0 = not). *\/ */
-/* static int x_center; */
-
-/* /\** Track whether or not to repeat X. *\/ */
-/* static int x_repeat = 1; */
-
-/* /\** Y re-center (0 = not). *\/ */
-/* static int y_center; */
-
-/* /\** Track whether or not to repeat X. *\/ */
-/* static int y_repeat = 1; */
-
-/* /\** Should the vector cutting be optimized and dupes removed? *\/ */
-/* static bool do_vector_optimize = true; */
-
-
-/*************************************************************************/
-
-
 FILE *fh_vector;
 static int GSDLLCALL gsdll_stdout(void *minst, const char *str, int len)
 {
@@ -619,8 +543,6 @@ int main(int argc, char *argv[])
 			.repeat = RASTER_REPEAT,
 			.screen_size = SCREEN_DEFAULT,
 		},
-		//.vector_speed = { 100, 100, 100 },
-		//.vector_power = { 1, 1, 1 },
 		.vector_frequency = VECTOR_FREQUENCY_DEFAULT,
 		.vector_optimize = true,
 		.vectors = NULL,
