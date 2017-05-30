@@ -199,8 +199,9 @@
 FILE *fh_vector;
 static int GSDLLCALL gsdll_stdout(void *minst, const char *str, int len)
 {
-	fprintf(fh_vector, "%s", str);
-	return len;
+	size_t rc = fwrite(str, 1, len, fh_vector);
+	fflush(fh_vector);
+	return rc;
 }
 
 /**
