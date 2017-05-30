@@ -74,3 +74,11 @@ int32_t vector_compare(vector_t *self, vector_t *other)
 
 	return -1;
 }
+
+vector_t *vector_flip(vector_t *self)
+{
+	point_t *start = self->start;
+	self->start = self->end;
+	self->end = start;
+	return self;
+}

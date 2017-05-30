@@ -44,7 +44,6 @@ extern "C" {
 static bool ps_to_eps(print_job_t *print_job, FILE *ps_file, FILE *eps_file);
 static void range_checks(print_job_t *print_job);
 static void usage(int rc, const char* const msg);
-static int32_t vector_param_set(int32_t **value, const char *optarg);
 
 int main(int argc, char *argv[]);
 

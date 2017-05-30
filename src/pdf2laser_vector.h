@@ -27,12 +27,12 @@ struct vector {
 	vector_t *prev;
 };
 
-vector_t *vector_create(int32_t start_x, int32_t start_y,
-						int32_t end_x, int32_t end_y);
-
+vector_t *vector_create(int32_t start_x, int32_t start_y, int32_t end_x, int32_t end_y);
 bool vector_destroy(vector_t *self);
-
 int32_t vector_compare(vector_t *self, vector_t *other);
+
+vector_t *vector_flip(vector_t *self);
+int32_t point_compare(point_t *self, point_t *other);
 
 #ifdef __cplusplus
 };

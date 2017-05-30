@@ -4,6 +4,8 @@
 #include <inttypes.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <math.h>
+#include <stdio.h>
 
 #include "pdf2laser_vector.h"
 
@@ -21,6 +23,7 @@ struct vector_list {
 	int32_t length;
 	int32_t pass;
 	int32_t power;
+	int32_t speed;
 };
 
 vector_list_t *vector_list_create(void);
@@ -29,6 +32,7 @@ vector_list_t *vector_list_stats(vector_list_t *self);
 vector_t *vector_list_find_closest(vector_list_t *list, point_t *point);
 vector_t *vector_list_remove(vector_list_t *self, vector_t *vector);
 vector_list_t *vector_list_optimize(vector_list_t *self);
+bool vector_list_contains(vector_list_t *self, vector_t *vector);
 
 #ifdef __cplusplus
 };

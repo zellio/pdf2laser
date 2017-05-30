@@ -339,15 +339,10 @@ bool generate_raster(print_job_t *print_job, FILE *pjl_file, FILE *bitmap_file)
  */
 bool vectors_parse(print_job_t *print_job, FILE * const vector_file)
 {
-	print_job->vectors = calloc(3, sizeof(vector_list_t*));
-	for (int32_t i = 0; i < VECTOR_PASSES; i++) {
-		print_job->vectors[i] = vector_list_create();
-	}
-
 	vector_list_t *current_list = NULL;
 
 	int32_t vector_count = 0;
-	int32_t pass, power, x_start, y_start, x_current, y_current;
+	int32_t x_start, y_start, x_current, y_current;
 
 	char *line = NULL;
 	size_t length = 0;
@@ -369,12 +364,12 @@ bool vectors_parse(print_job_t *print_job, FILE * const vector_file)
 			else if (red && !green && !blue) {
 				current_list = print_job->vectors[1];
 				current_list->pass = 1;
-				current_list->power = green;
+				current_list->power = red;
 			}
 			else if (!red && !green && blue) {
 				current_list = print_job->vectors[2];
 				current_list->pass = 2;
-				current_list->power = green;
+				current_list->power = blue;
 			}
 			else {
 				fprintf(stderr, "non-red/green/blue vector? %d,%d,%d\n", red, green, blue);
@@ -393,20 +388,11 @@ bool vectors_parse(print_job_t *print_job, FILE * const vector_file)
 			int32_t x_next, y_next;
 			sscanf(line, "L%d,%d", &x_next, &y_next);
 			vector_t *vector = vector_create(x_current, y_current, x_next, y_next);
-			if (print_job->vector_optimize) {
-				vector_t *v = current_list->head;
-				while (v) {
-					if (vector_compare(vector, v) == 0) {
-						free(vector);
-						vector = NULL;
-						v = NULL;
-					}
-					else {
-						v = v->next;
-					}
-				}
+			if (print_job->vector_optimize &&
+				vector_list_contains(current_list, vector)) {
+				free(vector);
 			}
-			if (vector) {
+			else {
 				vector_list_append(current_list, vector);
 				vector_count += 1;
 			}
@@ -417,21 +403,13 @@ bool vectors_parse(print_job_t *print_job, FILE * const vector_file)
 		case 'C': {
 			// Closing statment from current point to starting point.
 			vector_t *vector = vector_create(x_current, y_current, x_start, y_start);
-			if (print_job->vector_optimize) {
-				vector_t *v = current_list->head;
-				while (v) {
-					if (vector_compare(vector, v) == 0) {
-						free(vector);
-						vector = NULL;
-						v = NULL;
-					}
-					else {
-						v = v->next;
-					}
-				}
+			if (print_job->vector_optimize &&
+				vector_list_contains(current_list, vector)) {
+				free(vector);
 			}
-			if (vector)
+			else {
 				vector_list_append(current_list, vector);
+			}
 			x_current = x_start;
 			y_current = y_start;
 			break;
@@ -445,27 +423,17 @@ bool vectors_parse(print_job_t *print_job, FILE * const vector_file)
 	}
 
  vector_parse_complete:
-	printf("read %u segments\n", vector_count);
 	for (int i = 0 ; i < VECTOR_PASSES ; i++) {
-		printf("Vector pass %d: power=%d speed=%d\n",
+		printf("Vector pass %d: segments=%d power=%d speed=%d\n",
 			   i,
-			   print_job->vector_power[i],
-			   print_job->vector_speed[i]);
+			   print_job->vectors[i]->length,
+			   print_job->vectors[i]->power,
+			   print_job->vectors[i]->speed);
 		vector_list_stats(print_job->vectors[i]);
 	}
 
 	return true;
 }
-
-vector_t *vector_flip(vector_t *self)
-{
-	point_t *start = self->start;
-	self->start = self->end;
-	self->end = start;
-	return self;
-}
-
-
 
 static void output_vector(vector_list_t *list, FILE * const pjl_file)
 {
@@ -473,16 +441,17 @@ static void output_vector(vector_list_t *list, FILE * const pjl_file)
 	int32_t current_y = 0;
 	vector_t *vector = list->head;
 	while (vector) {
-
 		if (point_compare(vector->start, &(point_t){ current_x, current_y }) != 0) {
 			// Stop the laser; we need to transit and then start the laser as
 			// we go to the next point.  Note initial ";"
 			fprintf(pjl_file, ";PU%d,%d;PD%d,%d", vector->start->y, vector->start->x, vector->end->y, vector->end->x);
+			fprintf(stderr, ";PU%d,%d;PD%d,%d", vector->start->y, vector->start->x, vector->end->y, vector->end->x);
 		}
 		else {
 			// This is the continuation of a line, so just add additional
 			// points
 			fprintf(pjl_file, ",%d,%d", vector->end->y, vector->end->x);
+			fprintf(stderr, ",%d,%d", vector->end->y, vector->end->x);
 		}
 
 		// Changing power on the fly is not supported for now
@@ -518,8 +487,8 @@ bool generate_vector(print_job_t *print_job, FILE * const pjl_file, FILE * const
 
 		//const vector_t *v = vectors[i].vectors;
 
-		fprintf(pjl_file, "YP%03d;", print_job->vector_power[i]);
-		fprintf(pjl_file, "ZS%03d", print_job->vector_speed[i]); // note: no ";"
+		fprintf(pjl_file, "YP%03d;", print_job->vectors[i]->power);
+		fprintf(pjl_file, "ZS%03d", print_job->vectors[i]->speed); // note: no ";"
 		output_vector(print_job->vectors[i], pjl_file);
 	}
 

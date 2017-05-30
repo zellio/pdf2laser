@@ -471,18 +471,18 @@ static void range_checks(print_job_t *print_job)
 	}
 
 	for (int i = 0 ; i < VECTOR_PASSES ; i++) {
-		if (print_job->vector_power[i] > 100) {
-			print_job->vector_power[i] = 100;
+		if (print_job->vectors[i]->power > 100) {
+			print_job->vectors[i]->power = 100;
 		}
-		else if (print_job->vector_power[i] < 0) {
-			print_job->vector_power[i] = 0;
+		else if (print_job->vectors[i]->power < 0) {
+			print_job->vectors[i]->power = 0;
 		}
 
-		if (print_job->vector_speed[i] > 100) {
-			print_job->vector_speed[i] = 100;
+		if (print_job->vectors[i]->speed > 100) {
+			print_job->vectors[i]->speed = 100;
 		}
-		else if (print_job->vector_speed[i] < 1) {
-			print_job->vector_speed[i] = 1;
+		else if (print_job->vectors[i]->speed < 1) {
+			print_job->vectors[i]->speed = 1;
 		}
 	}
 }
@@ -543,12 +543,7 @@ static const struct option long_options[] = {
 };
 
 
-/*
- * Look for "X,Y,Z" for each power setting, or "X" for all three.
- * Handle the case where we have been given floating point values,
- * even though we only want to deal with integers.
- */
-static int32_t vector_param_set(int32_t **value, const char *optarg)
+static int32_t vector_set_param_speed(print_job_t *print_job, char *optarg)
 {
 	double values[3] = { 0.0, 0.0, 0.0 };
 	int32_t rc = sscanf(optarg, "%lf,%lf,%lf", &values[0], &values[1], &values[2]);
@@ -556,20 +551,39 @@ static int32_t vector_param_set(int32_t **value, const char *optarg)
 	if (rc < 1)
 		return -1;
 
-	// convert to integer from the floating point representation
-	value[0] = (int32_t)values[0];
-	value[1] = (int32_t)values[1];
-	value[2] = (int32_t)values[2];
+	print_job->vectors[0]->speed = (int32_t)values[0];
+	print_job->vectors[1]->speed = (int32_t)values[1];
+	print_job->vectors[2]->speed = (int32_t)values[2];
 
 	if (rc <= 1)
-		value[1] = value[0];
+		print_job->vectors[1]->speed = print_job->vectors[0]->speed;
 
 	if (rc <= 2)
-		value[2] = value[1];
+		print_job->vectors[2]->speed = print_job->vectors[1]->speed;
 
 	return rc;
 }
 
+static int32_t vector_set_param_power(print_job_t *print_job, char *optarg)
+{
+	double values[3] = { 0.0, 0.0, 0.0 };
+	int32_t rc = sscanf(optarg, "%lf,%lf,%lf", &values[0], &values[1], &values[2]);
+
+	if (rc < 1)
+		return -1;
+
+	print_job->vectors[0]->power = (int32_t)values[0];
+	print_job->vectors[1]->power = (int32_t)values[1];
+	print_job->vectors[2]->power = (int32_t)values[2];
+
+	if (rc <= 1)
+		print_job->vectors[1]->power = print_job->vectors[0]->power;
+
+	if (rc <= 2)
+		print_job->vectors[2]->power = print_job->vectors[1]->power;
+
+	return rc;
+}
 
 /**
  * Main entry point for the program.
@@ -605,13 +619,18 @@ int main(int argc, char *argv[])
 			.repeat = RASTER_REPEAT,
 			.screen_size = SCREEN_DEFAULT,
 		},
-		.vector_speed = { 100, 100, 100 },
-		.vector_power = { 1, 1, 1 },
+		//.vector_speed = { 100, 100, 100 },
+		//.vector_power = { 1, 1, 1 },
 		.vector_frequency = VECTOR_FREQUENCY_DEFAULT,
 		.vector_optimize = true,
 		.vectors = NULL,
 		.debug = DEBUG,
 	};
+
+	print_job->vectors = calloc(VECTOR_PASSES, sizeof(vector_list_t*));
+	for (int32_t i = 0; i < VECTOR_PASSES; i++) {
+		print_job->vectors[i] = vector_list_create();
+	}
 
 	const char *host = "192.168.1.4";
 
@@ -634,11 +653,11 @@ int main(int argc, char *argv[])
 		case 'r': print_job->raster->speed = atoi(optarg); break;
 		case 'R': print_job->raster->power = atoi(optarg); break;
 		case 'v':
-			if (vector_param_set(&(print_job->vector_speed), optarg) < 0)
+			if (vector_set_param_speed(print_job, optarg) < 0)
 				usage(EXIT_FAILURE, "unable to parse vector-speed");
 			break;
 		case 'V':
-			if (vector_param_set(&(print_job->vector_power), optarg) < 0)
+			if (vector_set_param_power(print_job, optarg) < 0)
 				usage(EXIT_FAILURE, "unable to parse vector-power");
 			break;
 		case 'm': print_job->raster->mode = tolower(*optarg); break;
@@ -692,12 +711,12 @@ int main(int argc, char *argv[])
 		   print_job->raster->power,
 		   print_job->raster->resolution,
 		   print_job->vector_frequency,
-		   print_job->vector_speed[0],
-		   print_job->vector_speed[1],
-		   print_job->vector_speed[2],
-		   print_job->vector_power[0],
-		   print_job->vector_power[1],
-		   print_job->vector_power[2]);
+		   print_job->vectors[0]->speed,
+		   print_job->vectors[1]->speed,
+		   print_job->vectors[2]->speed,
+		   print_job->vectors[0]->power,
+		   print_job->vectors[1]->power,
+		   print_job->vectors[2]->power);
 
 	char *target_base = strndup(source_basename, FILENAME_NCHARS);
 	char *last_dot = strrchr(target_base, '.');

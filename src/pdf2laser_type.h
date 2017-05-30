@@ -49,8 +49,8 @@ struct print_job {
 
 	raster_t *raster;
 
-	int32_t vector_speed[3];
-	int32_t vector_power[3];
+	//int32_t vector_speed[3];
+	//int32_t vector_power[3];
 	int32_t vector_frequency;
 	bool vector_optimize;
 

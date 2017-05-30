@@ -8,6 +8,7 @@ vector_list_t *vector_list_create(void)
 	list->length = 0;
 	list->pass = 0;
 	list->power = 0;
+	list->speed = 0;
 	return list;
 }
 
@@ -19,12 +20,11 @@ vector_list_t *vector_list_append(vector_list_t *self, vector_t *vector)
 		self->length = 1;
 	}
 	else {
-		vector->prev = self->tail;
-		vector->next = NULL;
+ 		vector->prev = self->tail;
+		self->tail->next = vector;
 		self->tail = vector;
 		self->length += 1;
 	}
-
 	return self;
 }
 
@@ -90,8 +90,8 @@ vector_list_t *vector_list_stats(vector_list_t *self)
 		vector = vector->next;
 	}
 
-	printf("Cuts: %u len %lu\n", cuts, cut_total);
-	printf("Move: %u len %lu\n", transits, transit_total);
+	printf("Cuts: %d len %ld\n", cuts, cut_total);
+	printf("Move: %d len %ld\n", transits, transit_total);
 
 	return self;
 }
@@ -175,4 +175,16 @@ vector_list_t *vector_list_optimize(vector_list_t *self)
 	list->power = self->power;
 
 	return list;
+}
+
+
+bool vector_list_contains(vector_list_t *self, vector_t *vector)
+{
+	vector_t *v = self->head;
+	while (v) {
+		if (vector_compare(vector, v) == 0) {
+			return true;
+		}
+	}
+	return false;
 }
