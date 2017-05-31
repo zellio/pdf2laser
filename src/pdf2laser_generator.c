@@ -445,13 +445,11 @@ static void output_vector(vector_list_t *list, FILE * const pjl_file)
 			// Stop the laser; we need to transit and then start the laser as
 			// we go to the next point.  Note initial ";"
 			fprintf(pjl_file, ";PU%d,%d;PD%d,%d", vector->start->y, vector->start->x, vector->end->y, vector->end->x);
-			fprintf(stderr, ";PU%d,%d;PD%d,%d", vector->start->y, vector->start->x, vector->end->y, vector->end->x);
 		}
 		else {
 			// This is the continuation of a line, so just add additional
 			// points
 			fprintf(pjl_file, ",%d,%d", vector->end->y, vector->end->x);
-			fprintf(stderr, ",%d,%d", vector->end->y, vector->end->x);
 		}
 
 		// Changing power on the fly is not supported for now
