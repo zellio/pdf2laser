@@ -15,10 +15,10 @@ extern "C" {
 #endif
 
 typedef enum {
-	RASTER_MODE_COLOR = 'c',
-	RASTER_MODE_GREY_SCALE = 'g',
-	RASTER_MODE_MONO = 'm',
-	RASTER_MODE_NONE = 'n',
+	RASTER_MODE_COLOR = 'c',      // color determines power level
+	RASTER_MODE_GREY_SCALE = 'g', // grey-scale levels determine power level
+	RASTER_MODE_MONO = 'm',       // mono mode
+	RASTER_MODE_NONE = 'n',       // no rasterization
 } raster_mode;
 
 typedef struct raster raster_t;

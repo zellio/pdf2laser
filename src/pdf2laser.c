@@ -1,5 +1,5 @@
 
-/// pdf2laser.c --- tool for printing to Epilog laser cuttpers
+/// pdf2laser.c --- tool for printing to Epilog Fusion laser cutters
 
 // Copyright (C) 2015-2017 Zachary Elliott <contact@zell.io>
 // Copyright (C) 2011-2015 Trammell Hudson <hudson@osresearch.net>
@@ -46,78 +46,6 @@
 /*************************************************************************
  * local defines
  */
-
-/** Default on whether or not auto-focus is enabled. */
-#define AUTO_FOCUS true
-
-/** Default bed height (y-axis) in pts. */
-#define BED_HEIGHT (864)
-
-/** Default bed width (x-axis) in pts. */
-#define BED_WIDTH (1728)
-
-
-/** Default for debug mode. */
-#define DEBUG (false)
-
-/** Number of characters allowable for a filename. */
-#define FILENAME_NCHARS (1024)
-
-/** Default on whether or not the result is supposed to be flipped along the X
- * axis.
- */
-#define FLIP (false)
-
-/** Additional offset for the X axis. */
-#define HPGLX (0)
-
-/** Additional offset for the Y axis. */
-#define HPGLY (0)
-
-/** Whether or not to rotate the incoming PDF 90 degrees clockwise. */
-#define PDF_ROTATE_90 (1)
-
-/** Accepted number of points per an inch. */
-#define POINTS_PER_INCH (72)
-
-/** Default mode for processing raster engraving (varying power depending upon
- * image characteristics).
- * Possible values are:
- * 'c' = color determines power level
- * 'g' = grey-scale levels determine power level
- * 'm' = mono mode
- * 'n' = no rasterization
- */
-#define RASTER_MODE_DEFAULT (RASTER_MODE_MONO)
-
-/** Default power level for raster engraving */
-#define RASTER_POWER_DEFAULT (40)
-
-/** Whether or not the raster printing is to be repeated. */
-#define RASTER_REPEAT (1)
-
-/** Default speed for raster engraving */
-#define RASTER_SPEED_DEFAULT (100)
-
-/** Default resolution is 600 DPI */
-#define RESOLUTION_DEFAULT (600)
-
-/** Pixel size of screen (0 is threshold).
- * FIXME - add more details
- */
-#define SCREEN_DEFAULT (8)
-
-/** Temporary directory to store files. */
-#define TMP_DIRECTORY "/tmp"
-
-/** FIXME */
-#define VECTOR_FREQUENCY_DEFAULT (5000)
-
-/** Default power level for vector cutting. */
-#define VECTOR_POWER_DEFAULT (50)
-
-/** Default speed level for vector cutting. */
-#define VECTOR_SPEED_DEFAULT (30)
 
 
 FILE *fh_vector;
