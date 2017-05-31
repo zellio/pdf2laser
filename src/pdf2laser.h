@@ -2,29 +2,15 @@
 #define __PDF2LASER_H__ 1
 
 #include <ctype.h>
-#include <errno.h>
-#include <netdb.h>
-#include <netinet/in.h>
+#include <getopt.h>
+#include <inttypes.h>
+#include <libgen.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
-#include <math.h>
-#include <limits.h>
-#include <sys/signal.h>
-#include <sys/socket.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <arpa/inet.h>
 #include <unistd.h>
-#include <getopt.h>
-#include <pwd.h>
-
-#include <ghostscript/iapi.h>
-#include <ghostscript/ierrors.h>
-
-#include <libgen.h>
 
 #include "pdf2laser_type.h"
 #include "pdf2laser_printer.h"
