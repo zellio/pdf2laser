@@ -138,10 +138,19 @@ bool printer_send(const char *host, FILE *pjl_file, const char *job_name)
 		return false;
 	}
 
-	size_t read_length;
-	char buffer[102400];
-	while ((read_length = fread(buffer, 1, 102400, pjl_file)) > 0)
-		write(p_sock, buffer, read_length);
+	ssize_t bs = 0;
+	size_t bytes_sent = 0;
+	size_t count = file_stat.st_size;
+
+	while (bytes_sent < count) {
+		if ((bs = sendfile(p_sock, fileno(pjl_file), 0, count - bytes_sent)) <= 0) {
+			if (errno == EINTR || errno == EAGAIN)
+				continue;
+			perror("sendfile filed");
+			return -1;
+		}
+		bytes_sent += bs;
+	}
 
 	return printer_disconnect(p_sock);
 }
