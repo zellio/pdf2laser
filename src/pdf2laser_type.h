@@ -35,7 +35,7 @@ typedef struct print_job print_job_t;
 struct print_job {
 	char *name;
 	bool focus;
-	uint8_t flip;
+	//uint8_t flip;
 	uint32_t height;
 	uint32_t width;
 

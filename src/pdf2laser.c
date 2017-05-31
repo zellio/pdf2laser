@@ -263,8 +263,8 @@ static bool ps_to_eps(print_job_t *print_job, FILE *ps_file, FILE *eps_file)
 				if (x_offset || y_offset)
 					fprintf(eps_file, "%d %d translate\n", -x_offset, -y_offset);
 
-				if (print_job->flip)
-					fprintf(eps_file, "%d 0 translate -1 1 scale\n", print_job->width);
+				// if (print_job->flip)
+				//	fprintf(eps_file, "%d 0 translate -1 1 scale\n", print_job->width);
 			}
 		}
 	}
@@ -459,7 +459,7 @@ int main(int argc, char *argv[])
 	}
 
 	print_job_t *print_job = &(print_job_t){
-		.flip = FLIP,
+		// .flip = FLIP,
 		.height = BED_HEIGHT,
 		.width = BED_WIDTH,
 		.focus = false,
