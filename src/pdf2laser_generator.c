@@ -11,8 +11,6 @@
 #include "pdf2laser_vector.h"       // for vector_t, point_t, point_compare
 #include "pdf2laser_vector_list.h"  // for vector_list_t, vector_list_optimize
 
-// bool debug = false;
-
 /**
  * Convert a big endian value stored in the array starting at the given pointer
  * position to its little endian value.
@@ -33,6 +31,7 @@ static int32_t big_to_little_endian(uint8_t *position, size_t nbytes)
 
 	return result;
 }
+
 
 /**
  *
@@ -234,6 +233,7 @@ bool generate_eps(print_job_t *print_job, FILE *ps_file, FILE *eps_file)
 
 	return true;
 }
+
 
 /**
  *
@@ -627,7 +627,6 @@ static void output_vector(vector_list_t *list, FILE * const pjl_file)
 	// Stop the laser (note initial ";")
 	fprintf(pjl_file, ";PU;");
 }
-
 
 bool generate_vector(print_job_t *print_job, FILE * const pjl_file, FILE * const vector_file)
 {
