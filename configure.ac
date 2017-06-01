@@ -9,22 +9,94 @@ AC_CONFIG_SRCDIR([src/pdf2laser.c])
 AC_CONFIG_HEADERS([config.h])
 
 # Checks for programs.
-AC_PROG_CC
+AC_PROG_CC([clang gcc])
 AC_PROG_INSTALL
 
 # Checks for libraries.
 AC_SEARCH_LIBS([sqrt], [m])
 
 # Checks for header files.
-AC_CHECK_HEADERS([arpa/inet.h limits.h netdb.h netinet/in.h stdlib.h string.h strings.h sys/socket.h unistd.h])
+AC_CHECK_HEADERS([ \
+arpa/inet.h \
+ctype.h \
+errno.h \
+getopt.h \
+ghostscript/gserrors.h \
+ghostscript/iapi.h \
+libgen.h \
+math.h \
+netdb.h \
+netinet/in.h \
+stdbool.h \
+stdint.h \
+stdio.h \
+stdlib.h \
+string.h \
+strings.h \
+sys/sendfile.h \
+sys/socket.h \
+sys/stat.h \
+sys/types.h \
+unistd.h \
+])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_CHECK_HEADER_STDBOOL
-AC_TYPE_UID_T
+AC_TYPE_INT8_T
 AC_TYPE_UINT8_T
+AC_TYPE_INT32_T
+AC_TYPE_UINT32_T
+AC_TYPE_INT64_T
+AC_TYPE_UINT64_T
 
 # Checks for library functions.
-AC_CHECK_FUNCS([alarm gethostname inet_ntoa socket sqrt strchr strdup strncasecmp strrchr])
+AC_CHECK_FUNCS([ \
+addrinfo \
+alarm \
+atoi \
+basename \
+calloc \
+close \
+connect \
+errno \
+exit \
+fclose \
+fileno \
+fopen \
+fprintf \
+free \
+freeaddrinfo \
+fstat \
+getaddrinfo \
+gs_error_type \
+gsapi_delete_instance \
+gsapi_exit \
+gsapi_init_with_args \
+gsapi_new_instance \
+gsapi_set_arg_encoding \
+gsapi_set_stdio \
+inet_ntoa \
+mkdtemp \
+perror \
+pow \
+powl \
+printf \
+rmdir \
+sendfile \
+sleep \
+snprintf \
+sqrt \
+sscanf \
+stat \
+stderr \
+strchr \
+strncasecmp \
+strncmp \
+strndup \
+strrchr \
+tolower \
+unlink \
+])
 
 AC_CONFIG_FILES([src/Makefile
 doc/Makefile
