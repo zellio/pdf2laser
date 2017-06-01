@@ -130,6 +130,16 @@ bool printer_send(const char *host, FILE *pjl_file, const char *job_name)
 		*first_dot = '\0';
 	}
 
+	uint8_t lpdres;
+	int32_t p_sock = printer_connect(host, PRINTER_MAX_WAIT);
+
+	write(p_sock, "\002\r\n", 3);
+	read(p_sock, &lpdres, 1);
+	if (lpdres) {
+		fprintf (stderr, "Bad response from %s, %u\n", host, lpdres);
+		return false;
+	}
+
 	struct stat file_stat;
 	if (fstat(fileno(pjl_file), &file_stat)) {
 		perror("Error reading pjl file\n");
@@ -137,10 +147,7 @@ bool printer_send(const char *host, FILE *pjl_file, const char *job_name)
 	}
 
 	char job_header[10240];
-	snprintf(job_header, 10240, "\002\r\n\003%ld dfA%s%s\r\n", file_stat.st_size, job_name, local_hostname);
-
-	uint8_t lpdres;
-	int32_t p_sock = printer_connect(host, PRINTER_MAX_WAIT);
+	snprintf(job_header, 10240, "\003%u dfA%s%s\r\n", (uint32_t)file_stat.st_size, job_name, local_hostname);
 
 	write(p_sock, job_header, strlen(job_header));
 	read(p_sock, &lpdres, 1);
@@ -162,6 +169,8 @@ bool printer_send(const char *host, FILE *pjl_file, const char *job_name)
 		}
 		bytes_sent += bs;
 	}
+
+	printf("Job size: %d (%d)\r\n", bytes_sent, count);
 
 	return printer_disconnect(p_sock);
 }

@@ -638,8 +638,6 @@ bool generate_vector(print_job_t *print_job, FILE * const pjl_file, FILE * const
 	fprintf(pjl_file, "IN;");
 	fprintf(pjl_file, "XR%04d;", print_job->vector_frequency);
 
-	// \note: step and repeat is no longer supported
-
 	for (int i = 0; i < VECTOR_PASSES; i++) {
 		if (print_job->vector_optimize) {
 			vector_list_t *vl = print_job->vectors[i];
@@ -647,10 +645,9 @@ bool generate_vector(print_job_t *print_job, FILE * const pjl_file, FILE * const
 			free(vl);
 		}
 
-		//const vector_t *v = vectors[i].vectors;
-
 		fprintf(pjl_file, "YP%03d;", print_job->vectors[i]->power);
 		fprintf(pjl_file, "ZS%03d", print_job->vectors[i]->speed); // note: no ";"
+
 		output_vector(print_job->vectors[i], pjl_file);
 	}
 
@@ -668,7 +665,7 @@ bool generate_pjl(print_job_t *print_job, FILE *bitmap_file, FILE *pjl_file, FIL
 {
 	/* Print the printer job language header. */
 	fprintf(pjl_file, "%s", "\033%-12345X@PJL COMMENT *Job Start*\r\n");
-	fprintf(pjl_file, "@PJL JOB NAME= %s\r\n", print_job->name);
+	fprintf(pjl_file, "@PJL JOB NAME=%s\r\n", print_job->name);
 	fprintf(pjl_file, "@PJL ENTER LANGUAGE=PCL\r\n");
 	/* Set autofocus on or off. */
 	fprintf(pjl_file, "\033&y%dA", print_job->focus);

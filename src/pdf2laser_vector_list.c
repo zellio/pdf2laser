@@ -176,6 +176,7 @@ vector_list_t *vector_list_optimize(vector_list_t *self)
 
 	list->pass = self->pass;
 	list->power = self->power;
+	list->speed = self->speed;
 
 	return list;
 }
