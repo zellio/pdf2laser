@@ -33,6 +33,9 @@ struct raster {
 
 typedef struct print_job print_job_t;
 struct print_job {
+	char *source_filename;
+	char *host;
+
 	char *name;
 	bool focus;
 	//uint8_t flip;

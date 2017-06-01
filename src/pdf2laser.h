@@ -15,6 +15,7 @@
 #include "pdf2laser_type.h"
 #include "pdf2laser_printer.h"
 #include "pdf2laser_generator.h"
+#include "pdf2laser_cli.h"
 
 #include "config.h"
 
@@ -81,9 +82,8 @@ extern "C" {
 /* /\** Default speed level for vector cutting. *\/ */
 /* #define VECTOR_SPEED_DEFAULT (30) */
 
-static bool ps_to_eps(print_job_t *print_job, FILE *ps_file, FILE *eps_file);
-static void range_checks(print_job_t *print_job);
-static void usage(int rc, const char* const msg);
+/* static void range_checks(print_job_t *print_job); */
+/* static void usage(int rc, const char* const msg); */
 
 int main(int argc, char *argv[]);
 

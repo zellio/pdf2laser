@@ -72,6 +72,158 @@ bool generate_ps(const char *target_pdf, const char *target_ps)
 	return true;
 }
 
+
+/**
+ * Convert the given postscript file (ps) converting it to an encapsulated
+ * postscript file (eps).
+ *
+ * @param ps_file a file handle pointing to an opened postscript file that
+ * is to be converted.
+ * @param eps_file a file handle pointing to the opened encapsulated
+ * postscript file to store the result.
+ *
+ * @return Return true if the function completes its task, false otherwise.
+ */
+bool generate_eps(print_job_t *print_job, FILE *ps_file, FILE *eps_file)
+{
+	char *line = NULL;
+	size_t length = 0;
+	ssize_t length_read;
+
+	while ((length_read = getline(&line, &length, ps_file)) != -1) {
+		fprintf(eps_file, "%s", line);
+
+		if (*line != '%') {
+			break;
+		}
+		else if (strncmp(line, "%!", 2) == 0) {
+			fprintf
+				(eps_file,
+				 "/=== {(        ) cvs print} def" // print a number
+				 "/stroke {"
+				 // check for solid red
+				 "currentrgbcolor "
+				 "0.0 eq "
+				 "exch 0.0 eq "
+				 "and "
+				 "exch 1.0 eq "
+				 "and "
+				 // check for solid blue
+				 "currentrgbcolor "
+				 "0.0 eq "
+				 "exch 1.0 eq "
+				 "and "
+				 "exch 0.0 eq "
+				 "and "
+				 "or "
+				 // check for solid blue
+				 "currentrgbcolor "
+				 "1.0 eq "
+				 "exch 0.0 eq "
+				 "and "
+				 "exch 0.0 eq "
+				 "and "
+				 "or "
+				 "{"
+				 // solid red, green or blue
+				 "(P)=== "
+				 "currentrgbcolor "
+				 "(,)=== "
+				 "100 mul round cvi === "
+				 "(,)=== "
+				 "100 mul round cvi === "
+				 "(,)=== "
+				 "100 mul round cvi = "
+				 "flattenpath "
+				 "{ "
+				 // moveto
+				 "transform (M)=== "
+				 "round cvi === "
+				 "(,)=== "
+				 "round cvi ="
+				 "}{"
+				 // lineto
+				 "transform(L)=== "
+				 "round cvi === "
+				 "(,)=== "
+				 "round cvi ="
+				 "}{"
+				 // curveto (not implemented)
+				 "}{"
+				 // closepath
+				 "(C)="
+				 "}"
+				 "pathforall newpath"
+				 "}"
+				 "{"
+				 // Default is to just stroke
+				 "stroke"
+				 "}"
+				 "ifelse"
+				 "}bind def"
+				 "/showpage {(X)= showpage}bind def"
+				 "\n");
+
+			if (print_job->raster->mode != 'c' && print_job->raster->mode != 'g') {
+				if (print_job->raster->screen_size == 0) {
+					fprintf(eps_file, "{0.5 ge{1}{0}ifelse}settransfer\n");
+				}
+				else {
+					uint32_t screen_size = print_job->raster->screen_size;
+					if (print_job->raster->resolution >= 600) {
+						// adjust for overprint
+						fprintf(eps_file,
+								"{dup 0 ne{%d %d div add}if}settransfer\n",
+								print_job->raster->resolution / 600, screen_size);
+					}
+					fprintf(eps_file, "%d 30{%s}setscreen\n", print_job->raster->resolution / screen_size,
+							(print_job->raster->screen_size > 0) ? "pop abs 1 exch sub" :
+							"180 mul cos exch 180 mul cos add 2 div");
+				}
+			}
+		}
+		else if (strncasecmp(line, "%%PageBoundingBox:", 18) == 0) {
+
+			int32_t x_offset = 0;
+			int32_t y_offset = 0;
+
+			int32_t x_lower_left, y_lower_left, x_upper_right, y_upper_right;
+
+			if (sscanf(line, "%%%%PageBoundingBox: %d %d %d %d",
+					   &x_lower_left,
+					   &y_lower_left,
+					   &x_upper_right,
+					   &y_upper_right) == 4) {
+
+				x_offset = x_lower_left;
+				y_offset = y_lower_left;
+
+				print_job->width = (x_upper_right - x_lower_left);
+				print_job->height = (y_upper_right - y_lower_left);
+
+				fprintf(eps_file, "/setpagedevice{pop}def\n"); // use bbox
+
+				if (x_offset || y_offset)
+					fprintf(eps_file, "%d %d translate\n", -x_offset, -y_offset);
+
+				// if (print_job->flip)
+				//	fprintf(eps_file, "%d 0 translate -1 1 scale\n", print_job->width);
+			}
+		}
+	}
+
+	free(line);
+
+	{
+		size_t length;
+		uint8_t buffer[102400];
+		while ((length = fread(buffer, 1, 102400, ps_file)) > 0)
+			fwrite(buffer, 1, length, eps_file);
+	}
+
+	return true;
+}
+
 /**
  *
  */

@@ -130,314 +130,6 @@ static bool execute_ghostscript(print_job_t *print_job,
 }
 
 /**
- * Convert the given postscript file (ps) converting it to an encapsulated
- * postscript file (eps).
- *
- * @param ps_file a file handle pointing to an opened postscript file that
- * is to be converted.
- * @param eps_file a file handle pointing to the opened encapsulated
- * postscript file to store the result.
- *
- * @return Return true if the function completes its task, false otherwise.
- */
-static bool ps_to_eps(print_job_t *print_job, FILE *ps_file, FILE *eps_file)
-{
-
-	char *line = NULL;
-	size_t length = 0;
-	ssize_t length_read;
-
-	while ((length_read = getline(&line, &length, ps_file)) != -1) {
-		fprintf(eps_file, "%s", line);
-
-		if (*line != '%') {
-			break;
-		}
-		else if (strncmp(line, "%!", 2) == 0) {
-			fprintf
-				(eps_file,
-				 "/=== {(        ) cvs print} def" // print a number
-				 "/stroke {"
-				 // check for solid red
-				 "currentrgbcolor "
-				 "0.0 eq "
-				 "exch 0.0 eq "
-				 "and "
-				 "exch 1.0 eq "
-				 "and "
-				 // check for solid blue
-				 "currentrgbcolor "
-				 "0.0 eq "
-				 "exch 1.0 eq "
-				 "and "
-				 "exch 0.0 eq "
-				 "and "
-				 "or "
-				 // check for solid blue
-				 "currentrgbcolor "
-				 "1.0 eq "
-				 "exch 0.0 eq "
-				 "and "
-				 "exch 0.0 eq "
-				 "and "
-				 "or "
-				 "{"
-				 // solid red, green or blue
-				 "(P)=== "
-				 "currentrgbcolor "
-				 "(,)=== "
-				 "100 mul round cvi === "
-				 "(,)=== "
-				 "100 mul round cvi === "
-				 "(,)=== "
-				 "100 mul round cvi = "
-				 "flattenpath "
-				 "{ "
-				 // moveto
-				 "transform (M)=== "
-				 "round cvi === "
-				 "(,)=== "
-				 "round cvi ="
-				 "}{"
-				 // lineto
-				 "transform(L)=== "
-				 "round cvi === "
-				 "(,)=== "
-				 "round cvi ="
-				 "}{"
-				 // curveto (not implemented)
-				 "}{"
-				 // closepath
-				 "(C)="
-				 "}"
-				 "pathforall newpath"
-				 "}"
-				 "{"
-				 // Default is to just stroke
-				 "stroke"
-				 "}"
-				 "ifelse"
-				 "}bind def"
-				 "/showpage {(X)= showpage}bind def"
-				 "\n");
-
-			if (print_job->raster->mode != 'c' && print_job->raster->mode != 'g') {
-				if (print_job->raster->screen_size == 0) {
-					fprintf(eps_file, "{0.5 ge{1}{0}ifelse}settransfer\n");
-				}
-				else {
-					uint32_t screen_size = print_job->raster->screen_size;
-					if (print_job->raster->resolution >= 600) {
-						// adjust for overprint
-						fprintf(eps_file,
-								"{dup 0 ne{%d %d div add}if}settransfer\n",
-								print_job->raster->resolution / 600, screen_size);
-					}
-					fprintf(eps_file, "%d 30{%s}setscreen\n", print_job->raster->resolution / screen_size,
-							(print_job->raster->screen_size > 0) ? "pop abs 1 exch sub" :
-							"180 mul cos exch 180 mul cos add 2 div");
-				}
-			}
-		}
-		else if (strncasecmp(line, "%%PageBoundingBox:", 18) == 0) {
-
-			int32_t x_offset = 0;
-			int32_t y_offset = 0;
-
-			int32_t x_lower_left, y_lower_left, x_upper_right, y_upper_right;
-
-			if (sscanf(line, "%%%%PageBoundingBox: %d %d %d %d",
-					   &x_lower_left,
-					   &y_lower_left,
-					   &x_upper_right,
-					   &y_upper_right) == 4) {
-
-				x_offset = x_lower_left;
-				y_offset = y_lower_left;
-
-				print_job->width = (x_upper_right - x_lower_left);
-				print_job->height = (y_upper_right - y_lower_left);
-
-				fprintf(eps_file, "/setpagedevice{pop}def\n"); // use bbox
-
-				if (x_offset || y_offset)
-					fprintf(eps_file, "%d %d translate\n", -x_offset, -y_offset);
-
-				// if (print_job->flip)
-				//	fprintf(eps_file, "%d 0 translate -1 1 scale\n", print_job->width);
-			}
-		}
-	}
-
-	free(line);
-
-	{
-		size_t length;
-		uint8_t buffer[102400];
-		while ((length = fread(buffer, 1, 102400, ps_file)) > 0)
-			fwrite(buffer, 1, length, eps_file);
-	}
-
-	return true;
-}
-
-/**
- * Perform range validation checks on the major global variables to ensure
- * their values are sane. If values are outside accepted tolerances then modify
- * them to be the correct value.
- *
- * @return Nothing
- */
-static void range_checks(print_job_t *print_job)
-{
-	if (print_job->raster->power > 100) {
-		print_job->raster->power = 100;
-	}
-	else if (print_job->raster->power < 0) {
-		print_job->raster->power = 0;
-	}
-
-	if (print_job->raster->speed > 100) {
-		print_job->raster->speed = 100;
-	}
-	else if (print_job->raster->speed < 1) {
-		print_job->raster->speed = 1;
-	}
-
-	if (print_job->raster->resolution > 1200) {
-		print_job->raster->resolution = 1200;
-	}
-	else if (print_job->raster->resolution < 75) {
-		print_job->raster->resolution = 75;
-	}
-
-	if (print_job->raster->screen_size < 1) {
-		print_job->raster->screen_size = 1;
-	}
-
-	if (print_job->vector_frequency < 10) {
-		print_job->vector_frequency = 10;
-	}
-	else if (print_job->vector_frequency > 5000) {
-		print_job->vector_frequency = 5000;
-	}
-
-	for (int i = 0 ; i < VECTOR_PASSES ; i++) {
-		if (print_job->vectors[i]->power > 100) {
-			print_job->vectors[i]->power = 100;
-		}
-		else if (print_job->vectors[i]->power < 0) {
-			print_job->vectors[i]->power = 0;
-		}
-
-		if (print_job->vectors[i]->speed > 100) {
-			print_job->vectors[i]->speed = 100;
-		}
-		else if (print_job->vectors[i]->speed < 1) {
-			print_job->vectors[i]->speed = 1;
-		}
-	}
-}
-
-static void usage(int rc, const char * const msg)
-{
-	static const char usage_str[] =
-		"Usage: " PACKAGE " [OPTION]... [FILE]\n"
-		"\n"
-		"General options:\n"
-		"    -a, --autofocus                   Enable auto focus\n"
-		"    -n JOBNAME, --job=JOBNAME         Set the job name to display\n"
-		"    -p ADDRESS, --printer=ADDRESS     ADDRESS of the printer\n"
-		"    -P PRESET, --preset=PRESET        Select a default preset\n"
-		"\n"
-		"Raster options:\n"
-		"    -d DPI, --dpi DPI                 Resolution of raster artwork\n"
-		"    -m MODE, --mode MODE              Mode for rasterization (default mono)\n"
-		"    -r SPEED, --raster-speed=SPEED    Raster speed\n"
-		"    -R POWER, --raster-power=POWER    Raster power\n"
-		"    -s SIZE, --screen-size SIZE       Photograph screen size (default 8)\n"
-		"\n"
-		"Vector options:\n"
-		"    -O, --no-optimize                 Disable vector optimization\n"
-		"    -f FREQ, --frequency=FREQ         Vector frequency\n"
-		"    -v SPEED, --vector-speed=SPEED    Vector speed\n"
-		"    -V POWER, --vector-power=POWER    Vector power for the R,G and B passes\n"
-		"\n"
-		"General options:\n"
-		"    -D, --debug                       Enable debug mode\n"
-		"    -h, --help                        Output a usage message and exit\n"
-		"    --version                         Output the version number and exit\n"
-		"";
-
-	fprintf(stderr, "%s%s\n", msg, usage_str);
-
-	exit(rc);
-}
-
-static const struct option long_options[] = {
-	{ "debug",         no_argument,        NULL,  'D' },
-	{ "printer",       required_argument,  NULL,  'p' },
-	{ "preset",        required_argument,  NULL,  'P' },
-	{ "autofocus",     required_argument,  NULL,  'a' },
-	{ "job",           required_argument,  NULL,  'n' },
-	{ "dpi",           required_argument,  NULL,  'd' },
-	{ "raster-power",  required_argument,  NULL,  'R' },
-	{ "raster-speed",  required_argument,  NULL,  'r' },
-	{ "mode",          required_argument,  NULL,  'm' },
-	{ "screen-size",   required_argument,  NULL,  's' },
-	{ "frequency",     required_argument,  NULL,  'f' },
-	{ "vector-power",  required_argument,  NULL,  'V' },
-	{ "vector-speed",  required_argument,  NULL,  'v' },
-	{ "no-optimize",   no_argument,        NULL,  'O' },
-	{ "help",          no_argument,        NULL,  'h' },
-	{ "version",       no_argument,        NULL,  '@' },
-	{ NULL,            0,                  NULL,   0  },
-};
-
-
-static int32_t vector_set_param_speed(print_job_t *print_job, char *optarg)
-{
-	double values[3] = { 0.0, 0.0, 0.0 };
-	int32_t rc = sscanf(optarg, "%lf,%lf,%lf", &values[0], &values[1], &values[2]);
-
-	if (rc < 1)
-		return -1;
-
-	print_job->vectors[0]->speed = (int32_t)values[0];
-	print_job->vectors[1]->speed = (int32_t)values[1];
-	print_job->vectors[2]->speed = (int32_t)values[2];
-
-	if (rc <= 1)
-		print_job->vectors[1]->speed = print_job->vectors[0]->speed;
-
-	if (rc <= 2)
-		print_job->vectors[2]->speed = print_job->vectors[1]->speed;
-
-	return rc;
-}
-
-static int32_t vector_set_param_power(print_job_t *print_job, char *optarg)
-{
-	double values[3] = { 0.0, 0.0, 0.0 };
-	int32_t rc = sscanf(optarg, "%lf,%lf,%lf", &values[0], &values[1], &values[2]);
-
-	if (rc < 1)
-		return -1;
-
-	print_job->vectors[0]->power = (int32_t)values[0];
-	print_job->vectors[1]->power = (int32_t)values[1];
-	print_job->vectors[2]->power = (int32_t)values[2];
-
-	if (rc <= 1)
-		print_job->vectors[1]->power = print_job->vectors[0]->power;
-
-	if (rc <= 2)
-		print_job->vectors[2]->power = print_job->vectors[1]->power;
-
-	return rc;
-}
-
-/**
  * Main entry point for the program.
  *
  * @param argc The number of command line options passed to the program.
@@ -457,9 +149,13 @@ int main(int argc, char *argv[])
 		perror("mkdtemp failed");
 		return false;
 	}
+	// This is the NYC Resistor laser host.
+	char *host = "192.168.1.4";
 
+	// Job struct defaults
 	print_job_t *print_job = &(print_job_t){
 		// .flip = FLIP,
+		.host = host,
 		.height = BED_HEIGHT,
 		.width = BED_WIDTH,
 		.focus = false,
@@ -477,69 +173,18 @@ int main(int argc, char *argv[])
 		.debug = DEBUG,
 	};
 
+	// NOTE: This should be replaced with something that processes the colours
+	// that are passed in so pdf2laser can support something other than the
+	// current RGB layout.
 	print_job->vectors = calloc(VECTOR_PASSES, sizeof(vector_list_t*));
 	for (int32_t i = 0; i < VECTOR_PASSES; i++) {
 		print_job->vectors[i] = vector_list_create();
 	}
 
-	const char *host = "192.168.1.4";
+	// Process command line options
+	optparse(print_job, argc, argv);
 
-	while (true) {
-		const char ch = getopt_long(argc,
-									argv,
-									"Dp:P:n:d:r:R:v:V:g:G:b:B:m:f:s:aO:h",
-									long_options,
-									NULL
-									);
-		if (ch <= 0 )
-			break;
-
-		switch (ch) {
-		case 'D': print_job->debug = true; break;
-		case 'p': host = optarg; break;
-		case 'P': usage(EXIT_FAILURE, "Presets are not supported yet\n"); break;
-		case 'n': print_job->name = optarg; break;
-		case 'd': print_job->raster->resolution = atoi(optarg); break;
-		case 'r': print_job->raster->speed = atoi(optarg); break;
-		case 'R': print_job->raster->power = atoi(optarg); break;
-		case 'v':
-			if (vector_set_param_speed(print_job, optarg) < 0)
-				usage(EXIT_FAILURE, "unable to parse vector-speed");
-			break;
-		case 'V':
-			if (vector_set_param_power(print_job, optarg) < 0)
-				usage(EXIT_FAILURE, "unable to parse vector-power");
-			break;
-		case 'm': print_job->raster->mode = tolower(*optarg); break;
-		case 'f': print_job->vector_frequency = atoi(optarg); break;
-		case 's': print_job->raster->screen_size = atoi(optarg); break;
-		case 'a': print_job->focus = AUTO_FOCUS; break;
-		case 'O': print_job->vector_optimize = false; break;
-		case 'h': usage(EXIT_SUCCESS, ""); break;
-		case '@': fprintf(stdout, "%s\n", VERSION); exit(0); break;
-		default: usage(EXIT_FAILURE, "Unknown argument\n"); break;
-		}
-	}
-
-	/* Perform a check over the global values to ensure that they have values
-	 * that are within a tolerated range.
-	 */
-	range_checks(print_job);
-
-	// ensure printer host is set
-	if (!host)
-		usage(EXIT_FAILURE, "Printer host must be specfied\n");
-
-	// Skip any of the processed arguments
-	argc -= optind;
-	argv += optind;
-
-	// If there is an argument after, there must be only one
-	// and it will be the input postcript / pdf
-	if (argc > 1)
-		usage(EXIT_FAILURE, "Only one input file may be specified\n");
-
-	const char *source_filename = argc ? strndup(argv[0], FILENAME_NCHARS) : "stdin";
+	const char *source_filename = print_job->source_filename;
 
 	char *source_basename = strndup(argv[0], FILENAME_NCHARS);
 	source_basename = basename(source_basename);
@@ -602,24 +247,48 @@ int main(int argc, char *argv[])
 	FILE *fh_pjl;
 	FILE *fh_vector;
 
-	if (strncmp(source_filename, "stdin", 5) == 0) {
-		fh_pdf = fopen(target_pdf, "w");
-		if (!fh_pdf) {
-			perror(target_pdf);
-			return 1;
-		}
-
-		{
-			uint8_t buffer[102400];
-			size_t rc;
-			while ((rc = fread(buffer, 1, 102400, stdin)) > 0)
-				fwrite(buffer, 1, rc, fh_pdf);
-		}
-
-		fclose(fh_pdf);
+	fh_pdf = fopen(target_pdf, "w");
+	if (!fh_pdf) {
+		perror(target_pdf);
+		return 1;
 	}
 
-	if (!generate_ps(source_filename, target_ps)) {
+	if (strncmp(source_filename, "stdin", 5) == 0) {
+		uint8_t buffer[102400];
+		size_t rc;
+		while ((rc = fread(buffer, 1, 102400, stdin)) > 0)
+			fwrite(buffer, 1, rc, fh_pdf);
+	}
+	else {
+		FILE *fh_source = fopen(source_filename, "r");
+		int32_t source_fno = fileno(fh_source);
+
+		struct stat file_stat;
+		if (fstat(source_fno, &file_stat)) {
+			perror("Error reading pjl file\n");
+			return false;
+		}
+
+		ssize_t bs = 0;
+		size_t bytes_sent = 0;
+		size_t count = file_stat.st_size;
+
+		while (bytes_sent < count) {
+			if ((bs = sendfile(fileno(fh_pdf), source_fno, 0, count - bytes_sent)) <= 0) {
+				if (errno == EINTR || errno == EAGAIN)
+					continue;
+				perror("sendfile filed");
+				return -1;
+			}
+			bytes_sent += bs;
+		}
+
+		fclose(fh_source);
+	}
+
+	fclose(fh_pdf);
+
+	if (!generate_ps(target_pdf, target_ps)) {
 		perror("Error converting pdf to postscript.");
 		return 1;
 	}
@@ -645,7 +314,7 @@ int main(int argc, char *argv[])
 	}
 
 	/* Convert postscript to encapsulated postscript. */
-	if (!ps_to_eps(print_job, fh_ps, fh_eps)) {
+	if (!generate_eps(print_job, fh_ps, fh_eps)) {
 		perror("Error converting postscript to encapsulated postscript.");
 		fclose(fh_eps);
 		return 1;
@@ -720,7 +389,7 @@ int main(int argc, char *argv[])
 	}
 
 	/* Send print job to printer. */
-	if (!printer_send(host, fh_pjl, print_job->name)) {
+	if (!printer_send(print_job->host, fh_pjl, print_job->name)) {
 		perror("Could not send pjl file to printer.\n");
 		return 1;
 	}
