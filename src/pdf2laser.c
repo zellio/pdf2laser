@@ -50,7 +50,9 @@
 #include <stdio.h>                  // for perror, snprintf, fclose, fopen
 #include <stdlib.h>                 // for calloc, mkdtemp
 #include <string.h>                 // for strrchr, strncmp
+#ifdef __linux
 #include <sys/sendfile.h>           // for sendfile
+#endif
 #include <sys/stat.h>               // for fstat, stat
 #include <unistd.h>                 // for unlink, rmdir, ssize_t
 #include "pdf2laser_cli.h"          // for optparse
@@ -284,6 +286,7 @@ int main(int argc, char *argv[])
 			return false;
 		}
 
+#ifdef __linux
 		ssize_t bs = 0;
 		size_t bytes_sent = 0;
 		size_t count = file_stat.st_size;
@@ -297,6 +300,15 @@ int main(int argc, char *argv[])
 			}
 			bytes_sent += bs;
 		}
+#else
+		{
+			char buffer[102400];
+			size_t rc;
+			while ((rc = fread(buffer, 1, 102400, fh_source)) > 0)
+				fwrite(buffer, 1, rc, fh_pdf);
+		}
+
+#endif
 
 		fclose(fh_source);
 	}

@@ -7,7 +7,6 @@
 #include <string.h>                 // for strncmp
 #include <strings.h>                // for strncasecmp
 #include <sys/types.h>              // for ssize_t
-#include <sys/sendfile.h>           // for sendfile
 #include "pdf2laser_type.h"         // for print_job_t, raster_t
 #include "pdf2laser_vector.h"       // for vector_t, point_t, point_compare
 #include "pdf2laser_vector_list.h"  // for vector_list_t, vector_list_optimize

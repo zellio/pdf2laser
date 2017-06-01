@@ -6,7 +6,9 @@
 #include <stdint.h>           // for int32_t, uint32_t, uint8_t
 #include <stdio.h>            // for perror, fprintf, NULL, fileno, printf, snprintf
 #include <string.h>           // for strchr
+#ifdef __linux
 #include <sys/sendfile.h>     // for sendfile
+#endif
 #include <sys/socket.h>       // for connect, socket, PF_UNSPEC, SOCK_STREAM
 #include <sys/stat.h>         // for fstat, stat
 #include <unistd.h>           // for alarm, close, sleep, ssize_t
@@ -156,6 +158,7 @@ bool printer_send(const char *host, FILE *pjl_file, const char *job_name)
 		return false;
 	}
 
+#ifdef __linux
 	ssize_t bs = 0;
 	size_t bytes_sent = 0;
 	size_t count = file_stat.st_size;
@@ -171,6 +174,17 @@ bool printer_send(const char *host, FILE *pjl_file, const char *job_name)
 	}
 
 	printf("Job size: %d (%d)\r\n", bytes_sent, count);
+#else
+	{
+		char buffer[102400];
+		size_t rc;
+		while ((rc = fread(buffer, 1, 102400, pjl_file)) > 0)
+			write(p_sock, buffer, rc);
+
+		printf("Job size: %d (%d)\r\n", file_stat.st_size);
+	}
+#endif
+
 
 	return printer_disconnect(p_sock);
 }
