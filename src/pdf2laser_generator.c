@@ -1,4 +1,16 @@
 #include "pdf2laser_generator.h"
+#include <ghostscript/gserrors.h>   // for gs_error_type::gs_error_Quit
+#include <ghostscript/iapi.h>       // for gsapi_delete_instance, gsapi_exit
+#include <stdint.h>                 // for int32_t, uint8_t
+#include <stdio.h>                  // for fprintf, fputc, printf, stderr, NULL
+#include <stdlib.h>                 // for free, calloc
+#include <string.h>                 // for strncmp
+#include <strings.h>                // for strncasecmp
+#include <sys/types.h>              // for ssize_t
+#include <sys/sendfile.h>           // for sendfile
+#include "pdf2laser_type.h"         // for print_job_t, raster_t
+#include "pdf2laser_vector.h"       // for vector_t, point_t, point_compare
+#include "pdf2laser_vector_list.h"  // for vector_list_t, vector_list_optimize
 
 // bool debug = false;
 

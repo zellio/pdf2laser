@@ -1,11 +1,9 @@
 #ifndef __PDF2LASER_TYPE_H__
 #define __PDF2LASER_TYPE_H__ 1
 
-#include <inttypes.h>
-#include <stdbool.h>
-
-#include "pdf2laser_vector.h"
-#include "pdf2laser_vector_list.h"
+#include <stdbool.h>                // for bool
+#include <stdint.h>                 // for int32_t, uint32_t, int8_t
+#include "pdf2laser_vector_list.h"  // for vector_list_t
 
 #ifdef __cplusplus
 extern "C" {

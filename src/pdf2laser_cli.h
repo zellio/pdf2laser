@@ -1,16 +1,9 @@
 #ifndef __PDF2LASER_CLI_H__
 #define __PDF2LASER_CLI_H__ 1
 
-#include <ctype.h>
-#include <getopt.h>
-#include <inttypes.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-
-#include "pdf2laser_type.h"
+#include <stdint.h>          // for int32_t
+#include <stdbool.h>         // for bool
+#include "pdf2laser_type.h"  // for print_job_t
 
 #include "config.h"
 

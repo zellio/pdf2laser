@@ -1,9 +1,8 @@
 #ifndef __PDF2LASER_VECTOR_H__
 #define __PDF2LASER_VECTOR_H__ 1
 
-#include <inttypes.h>
-#include <stdlib.h>
-#include <stdbool.h>
+#include <stdint.h>   // for int32_t
+#include <stdbool.h>  // for bool
 
 #ifdef __cplusplus
 extern "C" {

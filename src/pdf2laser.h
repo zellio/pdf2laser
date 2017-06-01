@@ -1,23 +1,7 @@
 #ifndef __PDF2LASER_H__
 #define __PDF2LASER_H__ 1
 
-#include <ctype.h>
-#include <getopt.h>
-#include <inttypes.h>
-#include <libgen.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <strings.h>
-#include <unistd.h>
-
-#include "pdf2laser_type.h"
-#include "pdf2laser_printer.h"
-#include "pdf2laser_generator.h"
-#include "pdf2laser_cli.h"
-
-#include "config.h"
+#include <stdbool.h> // for bool, true, false
 
 #ifdef __cplusplus
 extern "C" {

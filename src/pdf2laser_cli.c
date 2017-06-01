@@ -1,4 +1,13 @@
 #include "pdf2laser_cli.h"
+#include <ctype.h>                  // for tolower
+#include <getopt.h>                 // for optarg, required_argument, no_arg...
+#include <stdint.h>                 // for int32_t
+#include <stdio.h>                  // for NULL, fprintf, sscanf, stderr
+#include <stdlib.h>                 // for atoi, EXIT_FAILURE, exit, EXIT_SU...
+#include <string.h>                 // for strndup
+#include "config.h"                 // for PACKAGE, VERSION
+#include "pdf2laser_type.h"         // for print_job_t, raster_t
+#include "pdf2laser_vector_list.h"  // for vector_list_t
 
 static const char *opt_string = "Dp:P:n:d:r:R:v:V:g:G:b:B:m:f:s:aO:h";
 static const struct option long_options[] = {

@@ -1,18 +1,8 @@
 #ifndef __PDF2LASER_PRINTER_H__
 #define __PDF2LASER_PRINTER_H__ 1
 
-#include <arpa/inet.h>
-#include <errno.h>
-#include <inttypes.h>
-#include <netdb.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/socket.h>
-#include <sys/stat.h>
-#include <sys/sendfile.h>
-#include <unistd.h>
+#include <stdbool.h>  // for bool
+#include <stdio.h>    // For FILE
 
 #ifdef __cplusplus
 extern "C" {

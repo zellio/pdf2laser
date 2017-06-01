@@ -1,4 +1,7 @@
 #include "pdf2laser_vector_list.h"
+#include <math.h>    // for pow, powl, sqrt
+#include <stdio.h>   // for NULL, printf
+#include <stdlib.h>  // for calloc
 
 vector_list_t *vector_list_create(void)
 {

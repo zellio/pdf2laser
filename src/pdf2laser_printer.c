@@ -1,4 +1,15 @@
 #include "pdf2laser_printer.h"
+#include <arpa/inet.h>        // for inet_ntoa
+#include <errno.h>            // for errno, EINTR, EAGAIN, EBADF, EIO
+#include <netdb.h>            // for addrinfo, freeaddrinfo, getaddrinfo
+#include <netinet/in.h>       // for sockaddr_in, ntohs
+#include <stdint.h>           // for int32_t, uint32_t, uint8_t
+#include <stdio.h>            // for perror, fprintf, NULL, fileno, printf, snprintf
+#include <string.h>           // for strchr
+#include <sys/sendfile.h>     // for sendfile
+#include <sys/socket.h>       // for connect, socket, PF_UNSPEC, SOCK_STREAM
+#include <sys/stat.h>         // for fstat, stat
+#include <unistd.h>           // for alarm, close, sleep, ssize_t
 
 //bool debug = false;
 char *queue = "";

@@ -42,7 +42,22 @@
  */
 
 #include "pdf2laser.h"
-
+#include <errno.h>                  // for errno, EAGAIN, EINTR
+#include <ghostscript/gserrors.h>   // for gs_error_type::gs_error_Quit
+#include <ghostscript/iapi.h>       // for gsapi_new_instance, gsapi_set_arg_encoding, gsapi_set_stdio, gsapi_init_with_args, gsapi_delete_instance, gsapi_exit
+#include <libgen.h>                 // for basename
+#include <stdint.h>                 // for int32_t, uint8_t
+#include <stdio.h>                  // for perror, snprintf, fclose, fopen
+#include <stdlib.h>                 // for calloc, mkdtemp
+#include <string.h>                 // for strrchr, strncmp
+#include <sys/sendfile.h>           // for sendfile
+#include <sys/stat.h>               // for fstat, stat
+#include <unistd.h>                 // for unlink, rmdir, ssize_t
+#include "pdf2laser_cli.h"          // for optparse
+#include "pdf2laser_generator.h"    // for VECTOR_PASSES, generate_ps, generate_eps, generate_pjl
+#include "pdf2laser_printer.h"      // for pritner_send
+#include "pdf2laser_type.h"         // for print_job_t, raster_t
+#include "pdf2laser_vector_list.h"  // for vector_list_t, vector_list_create
 /*************************************************************************
  * local defines
  */

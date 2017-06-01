@@ -1,18 +1,9 @@
 #ifndef __PDF2LASER_GENERATOR_H__
 #define __PDF2LASER_GENERATOR_H__ 1
 
-#include <inttypes.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdbool.h>
-#include <math.h>
-#include <string.h>
-
-#include <ghostscript/iapi.h>
-#include <ghostscript/ierrors.h>
-
-#include "pdf2laser_type.h"
-#include "pdf2laser_vector.h"
+#include <stdio.h>           // for FILE
+#include <stdbool.h>         // for bool
+#include "pdf2laser_type.h"  // for print_job_t
 
 #ifdef __cplusplus
 extern "C" {

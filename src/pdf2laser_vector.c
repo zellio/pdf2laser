@@ -1,4 +1,5 @@
 #include "pdf2laser_vector.h"
+#include <stdlib.h>  // for calloc, free
 
 point_t *point_create(int32_t x, int32_t y)
 {
