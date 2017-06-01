@@ -201,7 +201,7 @@ int main(int argc, char *argv[])
 
 	const char *source_filename = print_job->source_filename;
 
-	char *source_basename = strndup(argv[0], FILENAME_NCHARS);
+	char *source_basename = strndup(print_job->source_filename, FILENAME_NCHARS);
 	source_basename = basename(source_basename);
 
 	// If no job name is specified, use just the filename if there

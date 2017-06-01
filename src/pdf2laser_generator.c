@@ -667,8 +667,9 @@ bool generate_vector(print_job_t *print_job, FILE * const pjl_file, FILE * const
 bool generate_pjl(print_job_t *print_job, FILE *bitmap_file, FILE *pjl_file, FILE *vector_file)
 {
 	/* Print the printer job language header. */
-	fprintf(pjl_file, "\033%%-12345X@PJL JOB NAME=%s\r\n", print_job->name);
-	fprintf(pjl_file, "\033E@PJL ENTER LANGUAGE=PCL\r\n");
+	fprintf(pjl_file, "%s", "\033%-12345X@PJL COMMENT *Job Start*\r\n");
+	fprintf(pjl_file, "@PJL JOB NAME= %s\r\n", print_job->name);
+	fprintf(pjl_file, "@PJL ENTER LANGUAGE=PCL\r\n");
 	/* Set autofocus on or off. */
 	fprintf(pjl_file, "\033&y%dA", print_job->focus);
 	/* Left (long-edge) offset registration.  Adjusts the position of the
@@ -719,10 +720,11 @@ bool generate_pjl(print_job_t *print_job, FILE *bitmap_file, FILE *pjl_file, FIL
 	fprintf(pjl_file, "\033E");
 
 	/* Exit language. */
-	fprintf(pjl_file, "\033%%-12345X");
+	//fprintf(pjl_file, "\033%%-12345X");
+	fprintf(pjl_file, "%s", "\033%-12345X@PJL COMMENT *Job End*\r\n");
 
 	/* End job. */
-	fprintf(pjl_file, "@PJL EOJ \r\n");
+	fprintf(pjl_file, "@PJL EOJ\r\n");
 
 	/* Pad out the remainder of the file with 0 characters. */
 	// for(int i = 0; i < 4096; i++)
