@@ -10,6 +10,7 @@
 #include "pdf2laser_vector_list.h"  // for vector_list_t
 
 static const char *opt_string = "Dp:P:n:d:r:R:v:V:g:G:b:B:m:f:s:aO:h";
+
 static const struct option long_options[] = {
 	{ "debug",         no_argument,        NULL,  'D' },
 	{ "printer",       required_argument,  NULL,  'p' },
@@ -29,7 +30,6 @@ static const struct option long_options[] = {
 	{ "version",       no_argument,        NULL,  '@' },
 	{ NULL,            0,                  NULL,   0  },
 };
-
 
 static void usage(int rc, const char * const msg)
 {
@@ -65,7 +65,6 @@ static void usage(int rc, const char * const msg)
 
 	exit(rc);
 }
-
 
 static int32_t vector_set_param_speed(print_job_t *print_job, char *optarg)
 {

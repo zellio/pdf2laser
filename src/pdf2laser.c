@@ -37,10 +37,6 @@
 #define _POSIX_C_SOURCE 200809L
 #define _XOPEN_SOURCE 700
 
-/*************************************************************************
- * includes
- */
-
 #include "pdf2laser.h"
 #include <errno.h>                  // for errno, EAGAIN, EINTR
 #include <ghostscript/gserrors.h>   // for gs_error_type::gs_error_Quit
@@ -60,10 +56,6 @@
 #include "pdf2laser_printer.h"      // for pritner_send
 #include "pdf2laser_type.h"         // for print_job_t, raster_t
 #include "pdf2laser_vector_list.h"  // for vector_list_t, vector_list_create
-/*************************************************************************
- * local defines
- */
-
 
 FILE *fh_vector;
 static int GSDLLCALL gsdll_stdout(void *minst, const char *str, int len)
@@ -166,6 +158,7 @@ int main(int argc, char *argv[])
 		perror("mkdtemp failed");
 		return false;
 	}
+
 	// This is the NYC Resistor laser host.
 	char *host = "192.168.1.4";
 
@@ -207,8 +200,6 @@ int main(int argc, char *argv[])
 	source_basename = basename(source_basename);
 
 	// If no job name is specified, use just the filename if there
-
-	// are any / in the name.
 	if (!print_job->name) {
 		print_job->name = source_basename;
 	}
@@ -236,9 +227,6 @@ int main(int argc, char *argv[])
 		*last_dot = '\0';
 
 	char target_basename[FILENAME_NCHARS] = { '\0' };
-
-	/* Strings designating filenames. */
-	//char target_basename[FILENAME_NCHARS] = { '\0' };
 	char target_bitmap[FILENAME_NCHARS] = { '\0' };
 	char target_eps[FILENAME_NCHARS] = { '\0' };
 	char target_pdf[FILENAME_NCHARS] = { '\0' };
@@ -246,9 +234,6 @@ int main(int argc, char *argv[])
 	char target_ps[FILENAME_NCHARS] = { '\0' };
 	char target_vector[FILENAME_NCHARS] = { '\0' };
 
-	/* Determine and set the names of all files that will be manipulated by the
-	 * program.
-	 */
 	snprintf(target_basename, FILENAME_NCHARS, "%s/%s", tmpdir_name, target_base);
 	snprintf(target_bitmap, FILENAME_NCHARS, "%s.bmp", target_basename);
 	snprintf(target_eps, FILENAME_NCHARS, "%s.eps", target_basename);
@@ -257,7 +242,6 @@ int main(int argc, char *argv[])
 	snprintf(target_ps, FILENAME_NCHARS, "%s.ps", target_basename);
 	snprintf(target_vector, FILENAME_NCHARS, "%s.vector", target_basename);
 
-	/* File handles. */
 	FILE *fh_bitmap;
 	FILE *fh_pdf;
 	FILE *fh_ps;
