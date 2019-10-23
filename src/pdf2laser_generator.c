@@ -118,7 +118,7 @@ bool generate_eps(print_job_t *print_job, FILE *ps_file, FILE *eps_file)
 				 "and "
 				 "exch 1.0 eq "
 				 "and "
-				 // check for solid blue
+				 // check for solid green
 				 "currentrgbcolor "
 				 "0.0 eq "
 				 "exch 1.0 eq "
