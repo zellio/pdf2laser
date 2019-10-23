@@ -159,8 +159,9 @@ int main(int argc, char *argv[])
 		return false;
 	}
 
-	// This is the NYC Resistor laser host.
-	char *host = "192.168.1.4";
+	// Default host is defined in config.h, and can be overridden at configuration time, e.g.
+	//   ./configure DEFAULT_HOST=foo
+	char *host = DEFAULT_HOST;
 
 	// Job struct defaults
 	print_job_t *print_job = &(print_job_t){
