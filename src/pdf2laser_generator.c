@@ -59,7 +59,7 @@ bool generate_ps(const char *target_pdf, const char *target_ps)
 	gs_argv[12] = strndup(target_pdf, 1024);
 
 	int32_t rc;
-	void *minst;
+	void *minst = NULL;
 
 	rc = gsapi_new_instance(&minst, NULL);
 	if (rc < 0)

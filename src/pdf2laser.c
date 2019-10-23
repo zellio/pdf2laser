@@ -112,7 +112,7 @@ static bool execute_ghostscript(print_job_t *print_job,
 
 	int32_t rc;
 
-	void *minst;
+	void *minst = NULL;
 	rc = gsapi_new_instance(&minst, NULL);
 
 	if (rc < 0)
