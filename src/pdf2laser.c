@@ -58,7 +58,7 @@
 #include "pdf2laser_vector_list.h"  // for vector_list_t, vector_list_create
 
 FILE *fh_vector;
-static int GSDLLCALL gsdll_stdout(void *minst, const char *str, int len)
+static int GSDLLCALL gsdll_stdout(__attribute__ ((unused)) void *minst, const char *str, int len)
 {
 	size_t rc = fwrite(str, 1, len, fh_vector);
 	fflush(fh_vector);
