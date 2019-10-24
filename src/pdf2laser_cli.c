@@ -9,13 +9,13 @@
 #include "pdf2laser_type.h"         // for print_job_t, raster_t
 #include "pdf2laser_vector_list.h"  // for vector_list_t
 
-static const char *opt_string = "Dp:P:n:d:r:R:v:V:g:G:b:B:m:f:s:aO:h";
+static const char *opt_string = "Dp:P:an:d:R:r:m:s:f:V:v:M:Oh@";
 
 static const struct option long_options[] = {
 	{ "debug",         no_argument,        NULL,  'D' },
 	{ "printer",       required_argument,  NULL,  'p' },
 	{ "preset",        required_argument,  NULL,  'P' },
-	{ "autofocus",     required_argument,  NULL,  'a' },
+	{ "autofocus",     no_argument,        NULL,  'a' },
 	{ "job",           required_argument,  NULL,  'n' },
 	{ "dpi",           required_argument,  NULL,  'd' },
 	{ "raster-power",  required_argument,  NULL,  'R' },
@@ -25,6 +25,7 @@ static const struct option long_options[] = {
 	{ "frequency",     required_argument,  NULL,  'f' },
 	{ "vector-power",  required_argument,  NULL,  'V' },
 	{ "vector-speed",  required_argument,  NULL,  'v' },
+	{ "multipass",     required_argument,  NULL,  'M' },
 	{ "no-optimize",   no_argument,        NULL,  'O' },
 	{ "help",          no_argument,        NULL,  'h' },
 	{ "version",       no_argument,        NULL,  '@' },
@@ -53,7 +54,8 @@ static void usage(int rc, const char * const msg)
 		"    -O, --no-optimize                 Disable vector optimization\n"
 		"    -f FREQ, --frequency=FREQ         Vector frequency\n"
 		"    -v SPEED, --vector-speed=SPEED    Vector speed\n"
-		"    -V POWER, --vector-power=POWER    Vector power for the R,G and B passes\n"
+		"    -V POWER, --vector-power=POWER    Vector power for the R, G, and B passes\n"
+	        "    -M PASSES, --multipass=PASSES     Number of times to repeat the R, G, and B passes\n"
 		"\n"
 		"General options:\n"
 		"    -D, --debug                       Enable debug mode\n"
@@ -104,6 +106,28 @@ static int32_t vector_set_param_power(print_job_t *print_job, char *optarg)
 
 	if (rc <= 2)
 		print_job->vectors[2]->power = print_job->vectors[1]->power;
+
+	return rc;
+}
+
+
+static int32_t vector_set_param_multipass(print_job_t *print_job, char *optarg)
+{
+	int32_t values[3] = { 0, 0, 0 };
+	int32_t rc = sscanf(optarg, "%d,%d,%d", &values[0], &values[1], &values[2]);
+
+	if (rc < 1)
+		return -1;
+
+	print_job->vectors[0]->multipass = values[0];
+	print_job->vectors[1]->multipass = values[1];
+	print_job->vectors[2]->multipass = values[2];
+
+	if (rc <= 1)
+		print_job->vectors[1]->multipass = print_job->vectors[0]->multipass;
+
+	if (rc <= 2)
+		print_job->vectors[2]->multipass = print_job->vectors[1]->multipass;
 
 	return rc;
 }
@@ -164,6 +188,10 @@ static void range_checks(print_job_t *print_job)
 		else if (print_job->vectors[i]->speed < 1) {
 			print_job->vectors[i]->speed = 1;
 		}
+
+		if (print_job->vectors[i]->multipass < 1) {
+			print_job->vectors[i]->multipass = 1;
+		}
 	}
 }
 
@@ -188,6 +216,10 @@ bool optparse(print_job_t *print_job, int32_t argc, char **argv)
 		case 'V':
 			if (vector_set_param_power(print_job, optarg) < 0)
 				usage(EXIT_FAILURE, "unable to parse vector-power");
+			break;
+		case 'M':
+			if (vector_set_param_multipass(print_job, optarg) < 0)
+				usage(EXIT_FAILURE, "unable to parse multipass");
 			break;
 		case 'm': print_job->raster->mode = tolower(*optarg); break;
 		case 'f': print_job->vector_frequency = atoi(optarg); break;

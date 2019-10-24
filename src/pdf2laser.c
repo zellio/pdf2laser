@@ -208,7 +208,7 @@ int main(int argc, char *argv[])
 	// Report the settings on stdout
 	printf("Job: %s\n"
 		   "Raster: speed=%d power=%d dpi=%d\n"
-		   "Vector: freq=%d speed=%d,%d,%d power=%d,%d,%d\n"
+		   "Vector: freq=%d speed=R%d,G%d,B%d power=R%d,G%d,B%d multipass=R%d,G%d,B%d\n"
 		   "",
 		   print_job->name,
 		   print_job->raster->speed,
@@ -220,7 +220,10 @@ int main(int argc, char *argv[])
 		   print_job->vectors[2]->speed,
 		   print_job->vectors[0]->power,
 		   print_job->vectors[1]->power,
-		   print_job->vectors[2]->power);
+		   print_job->vectors[2]->power,
+		   print_job->vectors[0]->multipass,
+		   print_job->vectors[1]->multipass,
+		   print_job->vectors[2]->multipass);
 
 	char *target_base = strndup(source_basename, FILENAME_NCHARS);
 	char *last_dot = strrchr(target_base, '.');
