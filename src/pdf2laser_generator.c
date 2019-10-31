@@ -59,7 +59,7 @@ bool generate_ps(const char *target_pdf, const char *target_ps)
 	gs_argv[12] = strndup(target_pdf, 1024);
 
 	int32_t rc;
-	void *minst;
+	void *minst = NULL;
 
 	rc = gsapi_new_instance(&minst, NULL);
 	if (rc < 0)
@@ -118,7 +118,7 @@ bool generate_eps(print_job_t *print_job, FILE *ps_file, FILE *eps_file)
 				 "and "
 				 "exch 1.0 eq "
 				 "and "
-				 // check for solid blue
+				 // check for solid green
 				 "currentrgbcolor "
 				 "0.0 eq "
 				 "exch 1.0 eq "
