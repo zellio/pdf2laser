@@ -8,6 +8,10 @@ AM_INIT_AUTOMAKE([-Wall])
 AC_CONFIG_SRCDIR([src/pdf2laser.c])
 AC_CONFIG_HEADERS([config.h])
 
+# Define configurable defaults.
+AC_ARG_VAR([DEFAULT_HOST], [Default host address when -p/--printer is not specified. If not overridden, defaults to the NYC Resistor laser host (192.168.1.4).])
+AC_DEFINE_UNQUOTED([DEFAULT_HOST], ["${DEFAULT_HOST=192.168.1.4}"], [Default host address when -p/--printer is not specified.])
+
 # Checks for programs.
 AC_PROG_CC([clang gcc])
 AC_PROG_INSTALL
