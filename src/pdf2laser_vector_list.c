@@ -12,6 +12,7 @@ vector_list_t *vector_list_create(void)
 	list->pass = 0;
 	list->power = 0;
 	list->speed = 0;
+	list->multipass = 1;
 	return list;
 }
 
@@ -93,8 +94,8 @@ vector_list_t *vector_list_stats(vector_list_t *self)
 		vector = vector->next;
 	}
 
-	printf("Cuts: %d len %ld\n", cuts, cut_total);
-	printf("Move: %d len %ld\n", transits, transit_total);
+	printf("Cuts: %d len %lld\n", cuts, cut_total);
+	printf("Move: %d len %lld\n", transits, transit_total);
 
 	return self;
 }
@@ -177,6 +178,7 @@ vector_list_t *vector_list_optimize(vector_list_t *self)
 	list->pass = self->pass;
 	list->power = self->power;
 	list->speed = self->speed;
+	list->multipass = self->multipass;
 
 	return list;
 }

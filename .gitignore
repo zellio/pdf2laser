@@ -19,3 +19,6 @@ missing
 pdf2laser
 src/.deps/*
 stamp-h1
+.DS_Store
+._*
+*~

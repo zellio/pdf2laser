@@ -20,6 +20,7 @@ struct vector_list {
 	int32_t pass;
 	int32_t power;
 	int32_t speed;
+	int32_t multipass;
 };
 
 vector_list_t *vector_list_create(void);

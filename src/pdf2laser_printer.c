@@ -173,7 +173,7 @@ bool printer_send(const char *host, FILE *pjl_file, const char *job_name)
 		bytes_sent += bs;
 	}
 
-	printf("Job size: %d (%d)\r\n", bytes_sent, count);
+	printf("Job size: %d (%d)\n", bytes_sent, count);
 #else
 	{
 		char buffer[102400];
@@ -181,7 +181,7 @@ bool printer_send(const char *host, FILE *pjl_file, const char *job_name)
 		while ((rc = fread(buffer, 1, 102400, pjl_file)) > 0)
 			write(p_sock, buffer, rc);
 
-		printf("Job size: %d (%d)\r\n", file_stat.st_size);
+		printf("Job size: %d\n", (int)file_stat.st_size);
 	}
 #endif
 

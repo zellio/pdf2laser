@@ -11,7 +11,7 @@
 //          Trammell Hudson <hudson@osresearch.net>
 //          Zachary Elliott <contact@zell.io>
 // URL: https://github.com/zellio/pdf2laser
-// Version: 0.4.0
+// Version: 0.5.0
 
 /// Commentary:
 
@@ -58,7 +58,7 @@
 #include "pdf2laser_vector_list.h"  // for vector_list_t, vector_list_create
 
 FILE *fh_vector;
-static int GSDLLCALL gsdll_stdout(void *minst, const char *str, int len)
+static int GSDLLCALL gsdll_stdout(__attribute__ ((unused)) void *minst, const char *str, int len)
 {
 	size_t rc = fwrite(str, 1, len, fh_vector);
 	fflush(fh_vector);
@@ -112,7 +112,7 @@ static bool execute_ghostscript(print_job_t *print_job,
 
 	int32_t rc;
 
-	void *minst;
+	void *minst = NULL;
 	rc = gsapi_new_instance(&minst, NULL);
 
 	if (rc < 0)
@@ -159,8 +159,9 @@ int main(int argc, char *argv[])
 		return false;
 	}
 
-	// This is the NYC Resistor laser host.
-	char *host = "192.168.1.4";
+	// Default host is defined in config.h, and can be overridden at configuration time, e.g.
+	//   ./configure DEFAULT_HOST=foo
+	char *host = DEFAULT_HOST;
 
 	// Job struct defaults
 	print_job_t *print_job = &(print_job_t){
@@ -207,7 +208,7 @@ int main(int argc, char *argv[])
 	// Report the settings on stdout
 	printf("Job: %s\n"
 		   "Raster: speed=%d power=%d dpi=%d\n"
-		   "Vector: freq=%d speed=%d,%d,%d power=%d,%d,%d\n"
+		   "Vector: freq=%d speed=R%d,G%d,B%d power=R%d,G%d,B%d multipass=R%d,G%d,B%d\n"
 		   "",
 		   print_job->name,
 		   print_job->raster->speed,
@@ -219,7 +220,10 @@ int main(int argc, char *argv[])
 		   print_job->vectors[2]->speed,
 		   print_job->vectors[0]->power,
 		   print_job->vectors[1]->power,
-		   print_job->vectors[2]->power);
+		   print_job->vectors[2]->power,
+		   print_job->vectors[0]->multipass,
+		   print_job->vectors[1]->multipass,
+		   print_job->vectors[2]->multipass);
 
 	char *target_base = strndup(source_basename, FILENAME_NCHARS);
 	char *last_dot = strrchr(target_base, '.');

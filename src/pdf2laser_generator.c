@@ -59,7 +59,7 @@ bool generate_ps(const char *target_pdf, const char *target_ps)
 	gs_argv[12] = strndup(target_pdf, 1024);
 
 	int32_t rc;
-	void *minst;
+	void *minst = NULL;
 
 	rc = gsapi_new_instance(&minst, NULL);
 	if (rc < 0)
@@ -110,6 +110,7 @@ bool generate_eps(print_job_t *print_job, FILE *ps_file, FILE *eps_file)
 			fprintf
 				(eps_file,
 				 "/=== {(        ) cvs print} def" // print a number
+				 "\n"
 				 "/stroke {"
 				 // check for solid red
 				 "currentrgbcolor "
@@ -118,7 +119,7 @@ bool generate_eps(print_job_t *print_job, FILE *ps_file, FILE *eps_file)
 				 "and "
 				 "exch 1.0 eq "
 				 "and "
-				 // check for solid blue
+				 // check for solid green
 				 "currentrgbcolor "
 				 "0.0 eq "
 				 "exch 1.0 eq "
@@ -171,6 +172,7 @@ bool generate_eps(print_job_t *print_job, FILE *ps_file, FILE *eps_file)
 				 "}"
 				 "ifelse"
 				 "}bind def"
+				 "\n"
 				 "/showpage {(X)= showpage}bind def"
 				 "\n");
 
@@ -518,21 +520,29 @@ bool vectors_parse(print_job_t *print_job, FILE * const vector_file)
 			// Note: Colours are stored as blue, green, red in the vector file
 			int32_t red, green, blue;
 			sscanf(line, "P,%d,%d,%d", &blue, &green, &red);
-
-			if (!red && green && !blue) {
+			if (red && !green && !blue) {
 				current_list = print_job->vectors[0];
 				current_list->pass = 0;
-				current_list->power = green;
+				// Following line would override power specified on command line
+				// with value that can only be 100 with current EPS header. Why?
+				// Perhaps a hook for later implementation of power scaling?
+				//current_list->power = red;
 			}
-			else if (red && !green && !blue) {
+			else if (!red && green && !blue) {
 				current_list = print_job->vectors[1];
 				current_list->pass = 1;
-				current_list->power = red;
+				// Following line would override power specified on command line
+				// with value that can only be 100 with current EPS header. Why?
+				// Perhaps a hook for later implementation of power scaling?
+				//current_list->power = green;
 			}
 			else if (!red && !green && blue) {
 				current_list = print_job->vectors[2];
 				current_list->pass = 2;
-				current_list->power = blue;
+				// Following line would override power specified on command line
+				// with value that can only be 100 with current EPS header. Why?
+				// Perhaps a hook for later implementation of power scaling?
+				//current_list->power = blue;
 			}
 			else {
 				fprintf(stderr, "non-red/green/blue vector? %d,%d,%d\n", red, green, blue);
@@ -646,7 +656,9 @@ bool generate_vector(print_job_t *print_job, FILE * const pjl_file, FILE * const
 		fprintf(pjl_file, "YP%03d;", print_job->vectors[i]->power);
 		fprintf(pjl_file, "ZS%03d", print_job->vectors[i]->speed); // note: no ";"
 
-		output_vector(print_job->vectors[i], pjl_file);
+		for (int n = 0; n < print_job->vectors[i]->multipass; n++) {
+		    output_vector(print_job->vectors[i], pjl_file);
+		}
 	}
 
 	fprintf(pjl_file, "\033%%0B"); // end HLGL
