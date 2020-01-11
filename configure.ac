@@ -18,6 +18,7 @@ AC_PROG_INSTALL
 
 # Checks for libraries.
 AC_SEARCH_LIBS([sqrt], [m])
+AC_SEARCH_LIBS([gsapi_new_instance], [gs])
 
 # Checks for header files.
 AC_CHECK_HEADERS([ \
