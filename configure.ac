@@ -3,7 +3,7 @@
 
 AC_PREREQ([2.69])
 
-AC_INIT([pdf2laser], [0.5.0], [https://github.com/zellio/pdf2laser/issues], [pdf2laser])
+AC_INIT([pdf2laser], [0.5.1], [https://github.com/zellio/pdf2laser/issues], [pdf2laser])
 AM_INIT_AUTOMAKE([-Wall])
 AC_CONFIG_SRCDIR([src/pdf2laser.c])
 AC_CONFIG_HEADERS([config.h])
@@ -18,6 +18,7 @@ AC_PROG_INSTALL
 
 # Checks for libraries.
 AC_SEARCH_LIBS([sqrt], [m])
+AC_SEARCH_LIBS([gsapi_new_instance], [gs])
 
 # Checks for header files.
 AC_CHECK_HEADERS([ \
