@@ -1,10 +1,11 @@
-
-configure: all
-	./configure
-
-all:
+autotools:
 	aclocal -I m4 --install
 	autoheader
 	libtoolize --force
 	automake --add-missing --foreign
 	autoconf
+
+configure: autotools
+	./configure
+
+all: autotools configure
