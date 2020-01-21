@@ -16,6 +16,19 @@ vector_list_t *vector_list_create(void)
 	return list;
 }
 
+vector_list_t *vector_list_shallow_clone(vector_list_t *self)
+{
+       vector_list_t *list = vector_list_create();
+       list->head = NULL;
+       list->tail = NULL;
+       list->length = self->length;
+       list->pass = self->pass;
+       list->power = self->power;
+       list->speed = self->speed;
+       list->multipass = self->multipass;
+       return list;
+}
+
 vector_list_t *vector_list_append(vector_list_t *self, vector_t *vector)
 {
 	if (self->head == NULL) {

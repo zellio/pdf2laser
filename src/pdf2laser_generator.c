@@ -520,34 +520,12 @@ bool vectors_parse(print_job_t *print_job, FILE * const vector_file)
 			// Note: Colours are stored as blue, green, red in the vector file
 			int32_t red, green, blue;
 			sscanf(line, "P,%d,%d,%d", &blue, &green, &red);
-			if (red && !green && !blue) {
-				current_list = print_job->vectors[0];
-				current_list->pass = 0;
-				// Following line would override power specified on command line
-				// with value that can only be 100 with current EPS header. Why?
-				// Perhaps a hook for later implementation of power scaling?
-				//current_list->power = red;
-			}
-			else if (!red && green && !blue) {
-				current_list = print_job->vectors[1];
-				current_list->pass = 1;
-				// Following line would override power specified on command line
-				// with value that can only be 100 with current EPS header. Why?
-				// Perhaps a hook for later implementation of power scaling?
-				//current_list->power = green;
-			}
-			else if (!red && !green && blue) {
-				current_list = print_job->vectors[2];
-				current_list->pass = 2;
-				// Following line would override power specified on command line
-				// with value that can only be 100 with current EPS header. Why?
-				// Perhaps a hook for later implementation of power scaling?
-				//current_list->power = blue;
-			}
-			else {
-				fprintf(stderr, "non-red/green/blue vector? %d,%d,%d\n", red, green, blue);
-				exit(-1);
-			}
+			vector_list_config_t *vector_config_list = print_job_find_vector_list_config_by_rgb(print_job, red, green, blue);
+			if (vector_config_list == NULL)
+				vector_config_list = print_job_clone_last_vector_list(print_job, red, green, blue);
+
+			current_list = vector_config_list->vector_list;
+			current_list->pass = vector_config_list->index;
 			break;
 		}
 		case 'M': {
@@ -596,14 +574,6 @@ bool vectors_parse(print_job_t *print_job, FILE * const vector_file)
 	}
 
  vector_parse_complete:
-	for (int i = 0 ; i < VECTOR_PASSES ; i++) {
-		printf("Vector pass %d: segments=%d power=%d speed=%d\n",
-			   i,
-			   print_job->vectors[i]->length,
-			   print_job->vectors[i]->power,
-			   print_job->vectors[i]->speed);
-		vector_list_stats(print_job->vectors[i]);
-	}
 
 	return true;
 }
@@ -646,22 +616,26 @@ bool generate_vector(print_job_t *print_job, FILE * const pjl_file, FILE * const
 	fprintf(pjl_file, "IN;");
 	fprintf(pjl_file, "XR%04d;", print_job->vector_frequency);
 
-	for (int i = 0; i < VECTOR_PASSES; i++) {
+	for (vector_list_config_t *vector_list_config = print_job->configs;
+		 vector_list_config != NULL;
+		 vector_list_config = vector_list_config->next) {
+
+		vector_list_t *vector_list = vector_list_config->vector_list;
 		if (print_job->vector_optimize) {
-			vector_list_t *vl = print_job->vectors[i];
-			print_job->vectors[i] = vector_list_optimize(vl);
-			free(vl);
+			vector_list_config->vector_list = vector_list_optimize(vector_list);
+			free(vector_list);
+			vector_list = vector_list_config->vector_list;
 		}
 
-		fprintf(pjl_file, "YP%03d;", print_job->vectors[i]->power);
-		fprintf(pjl_file, "ZS%03d", print_job->vectors[i]->speed); // note: no ";"
+		fprintf(pjl_file, "YP%03d;", vector_list->power);
+		fprintf(pjl_file, "ZS%03d", vector_list->speed); // NB. no ";"
 
-		for (int n = 0; n < print_job->vectors[i]->multipass; n++) {
-		    output_vector(print_job->vectors[i], pjl_file);
+		for (int pass = 0; pass < vector_list->multipass; pass++) {
+			output_vector(vector_list, pjl_file);
 		}
 	}
 
-	fprintf(pjl_file, "\033%%0B"); // end HLGL
+	fprintf(pjl_file, "\033%%0B");   // end HLGL
 	fprintf(pjl_file, "\033%%1BPU"); // start HLGL, pen up?
 
 	return true;

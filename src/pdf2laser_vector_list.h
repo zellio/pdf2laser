@@ -24,6 +24,7 @@ struct vector_list {
 };
 
 vector_list_t *vector_list_create(void);
+vector_list_t *vector_list_shallow_clone(vector_list_t *vector_list);
 vector_list_t *vector_list_append(vector_list_t *self, vector_t *vector);
 vector_list_t *vector_list_stats(vector_list_t *self);
 vector_t *vector_list_find_closest(vector_list_t *list, point_t *point);

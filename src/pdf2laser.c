@@ -180,17 +180,9 @@ int main(int argc, char *argv[])
 		},
 		.vector_frequency = VECTOR_FREQUENCY_DEFAULT,
 		.vector_optimize = true,
-		.vectors = NULL,
+		.configs = NULL,
 		.debug = DEBUG,
 	};
-
-	// NOTE: This should be replaced with something that processes the colours
-	// that are passed in so pdf2laser can support something other than the
-	// current RGB layout.
-	print_job->vectors = calloc(VECTOR_PASSES, sizeof(vector_list_t*));
-	for (int32_t i = 0; i < VECTOR_PASSES; i++) {
-		print_job->vectors[i] = vector_list_create();
-	}
 
 	// Process command line options
 	optparse(print_job, argc, argv);
@@ -206,24 +198,7 @@ int main(int argc, char *argv[])
 	}
 
 	// Report the settings on stdout
-	printf("Job: %s\n"
-		   "Raster: speed=%d power=%d dpi=%d\n"
-		   "Vector: freq=%d speed=R%d,G%d,B%d power=R%d,G%d,B%d multipass=R%d,G%d,B%d\n"
-		   "",
-		   print_job->name,
-		   print_job->raster->speed,
-		   print_job->raster->power,
-		   print_job->raster->resolution,
-		   print_job->vector_frequency,
-		   print_job->vectors[0]->speed,
-		   print_job->vectors[1]->speed,
-		   print_job->vectors[2]->speed,
-		   print_job->vectors[0]->power,
-		   print_job->vectors[1]->power,
-		   print_job->vectors[2]->power,
-		   print_job->vectors[0]->multipass,
-		   print_job->vectors[1]->multipass,
-		   print_job->vectors[2]->multipass);
+	printf("Configured values:\n%s\n", print_job_to_string(print_job));
 
 	char *target_base = strndup(source_basename, FILENAME_NCHARS);
 	char *last_dot = strrchr(target_base, '.');
@@ -402,6 +377,8 @@ int main(int argc, char *argv[])
 		perror(target_pjl);
 		return 1;
 	}
+
+	printf("Generated values:\n%s\n", print_job_to_string(print_job));
 
 	/* Send print job to printer. */
 	if (!printer_send(print_job->host, fh_pjl, print_job->name)) {

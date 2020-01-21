@@ -8,6 +8,7 @@
 #include "config.h"                 // for PACKAGE, VERSION
 #include "pdf2laser_type.h"         // for print_job_t, raster_t
 #include "pdf2laser_vector_list.h"  // for vector_list_t
+#include <stddef.h>                 // for offsetof
 
 static const char *opt_string = "Dp:P:an:d:R:r:m:s:f:V:v:M:Oh@";
 
@@ -67,71 +68,53 @@ static void usage(int rc, const char * const msg)
 
 	exit(rc);
 }
+#define OPTARG_MAX_LENGTH 1024
 
-static int32_t vector_set_param_speed(print_job_t *print_job, char *optarg)
+static int32_t vector_config_set_param_offset(print_job_t *print_job, char *optarg, size_t FIELD)
 {
-	double values[3] = { 0.0, 0.0, 0.0 };
-	int32_t rc = sscanf(optarg, "%lf,%lf,%lf", &values[0], &values[1], &values[2]);
+	size_t optlen = strnlen(optarg, OPTARG_MAX_LENGTH);
+	char *s = calloc(optlen + 1, sizeof(char));
+	strncpy(s, optarg, optlen);
 
-	if (rc < 1)
-		return -1;
+	char *token = strtok(s, ",");
+	while (token) {
+		int64_t values[2] = {0, 0};
+		int32_t rc = sscanf(token, "%lx=%ld", &values[0], &values[1]);
+		if (rc != 2)
+			return -1;
 
-	print_job->vectors[0]->speed = (int32_t)values[0];
-	print_job->vectors[1]->speed = (int32_t)values[1];
-	print_job->vectors[2]->speed = (int32_t)values[2];
+		int32_t red, green, blue;
+		vector_list_config_id_to_rgb(values[0], &red, &green, &blue);
 
-	if (rc <= 1)
-		print_job->vectors[1]->speed = print_job->vectors[0]->speed;
+		vector_list_config_t *vector_list_config =
+			print_job_find_vector_list_config_by_rgb(print_job, red, green, blue);
+		if (vector_list_config == NULL)
+			vector_list_config =
+				print_job_append_new_vector_list(print_job, red, green, blue);
 
-	if (rc <= 2)
-		print_job->vectors[2]->speed = print_job->vectors[1]->speed;
+		uint8_t *base = (uint8_t *)(vector_list_config->vector_list);
+		int32_t *field = (int32_t *)(base + FIELD);
+		*field = (int32_t)values[1];
 
-	return rc;
+		token = strtok(NULL, ",");
+	}
+	return 0;
 }
 
-static int32_t vector_set_param_power(print_job_t *print_job, char *optarg)
+static int32_t vector_config_set_param_speed(print_job_t *print_job, char *optarg)
 {
-	double values[3] = { 0.0, 0.0, 0.0 };
-	int32_t rc = sscanf(optarg, "%lf,%lf,%lf", &values[0], &values[1], &values[2]);
-
-	if (rc < 1)
-		return -1;
-
-	print_job->vectors[0]->power = (int32_t)values[0];
-	print_job->vectors[1]->power = (int32_t)values[1];
-	print_job->vectors[2]->power = (int32_t)values[2];
-
-	if (rc <= 1)
-		print_job->vectors[1]->power = print_job->vectors[0]->power;
-
-	if (rc <= 2)
-		print_job->vectors[2]->power = print_job->vectors[1]->power;
-
-	return rc;
+	return vector_config_set_param_offset(print_job, optarg, offsetof(vector_list_t, speed));
 }
 
-
-static int32_t vector_set_param_multipass(print_job_t *print_job, char *optarg)
+static int32_t vector_config_set_param_power(print_job_t *print_job, char *optarg)
 {
-	int32_t values[3] = { 0, 0, 0 };
-	int32_t rc = sscanf(optarg, "%d,%d,%d", &values[0], &values[1], &values[2]);
-
-	if (rc < 1)
-		return -1;
-
-	print_job->vectors[0]->multipass = values[0];
-	print_job->vectors[1]->multipass = values[1];
-	print_job->vectors[2]->multipass = values[2];
-
-	if (rc <= 1)
-		print_job->vectors[1]->multipass = print_job->vectors[0]->multipass;
-
-	if (rc <= 2)
-		print_job->vectors[2]->multipass = print_job->vectors[1]->multipass;
-
-	return rc;
+	return vector_config_set_param_offset(print_job, optarg, offsetof(vector_list_t, power));
 }
 
+static int32_t vector_config_set_param_multipass(print_job_t *print_job, char *optarg)
+{
+	return vector_config_set_param_offset(print_job, optarg, offsetof(vector_list_t, multipass));
+}
 
 /**
  * Perform range validation checks on the major global variables to ensure
@@ -174,23 +157,29 @@ static void range_checks(print_job_t *print_job)
 		print_job->vector_frequency = 5000;
 	}
 
-	for (int i = 0 ; i < 3 ; i++) {
-		if (print_job->vectors[i]->power > 100) {
-			print_job->vectors[i]->power = 100;
+	vector_list_t *current_vector_list = NULL;
+	for (vector_list_config_t *current_vector_config_list = print_job->configs;
+		 current_vector_config_list != NULL;
+		 current_vector_config_list = current_vector_config_list->next) {
+
+		current_vector_list = current_vector_config_list->vector_list;
+
+		if (current_vector_list->power > 100) {
+			current_vector_list->power = 100;
 		}
-		else if (print_job->vectors[i]->power < 0) {
-			print_job->vectors[i]->power = 0;
+		else if (current_vector_list->power < 0) {
+			current_vector_list->power = 0;
 		}
 
-		if (print_job->vectors[i]->speed > 100) {
-			print_job->vectors[i]->speed = 100;
+		if (current_vector_list->speed > 100) {
+			current_vector_list->speed = 100;
 		}
-		else if (print_job->vectors[i]->speed < 1) {
-			print_job->vectors[i]->speed = 1;
+		else if (current_vector_list->speed < 1) {
+			current_vector_list->speed = 1;
 		}
 
-		if (print_job->vectors[i]->multipass < 1) {
-			print_job->vectors[i]->multipass = 1;
+		if (current_vector_list->multipass < 1) {
+			current_vector_list->multipass = 1;
 		}
 	}
 }
@@ -210,15 +199,15 @@ bool optparse(print_job_t *print_job, int32_t argc, char **argv)
 		case 'r': print_job->raster->speed = atoi(optarg); break;
 		case 'R': print_job->raster->power = atoi(optarg); break;
 		case 'v':
-			if (vector_set_param_speed(print_job, optarg) < 0)
+			if (vector_config_set_param_speed(print_job, optarg) < 0)
 				usage(EXIT_FAILURE, "unable to parse vector-speed");
 			break;
 		case 'V':
-			if (vector_set_param_power(print_job, optarg) < 0)
+			if (vector_config_set_param_power(print_job, optarg) < 0)
 				usage(EXIT_FAILURE, "unable to parse vector-power");
 			break;
 		case 'M':
-			if (vector_set_param_multipass(print_job, optarg) < 0)
+			if (vector_config_set_param_multipass(print_job, optarg) < 0)
 				usage(EXIT_FAILURE, "unable to parse multipass");
 			break;
 		case 'm': print_job->raster->mode = tolower(*optarg); break;
