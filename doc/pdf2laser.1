@@ -72,21 +72,20 @@ paper.
 The
 .IR POWER ,
 .I SPEED
-and
+and,
 .I PASSES
-settings take between one and three numeric arguments, separated by
-commas (e.g. 20,10). These correspond to the
+settings take a comma separated list of arguments consisting of Color=Value
+pairs (e.g. ff0000=10,00ff00=20). These correspond to the
 .I POWER
 and
 .I SPEED
-levels for the red, green, and blue values of the image, and the
+levels for the RGB color specific by the given color code, and the
 number of times to repeat (that is, the
 .I PASSES
-count) the vector cuts corresponding to each color. The colours are
-defined in the same manner as in the colour mode of the raster section
-above. The omitted values will be set to the value preceding it. If
-you set only the red value then green and blue will use that, if you
-set red and green then blue will use the green value.
+count) the cut. If your PDF contains a vector color that is not specified by a
+flag, it will use the values of the last configured vector color. There is
+some non-determinism in vector ordering so you are better off specifying all
+of the colors in the file.
 .B DO NOT COUNT ON THIS FUNCTIONALITY, IT WILL CHANGE IN THE FUTURE\fR.
 .
 .SH OPTIONS
@@ -103,7 +102,7 @@ Set the display name of the job.
 IP address of the target printer.
 .TP
 .BI \-P " PRESET" "\fR,\fP \-\^\-preset=" PRESET
-Select a default preset.
+Select a default preset. (NB. Not implemented)
 .SS RASTER OPTIONS
 .TP
 .BI \-d " DPI" "\fR,\fP \-\^\-dpi=" DPI
@@ -128,17 +127,14 @@ Vector frequency (10-5000).
 .BR \-O ", " \-\^\-no-optimize
 Disable vector optimization.
 .TP
-.BI \-V " POWER" "\fR,\fP \-\^\-vector-power=" POWER
-Vector power for the R, G, and B passes.
-If only one power is specified it will be used for all three.
+.BI \-V " POWER" "\fR,\fP \-\^\-vector-power=" COLOR=POWER
+Vector power for the color specified (Color=POWER).
 .TP
-.BI \-v " SPEED" "\fR,\fP \-\^\-vector-speed=" SPEED
-Vector speed for the R, G, and B passes.
-If only one speed is specified it will be used for all three.
+.BI \-v " SPEED" "\fR,\fP \-\^\-vector-speed=" COLOR=SPEED
+Vector speed for the color specified (Color=SPEED).
 .TP
-.BI \-M " PASSES" "\fR,\fP \-\^\-multipass=" PASSES
-Number of times to repeat the R, G, and B passes (1 or more).
-If only one pass count is specified it will be used for all three.
+.BI \-M " PASSES" "\fR,\fP \-\^\-multipass=" COLOR=PASSES
+Number of times to repeat the specified color (Color=PASSES) (1 or more).
 .SS GENERIC OPTIONS
 .TP
 .B \-\^\-help
@@ -189,10 +185,13 @@ the command call will look like so.
 .BI "\-\^\-frequency " FREQUENCY
 \E\
 .br
-.BI "\-\^\-vector-power " POWER
+.BI "\-\^\-vector-power " COLOR=POWER
 \E\
 .br
-.BI "\-\^\-vector-speed " SPEED
+.BI "\-\^\-vector-speed " COLOR=SPEED
+\E\
+.br
+.BI "\-\^\-multipass " COLOR=PASSES
 \E\
 .br
 .B FILE
@@ -221,10 +220,13 @@ When cutting and rastering 1/8th inch birch plywood the call would look as such.
 .BI "\-\^\-frequency " 5
 \E\
 .br
-.BI "\-\^\-vector-power " 100
+.BI "\-\^\-vector-power " 000000=100
 \E\
 .br
-.BI "\-\^\-vector-speed " 12
+.BI "\-\^\-vector-speed " 000000=12
+\E\
+.br
+.BI "\-\^\-multipass " 000000=1
 \E\
 .br
 .B awesome_design.pdf
