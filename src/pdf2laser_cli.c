@@ -1,6 +1,11 @@
 #include "pdf2laser_cli.h"
+
+#define OPTPARSE_IMPLEMENTATION
+#define OPTPARSE_API static
+#include "optparse.h"
+
 #include <ctype.h>                  // for tolower
-#include <getopt.h>                 // for optarg, required_argument, no_arg...
+//#include <getopt.h>                 // for optarg, required_argument, no_arg...
 #include <stdint.h>                 // for int32_t
 #include <stdio.h>                  // for NULL, fprintf, sscanf, stderr
 #include <stdlib.h>                 // for atoi, EXIT_FAILURE, exit, EXIT_SU...
@@ -9,27 +14,25 @@
 #include "pdf2laser_type.h"         // for print_job_t, raster_t
 #include "pdf2laser_vector_list.h"  // for vector_list_t
 
-static const char *opt_string = "Dp:P:an:d:R:r:m:s:f:V:v:M:Oh@";
-
-static const struct option long_options[] = {
-	{ "debug",         no_argument,        NULL,  'D' },
-	{ "printer",       required_argument,  NULL,  'p' },
-	{ "preset",        required_argument,  NULL,  'P' },
-	{ "autofocus",     no_argument,        NULL,  'a' },
-	{ "job",           required_argument,  NULL,  'n' },
-	{ "dpi",           required_argument,  NULL,  'd' },
-	{ "raster-power",  required_argument,  NULL,  'R' },
-	{ "raster-speed",  required_argument,  NULL,  'r' },
-	{ "mode",          required_argument,  NULL,  'm' },
-	{ "screen-size",   required_argument,  NULL,  's' },
-	{ "frequency",     required_argument,  NULL,  'f' },
-	{ "vector-power",  required_argument,  NULL,  'V' },
-	{ "vector-speed",  required_argument,  NULL,  'v' },
-	{ "multipass",     required_argument,  NULL,  'M' },
-	{ "no-optimize",   no_argument,        NULL,  'O' },
-	{ "help",          no_argument,        NULL,  'h' },
-	{ "version",       no_argument,        NULL,  '@' },
-	{ NULL,            0,                  NULL,   0  },
+static const struct optparse_long long_options[] = {
+	{"debug",        'D', OPTPARSE_NONE},
+	{"printer",      'p', OPTPARSE_REQUIRED},
+	{"preset",       'P', OPTPARSE_REQUIRED},
+	{"autofocus",    'a', OPTPARSE_NONE},
+	{"job",          'n', OPTPARSE_REQUIRED},
+	{"dpi",          'd', OPTPARSE_REQUIRED},
+	{"raster-power", 'R', OPTPARSE_REQUIRED},
+	{"raster-speed", 'r', OPTPARSE_REQUIRED},
+	{"mode",         'm', OPTPARSE_REQUIRED},
+	{"screen-size",  's', OPTPARSE_REQUIRED},
+	{"frequency",    'f', OPTPARSE_REQUIRED},
+	{"vector-power", 'V', OPTPARSE_REQUIRED},
+	{"vector-speed", 'v', OPTPARSE_REQUIRED},
+	{"multipass",    'M', OPTPARSE_REQUIRED},
+	{"no-optimize",  'O', OPTPARSE_NONE},
+	{"help",         'h', OPTPARSE_NONE},
+	{"version",      '@', OPTPARSE_NONE},
+	{0}
 };
 
 static void usage(int rc, const char * const msg)
@@ -195,51 +198,101 @@ static void range_checks(print_job_t *print_job)
 	}
 }
 
-bool optparse(print_job_t *print_job, int32_t argc, char **argv)
+bool pdf2laser_optparse(print_job_t *print_job, int32_t argc, char **argv)
 {
-	int32_t long_index = 0;
+	struct optparse options;
+	int option;
 
-	int32_t opt;
-	while ((opt = getopt_long(argc, argv, opt_string, long_options, &long_index)) != -1) {
-		switch (opt) {
-		case 'D': print_job->debug = true; break;
-		case 'p': print_job->host = optarg; break;
-		case 'P': usage(EXIT_FAILURE, "Presets are not supported yet\n"); break;
-		case 'n': print_job->name = optarg; break;
-		case 'd': print_job->raster->resolution = atoi(optarg); break;
-		case 'r': print_job->raster->speed = atoi(optarg); break;
-		case 'R': print_job->raster->power = atoi(optarg); break;
+	optparse_init(&options, argv);
+
+	while ((option = optparse_long(&options, long_options, NULL)) != -1) {
+		switch (option) {
+		case 'D':
+			print_job->debug = true;
+			break;
+
+		case 'p':
+			print_job->host = options.optarg;
+			break;
+
+		case 'P':
+			usage(EXIT_FAILURE, "Presets are not supported yet\n");
+			break;
+
+		case 'n':
+			print_job->name = options.optarg;
+			break;
+
+		case 'd':
+			print_job->raster->resolution = atoi(options.optarg);
+			break;
+
+		case 'r':
+			print_job->raster->speed = atoi(options.optarg);
+			break;
+
+		case 'R':
+			print_job->raster->power = atoi(options.optarg);
+			break;
+
 		case 'v':
-			if (vector_set_param_speed(print_job, optarg) < 0)
+			if (vector_set_param_speed(print_job, options.optarg) < 0)
 				usage(EXIT_FAILURE, "unable to parse vector-speed");
 			break;
+
 		case 'V':
-			if (vector_set_param_power(print_job, optarg) < 0)
+			if (vector_set_param_power(print_job, options.optarg) < 0)
 				usage(EXIT_FAILURE, "unable to parse vector-power");
 			break;
+
 		case 'M':
-			if (vector_set_param_multipass(print_job, optarg) < 0)
+			if (vector_set_param_multipass(print_job, options.optarg) < 0)
 				usage(EXIT_FAILURE, "unable to parse multipass");
 			break;
-		case 'm': print_job->raster->mode = tolower(*optarg); break;
-		case 'f': print_job->vector_frequency = atoi(optarg); break;
-		case 's': print_job->raster->screen_size = atoi(optarg); break;
-		case 'a': print_job->focus = true; break;
-		case 'O': print_job->vector_optimize = false; break;
-		case 'h': usage(EXIT_SUCCESS, ""); break;
-		case '@': fprintf(stdout, "%s\n", VERSION); exit(0); break;
-		default: usage(EXIT_FAILURE, "Unknown argument\n"); break;
+
+		case 'm':
+			print_job->raster->mode = tolower(*options.optarg);
+			break;
+
+		case 'f':
+			print_job->vector_frequency = atoi(options.optarg);
+			break;
+
+		case 's':
+			print_job->raster->screen_size = atoi(options.optarg);
+			break;
+
+		case 'a':
+			print_job->focus = true;
+			break;
+
+		case 'O':
+			print_job->vector_optimize = false;
+			break;
+
+		case 'h':
+			usage(EXIT_SUCCESS, "");
+			break;
+
+		case '@':
+			fprintf(stdout, "%s\n", VERSION);
+			exit(EXIT_SUCCESS);
+
+		case '?':
+			fprintf(stderr, "%s: %s\n", argv[0], options.errmsg);
+			exit(EXIT_FAILURE);
+
+		default:
+			usage(EXIT_FAILURE, "Unknown argument\n");
+
 		}
 	}
 
-	/* Perform a check over the global values to ensure that they have values
-	 * that are within a tolerated range.
-	 */
 	range_checks(print_job);
 
 	// Skip any of the processed arguments
-	argc -= optind;
-	argv += optind;
+	argc -= options.optind;
+	argv += options.optind;
 
 	// If there is an argument after, there must be only one
 	// and it will be the input postcript / pdf

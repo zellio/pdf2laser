@@ -193,7 +193,7 @@ int main(int argc, char *argv[])
 	}
 
 	// Process command line options
-	optparse(print_job, argc, argv);
+	pdf2laser_optparse(print_job, argc, argv);
 
 	const char *source_filename = print_job->source_filename;
 
