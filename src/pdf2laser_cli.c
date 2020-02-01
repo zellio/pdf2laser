@@ -68,7 +68,6 @@ static void usage(int rc, const char * const msg)
 
 	exit(rc);
 }
-#define OPTARG_MAX_LENGTH 1024
 
 static int32_t vector_config_set_param_offset(print_job_t *print_job, char *optarg, size_t FIELD)
 {
