@@ -1,7 +1,7 @@
 
 /// pdf2laser.c --- tool for printing to Epilog Fusion laser cutters
 
-// Copyright (C) 2015-2017 Zachary Elliott <contact@zell.io>
+// Copyright (C) 2015-2020 Zachary Elliott <contact@zell.io>
 // Copyright (C) 2011-2015 Trammell Hudson <hudson@osresearch.net>
 // Copyright (C) 2008-2011 AS220 Labs <brandon@as220.org>
 // Copyright (C) 2002-2008 Andrews & Arnold Ltd <info@aaisp.net.uk>
@@ -193,7 +193,7 @@ int main(int argc, char *argv[])
 	}
 
 	// Process command line options
-	optparse(print_job, argc, argv);
+	pdf2laser_optparse(print_job, argc, argv);
 
 	const char *source_filename = print_job->source_filename;
 

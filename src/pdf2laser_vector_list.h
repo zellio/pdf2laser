@@ -3,6 +3,7 @@
 
 #include <stdbool.h>           // for bool
 #include <stdint.h>            // for int32_t
+#include <inttypes.h>          // for PRId64, PRId32
 #include "pdf2laser_vector.h"  // for vector_t, point_t
 
 #ifdef __cplusplus

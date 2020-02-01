@@ -22,7 +22,7 @@ extern "C" {
 #define BED_WIDTH (1728)
 
 /** Default for debug mode. */
-#define DEBUG (false)
+#define DEBUG (true)
 
 /** Number of characters allowable for a filename. */
 #define FILENAME_NCHARS (1024)
