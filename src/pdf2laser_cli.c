@@ -54,7 +54,7 @@ static void usage(int rc, const char * const msg)
 		"\n"
 		"Vector options:\n"
 		"    -O, --no-optimize                 Disable vector optimization\n"
-		"    -F, --no-fallthrough              Disable configuration fallthrough\n"
+		"    -F, --no-fallthrough              Disable automatic vector configuration\n"
 		"    -f FREQ, --frequency=FREQ         Vector frequency\n"
 		"    -v SPEED, --vector-speed=SPEED    Vector speed\n"
 		"    -V POWER, --vector-power=POWER    Vector power for the R, G, and B passes\n"
