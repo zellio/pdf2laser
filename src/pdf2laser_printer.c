@@ -1,6 +1,7 @@
 #include "pdf2laser_printer.h"
 #include <arpa/inet.h>        // for inet_ntoa
 #include <errno.h>            // for errno, EINTR, EAGAIN, EBADF, EIO
+#include <inttypes.h>         // for PRId64
 #include <netdb.h>            // for addrinfo, freeaddrinfo, getaddrinfo
 #include <netinet/in.h>       // for sockaddr_in, ntohs
 #include <stdint.h>           // for int32_t, uint32_t, uint8_t
@@ -173,7 +174,7 @@ bool printer_send(const char *host, FILE *pjl_file, const char *job_name)
 		bytes_sent += bs;
 	}
 
-	printf("Job size: %d (%d)\n", bytes_sent, count);
+	printf("Job size: %"PRIu64"(%"PRId64")\n", bytes_sent, count);
 #else
 	{
 		char buffer[102400];

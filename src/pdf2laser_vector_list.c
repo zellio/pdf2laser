@@ -94,8 +94,8 @@ vector_list_t *vector_list_stats(vector_list_t *self)
 		vector = vector->next;
 	}
 
-	printf("Cuts: %d len %lld\n", cuts, cut_total);
-	printf("Move: %d len %lld\n", transits, transit_total);
+	printf("Cuts: %"PRId32" len %"PRId64"\n", cuts, cut_total);
+	printf("Move: %"PRId32" len %"PRId64"\n", transits, transit_total);
 
 	return self;
 }
