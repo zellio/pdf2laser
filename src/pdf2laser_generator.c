@@ -1,4 +1,5 @@
 #include "pdf2laser_generator.h"
+#include <errno.h>
 #include <ghostscript/gserrors.h>   // for gs_error_type::gs_error_Quit
 #include <ghostscript/iapi.h>       // for gsapi_delete_instance, gsapi_exit
 #include <stdint.h>                 // for int32_t, uint8_t
@@ -6,10 +7,17 @@
 #include <stdlib.h>                 // for free, calloc
 #include <string.h>                 // for strncmp
 #include <strings.h>                // for strncasecmp
+#include <unistd.h>
+#ifdef __linux
+#include <sys/sendfile.h>           // for sendfile
+#endif
+#include <sys/stat.h>               // for fstat, stat
 #include <sys/types.h>              // for ssize_t
 #include "pdf2laser_type.h"         // for print_job_t, raster_t
 #include "pdf2laser_vector.h"       // for vector_t, point_t, point_compare
 #include "pdf2laser_vector_list.h"  // for vector_list_t, vector_list_optimize
+
+
 
 /**
  * Convert a big endian value stored in the array starting at the given pointer
@@ -107,44 +115,44 @@ bool generate_eps(print_job_t *print_job, FILE *ps_file, FILE *eps_file)
 			break;
 		}
 		else if (strncmp(line, "%!", 2) == 0) {
+			fprintf(eps_file, "/=== {(        ) cvs print} def\n/stroke { "); // print a number
+
+			if (print_job->vector_fallthrough) {
+				fprintf(eps_file, "true ");
+			} else {
+				for (vector_list_config_t *vector_list_config = print_job->configs;
+					 vector_list_config != NULL;
+					 vector_list_config = vector_list_config->next) {
+
+					int32_t red, green, blue;
+					vector_list_config_id_to_rgb(vector_list_config->id, &red, &green, &blue);
+
+					fprintf(eps_file, "currentrgbcolor "
+							"255 mul round cvi %d eq "
+							"exch "
+							"255 mul round cvi %d eq "
+							"and exch "
+							"255 mul round cvi %d eq "
+							"and ", blue, green, red);
+
+					if (vector_list_config->index > 0) {
+						fprintf(eps_file, "or ");
+					}
+				}
+			}
+
 			fprintf
 				(eps_file,
-				 "/=== {(        ) cvs print} def" // print a number
-				 "\n"
-				 "/stroke {"
-				 // check for solid red
-				 "currentrgbcolor "
-				 "0.0 eq "
-				 "exch 0.0 eq "
-				 "and "
-				 "exch 1.0 eq "
-				 "and "
-				 // check for solid green
-				 "currentrgbcolor "
-				 "0.0 eq "
-				 "exch 1.0 eq "
-				 "and "
-				 "exch 0.0 eq "
-				 "and "
-				 "or "
-				 // check for solid blue
-				 "currentrgbcolor "
-				 "1.0 eq "
-				 "exch 0.0 eq "
-				 "and "
-				 "exch 0.0 eq "
-				 "and "
-				 "or "
 				 "{"
-				 // solid red, green or blue
+				 // Display color codes
 				 "(P)=== "
 				 "currentrgbcolor "
 				 "(,)=== "
-				 "100 mul round cvi === "
+				 "255 mul round cvi === "
 				 "(,)=== "
-				 "100 mul round cvi === "
+				 "255 mul round cvi === "
 				 "(,)=== "
-				 "100 mul round cvi = "
+				 "255 mul round cvi = "
 				 "flattenpath "
 				 "{ "
 				 // moveto
@@ -167,7 +175,7 @@ bool generate_eps(print_job_t *print_job, FILE *ps_file, FILE *eps_file)
 				 "pathforall newpath"
 				 "}"
 				 "{"
-				 // Default is to just stroke
+				 // For debugging purposes, draw the line normally
 				 "stroke"
 				 "}"
 				 "ifelse"
@@ -215,23 +223,49 @@ bool generate_eps(print_job_t *print_job, FILE *ps_file, FILE *eps_file)
 
 				fprintf(eps_file, "/setpagedevice{pop}def\n"); // use bbox
 
-				if (x_offset || y_offset)
+				if (x_offset || y_offset) {
 					fprintf(eps_file, "%d %d translate\n", -x_offset, -y_offset);
-
-				// if (print_job->flip)
-				//	fprintf(eps_file, "%d 0 translate -1 1 scale\n", print_job->width);
+				}
 			}
 		}
 	}
 
 	free(line);
 
+#ifdef __linux
+	// write out the buffered data before abusing the kernel
+	fflush(eps_file);
+
+	int32_t ps_fno = fileno(ps_file);
+
+	struct stat ps_stat;
+	if (fstat(ps_fno, &ps_stat)) {
+		perror("Error reading ps file");
+		return false;
+	}
+
+	ssize_t bs = 0;
+	size_t bytes_sent = 0;
+	size_t count = ps_stat.st_size;
+	off_t offset = 0;
+
+	while (bytes_sent < count) {
+		if ((bs = sendfile(fileno(eps_file), ps_fno, &offset, count)) <= 0) {
+			if (errno == EINTR || errno == EAGAIN)
+				continue;
+			perror("sendfile failed");
+			exit(EXIT_FAILURE);
+		}
+		bytes_sent += bs;
+	}
+#else
 	{
 		size_t length;
 		uint8_t buffer[102400];
 		while ((length = fread(buffer, 1, 102400, ps_file)) > 0)
 			fwrite(buffer, 1, length, eps_file);
 	}
+#endif
 
 	return true;
 }
