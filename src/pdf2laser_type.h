@@ -57,6 +57,7 @@ struct print_job {
 
 	int32_t vector_frequency;
 	bool vector_optimize;
+	bool vector_fallthrough;
 
 	vector_list_config_t *configs;
 

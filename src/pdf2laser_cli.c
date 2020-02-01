@@ -10,27 +10,28 @@
 #include "pdf2laser_vector_list.h"  // for vector_list_t
 #include <stddef.h>                 // for offsetof
 
-static const char *opt_string = "Dp:P:an:d:R:r:m:s:f:V:v:M:Oh@";
+static const char *opt_string = "Dp:P:an:d:R:r:m:s:f:V:v:M:OFh@";
 
 static const struct option long_options[] = {
-	{ "debug",         no_argument,        NULL,  'D' },
-	{ "printer",       required_argument,  NULL,  'p' },
-	{ "preset",        required_argument,  NULL,  'P' },
-	{ "autofocus",     no_argument,        NULL,  'a' },
-	{ "job",           required_argument,  NULL,  'n' },
-	{ "dpi",           required_argument,  NULL,  'd' },
-	{ "raster-power",  required_argument,  NULL,  'R' },
-	{ "raster-speed",  required_argument,  NULL,  'r' },
-	{ "mode",          required_argument,  NULL,  'm' },
-	{ "screen-size",   required_argument,  NULL,  's' },
-	{ "frequency",     required_argument,  NULL,  'f' },
-	{ "vector-power",  required_argument,  NULL,  'V' },
-	{ "vector-speed",  required_argument,  NULL,  'v' },
-	{ "multipass",     required_argument,  NULL,  'M' },
-	{ "no-optimize",   no_argument,        NULL,  'O' },
-	{ "help",          no_argument,        NULL,  'h' },
-	{ "version",       no_argument,        NULL,  '@' },
-	{ NULL,            0,                  NULL,   0  },
+	{ "debug",          no_argument,        NULL,  'D' },
+	{ "printer",        required_argument,  NULL,  'p' },
+	{ "preset",         required_argument,  NULL,  'P' },
+	{ "autofocus",      no_argument,        NULL,  'a' },
+	{ "job",            required_argument,  NULL,  'n' },
+	{ "dpi",            required_argument,  NULL,  'd' },
+	{ "raster-power",   required_argument,  NULL,  'R' },
+	{ "raster-speed",   required_argument,  NULL,  'r' },
+	{ "mode",           required_argument,  NULL,  'm' },
+	{ "screen-size",    required_argument,  NULL,  's' },
+	{ "frequency",      required_argument,  NULL,  'f' },
+	{ "vector-power",   required_argument,  NULL,  'V' },
+	{ "vector-speed",   required_argument,  NULL,  'v' },
+	{ "multipass",      required_argument,  NULL,  'M' },
+	{ "no-optimize",    no_argument,        NULL,  'O' },
+	{ "no-fallthrough", no_argument,        NULL,  'F' },
+	{ "help",           no_argument,        NULL,  'h' },
+	{ "version",        no_argument,        NULL,  '@' },
+	{ NULL,             0,                  NULL,   0  },
 };
 
 static void usage(int rc, const char * const msg)
@@ -53,10 +54,11 @@ static void usage(int rc, const char * const msg)
 		"\n"
 		"Vector options:\n"
 		"    -O, --no-optimize                 Disable vector optimization\n"
+		"    -F, --no-fallthrough              Disable configuration fallthrough\n"
 		"    -f FREQ, --frequency=FREQ         Vector frequency\n"
 		"    -v SPEED, --vector-speed=SPEED    Vector speed\n"
 		"    -V POWER, --vector-power=POWER    Vector power for the R, G, and B passes\n"
-	        "    -M PASSES, --multipass=PASSES     Number of times to repeat the R, G, and B passes\n"
+		"    -M PASSES, --multipass=PASSES     Number of times to repeat the R, G, and B passes\n"
 		"\n"
 		"General options:\n"
 		"    -D, --debug                       Enable debug mode\n"
@@ -214,6 +216,7 @@ bool optparse(print_job_t *print_job, int32_t argc, char **argv)
 		case 's': print_job->raster->screen_size = atoi(optarg); break;
 		case 'a': print_job->focus = true; break;
 		case 'O': print_job->vector_optimize = false; break;
+		case 'F': print_job->vector_fallthrough = false; break;
 		case 'h': usage(EXIT_SUCCESS, ""); break;
 		case '@': fprintf(stdout, "%s\n", VERSION); exit(0); break;
 		default: usage(EXIT_FAILURE, "Unknown argument\n"); break;

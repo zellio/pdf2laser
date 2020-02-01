@@ -180,6 +180,7 @@ int main(int argc, char *argv[])
 		},
 		.vector_frequency = VECTOR_FREQUENCY_DEFAULT,
 		.vector_optimize = true,
+		.vector_fallthrough = true,
 		.configs = NULL,
 		.debug = DEBUG,
 	};
