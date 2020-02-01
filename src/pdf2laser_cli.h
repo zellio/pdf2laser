@@ -14,6 +14,8 @@ extern "C" {
 }
 #endif
 
+#define OPTARG_MAX_LENGTH 1024
+
 bool pdf2laser_optparse(print_job_t *print_job, int32_t argc, char **argv);
 
 #ifdef __cplusplus
