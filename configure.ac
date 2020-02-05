@@ -10,6 +10,9 @@ AC_CONFIG_HEADERS([config.h])
 AC_USE_SYSTEM_EXTENSIONS
 
 # Define configurable defaults.
+AC_ARG_VAR([DEBUG], [Print debug messages])
+AC_DEFINE_UNQUOTED([DEBUG], [${DEBUG=false}], [Print debug messages])
+
 AC_ARG_VAR([DEFAULT_HOST], [Default host address when -p/--printer is not specified. If not overridden, defaults to the NYC Resistor laser host (192.168.1.4).])
 AC_DEFINE_UNQUOTED([DEFAULT_HOST], ["${DEFAULT_HOST=192.168.1.4}"], [Default host address when -p/--printer is not specified.])
 
@@ -57,6 +60,8 @@ AC_DEFINE_UNQUOTED([VECTOR_FREQUENCY_DEFAULT], [(${VECTOR_FREQUENCY_DEFAULT=5000
 
 # Checks for programs.
 AC_PROG_CC([clang gcc])
+AC_PROG_YACC([bison yacc])
+AC_PROG_LEX([flex lex])
 AC_PROG_INSTALL
 
 # Checks for libraries.
