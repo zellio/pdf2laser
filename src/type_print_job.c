@@ -1,5 +1,24 @@
-#include "pdf2laser_type.h"
-#include "type_vector_list.h"
+#include "type_print_job.h"
+#include "type_raster.h"
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
+
+print_job_t *print_job_create(void)
+{
+	print_job_t *print_job = calloc(1, sizeof(print_job_t));
+	print_job->raster = raster_create();
+	return print_job;
+}
+
+print_job_t *print_job_destroy(print_job_t *self)
+{
+	if (self == NULL)
+		return NULL;
+	free(self->raster);
+	free(self);
+	return NULL;
+}
 
 vector_list_config_t *print_job_append_vector_list(print_job_t *self, vector_list_t *vector_list, int32_t red, int32_t green, int32_t blue)
 {

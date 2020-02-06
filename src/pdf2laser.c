@@ -54,7 +54,7 @@
 #include "pdf2laser_cli.h"          // for optparse
 #include "pdf2laser_generator.h"    // for VECTOR_PASSES, generate_ps, generate_eps, generate_pjl
 #include "pdf2laser_printer.h"      // for pritner_send
-#include "pdf2laser_type.h"         // for print_job_t, raster_t
+#include "type_print_job.h"         // for print_job_t, raster_t
 #include "type_vector_list.h"       // for vector_list_t, vector_list_create
 
 FILE *fh_vector;

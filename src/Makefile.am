@@ -9,7 +9,7 @@ CLEANFILES =
 
 BUILT_SOURCES =
 
-pdf2laser_SOURCES = type_point.c type_vector.c type_raster.c pdf2laser_type.c	\
+pdf2laser_SOURCES = type_point.c type_vector.c type_raster.c type_print_job.c	\
 	type_vector_list.c type_vector_list_config.c pdf2laser_generator.c			\
 	pdf2laser_printer.c pdf2laser_cli.c pdf2laser.c
 

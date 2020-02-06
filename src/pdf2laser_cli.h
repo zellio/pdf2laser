@@ -3,7 +3,7 @@
 
 #include <stdint.h>          // for int32_t
 #include <stdbool.h>         // for bool
-#include "pdf2laser_type.h"  // for print_job_t
+#include "type_print_job.h"  // for print_job_t
 
 #include "config.h"
 
