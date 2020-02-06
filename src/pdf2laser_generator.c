@@ -15,7 +15,7 @@
 #include <sys/types.h>              // for ssize_t
 #include "pdf2laser_type.h"         // for print_job_t, raster_t
 #include "type_vector.h"            // for vector_t, point_t, point_compare
-#include "pdf2laser_vector_list.h"  // for vector_list_t, vector_list_optimize
+#include "type_vector_list.h"       // for vector_list_t, vector_list_optimize
 
 
 

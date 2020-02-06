@@ -3,7 +3,7 @@
 
 #include <stdbool.h>                // for bool
 #include <stdint.h>                 // for int32_t, uint32_t, int8_t
-#include "pdf2laser_vector_list.h"  // for vector_list_t
+#include "type_vector_list.h"       // for vector_list_t
 #include <stdio.h>                  // for snprintf
 #include <stdlib.h>                 // for calloc
 #include <string.h>                 // for strnlen

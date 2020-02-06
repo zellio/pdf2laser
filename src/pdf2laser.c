@@ -55,7 +55,7 @@
 #include "pdf2laser_generator.h"    // for VECTOR_PASSES, generate_ps, generate_eps, generate_pjl
 #include "pdf2laser_printer.h"      // for pritner_send
 #include "pdf2laser_type.h"         // for print_job_t, raster_t
-#include "pdf2laser_vector_list.h"  // for vector_list_t, vector_list_create
+#include "type_vector_list.h"       // for vector_list_t, vector_list_create
 
 FILE *fh_vector;
 static int GSDLLCALL gsdll_stdout(__attribute__ ((unused)) void *minst, const char *str, int len)

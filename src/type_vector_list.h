@@ -1,5 +1,5 @@
-#ifndef __PDF2LASER_VECTOR_LIST_H__
-#define __PDF2LASER_VECTOR_LIST_H__ 1
+#ifndef __PDF2LASER_TYPE_VECTOR_LIST_H__
+#define __PDF2LASER_TYPE_VECTOR_LIST_H__ 1
 
 #include <stdbool.h>      // for bool
 #include <stdint.h>       // for int32_t

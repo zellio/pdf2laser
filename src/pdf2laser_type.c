@@ -1,5 +1,5 @@
 #include "pdf2laser_type.h"
-#include "pdf2laser_vector_list.h"
+#include "type_vector_list.h"
 
 uint32_t vector_list_config_rgb_to_id(int32_t red, int32_t green, int32_t blue)
 {

@@ -12,7 +12,7 @@
 #include <string.h>                 // for strndup
 #include "config.h"                 // for PACKAGE, VERSION
 #include "pdf2laser_type.h"         // for print_job_t, raster_t
-#include "pdf2laser_vector_list.h"  // for vector_list_t
+#include "type_vector_list.h"       // for vector_list_t
 #include <stddef.h>                 // for offsetof
 
 static const struct optparse_long long_options[] = {
