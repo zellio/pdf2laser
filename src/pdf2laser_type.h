@@ -4,6 +4,7 @@
 #include <stdbool.h>                // for bool
 #include <stdint.h>                 // for int32_t, uint32_t, int8_t
 #include "type_vector_list.h"       // for vector_list_t
+#include "type_raster.h"
 #include <stdio.h>                  // for snprintf
 #include <stdlib.h>                 // for calloc
 #include <string.h>                 // for strnlen
@@ -14,23 +15,6 @@ extern "C" {
 #if 0
 }
 #endif
-
-typedef enum {
-	RASTER_MODE_COLOR = 'c',      // color determines power level
-	RASTER_MODE_GREY_SCALE = 'g', // grey-scale levels determine power level
-	RASTER_MODE_MONO = 'm',       // mono mode
-	RASTER_MODE_NONE = 'n',       // no rasterization
-} raster_mode;
-
-typedef struct raster raster_t;
-struct raster {
-	uint32_t resolution;
-	raster_mode mode;
-	int32_t speed;
-	int32_t power;
-	int8_t repeat;
-	int32_t screen_size;
-};
 
 typedef struct vector_list_config vector_list_config_t;
 struct vector_list_config {
