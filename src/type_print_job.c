@@ -1,13 +1,27 @@
 #include "type_print_job.h"
+#include "pdf2laser.h"
 #include "type_raster.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include "config.h"
+#include <stdbool.h>
 
 print_job_t *print_job_create(void)
 {
 	print_job_t *print_job = calloc(1, sizeof(print_job_t));
 	print_job->raster = raster_create();
+
+	print_job->host = DEFAULT_HOST;
+	print_job->height = BED_HEIGHT;
+	print_job->width = BED_WIDTH;
+	print_job->focus = false;
+	print_job->vector_frequency = VECTOR_FREQUENCY_DEFAULT;
+	print_job->vector_optimize = true;
+	print_job->vector_fallthrough = true;
+	print_job->configs = NULL;
+	print_job->debug = DEBUG;
+
 	return print_job;
 }
 

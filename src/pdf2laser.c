@@ -161,29 +161,9 @@ int main(int argc, char *argv[])
 
 	// Default host is defined in config.h, and can be overridden at configuration time, e.g.
 	//   ./configure DEFAULT_HOST=foo
-	char *host = DEFAULT_HOST;
+	/* char *host = DEFAULT_HOST; */
 
-	// Job struct defaults
-	print_job_t *print_job = &(print_job_t){
-		// .flip = FLIP,
-		.host = host,
-		.height = BED_HEIGHT,
-		.width = BED_WIDTH,
-		.focus = false,
-		.raster = &(raster_t){
-			.resolution = RESOLUTION_DEFAULT,
-			.mode = RASTER_MODE_DEFAULT,
-			.speed = RASTER_SPEED_DEFAULT,
-			.power = RASTER_POWER_DEFAULT,
-			.repeat = RASTER_REPEAT,
-			.screen_size = SCREEN_DEFAULT,
-		},
-		.vector_frequency = VECTOR_FREQUENCY_DEFAULT,
-		.vector_optimize = true,
-		.vector_fallthrough = true,
-		.configs = NULL,
-		.debug = DEBUG,
-	};
+	print_job_t *print_job = print_job_create();
 
 	// Process command line options
 	pdf2laser_optparse(print_job, argc, argv);
