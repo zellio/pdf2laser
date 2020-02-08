@@ -13,6 +13,7 @@ vector_list_t *vector_list_create(void)
 	list->power = 0;
 	list->speed = 0;
 	list->multipass = 1;
+	list->frequency = 10;
 	return list;
 }
 

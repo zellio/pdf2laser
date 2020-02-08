@@ -27,7 +27,6 @@ struct print_job {
 
 	raster_t *raster;
 
-	int32_t vector_frequency;
 	bool vector_optimize;
 	bool vector_fallthrough;
 

@@ -16,7 +16,6 @@ print_job_t *print_job_create(void)
 	print_job->height = BED_HEIGHT;
 	print_job->width = BED_WIDTH;
 	print_job->focus = false;
-	print_job->vector_frequency = VECTOR_FREQUENCY_DEFAULT;
 	print_job->vector_optimize = true;
 	print_job->vector_fallthrough = true;
 	print_job->configs = NULL;

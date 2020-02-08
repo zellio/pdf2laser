@@ -120,6 +120,11 @@ static int32_t vector_config_set_param_multipass(print_job_t *print_job, char *o
 	return vector_config_set_param_offset(print_job, optarg, offsetof(vector_list_t, multipass));
 }
 
+static int32_t vector_config_set_param_frequency(print_job_t *print_job, char *optarg)
+{
+	return vector_config_set_param_offset(print_job, optarg, offsetof(vector_list_t, frequency));
+}
+
 /**
  * Perform range validation checks on the major global variables to ensure
  * their values are sane. If values are outside accepted tolerances then modify
@@ -154,13 +159,6 @@ static void range_checks(print_job_t *print_job)
 		print_job->raster->screen_size = 1;
 	}
 
-	if (print_job->vector_frequency < 10) {
-		print_job->vector_frequency = 10;
-	}
-	else if (print_job->vector_frequency > 5000) {
-		print_job->vector_frequency = 5000;
-	}
-
 	vector_list_t *current_vector_list = NULL;
 	for (vector_list_config_t *current_vector_config_list = print_job->configs;
 		 current_vector_config_list != NULL;
@@ -184,6 +182,13 @@ static void range_checks(print_job_t *print_job)
 
 		if (current_vector_list->multipass < 1) {
 			current_vector_list->multipass = 1;
+		}
+
+		if (current_vector_list->frequency < 10) {
+			current_vector_list->frequency = 10;
+		}
+		else if (current_vector_list->frequency > 5000) {
+			current_vector_list->frequency = 5000;
 		}
 	}
 }
@@ -245,7 +250,8 @@ bool pdf2laser_optparse(print_job_t *print_job, int32_t argc, char **argv)
 			break;
 
 		case 'f':
-			print_job->vector_frequency = atoi(options.optarg);
+			if (vector_config_set_param_frequency(print_job, options.optarg) < 0)
+				usage(EXIT_FAILURE, "unable to parse frequency");
 			break;
 
 		case 's':

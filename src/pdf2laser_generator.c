@@ -648,11 +648,12 @@ bool generate_vector(print_job_t *print_job, FILE * const pjl_file, FILE * const
 	vectors_parse(print_job, vector_file);
 
 	fprintf(pjl_file, "IN;");
-	fprintf(pjl_file, "XR%04d;", print_job->vector_frequency);
 
 	for (vector_list_config_t *vector_list_config = print_job->configs;
 		 vector_list_config != NULL;
 		 vector_list_config = vector_list_config->next) {
+
+		fprintf(pjl_file, "XR%04d;", vector_list_config->vector_list->frequency);
 
 		vector_list_t *vector_list = vector_list_config->vector_list;
 		if (print_job->vector_optimize) {
