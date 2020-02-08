@@ -13,7 +13,7 @@ print_job_t *print_job_create(void)
 	print_job_t *print_job = calloc(1, sizeof(print_job_t));
 	print_job->raster = raster_create();
 
-	print_job->host = DEFAULT_HOST;
+	print_job->host = strndup(DEFAULT_HOST, 1024);
 	print_job->height = BED_HEIGHT;
 	print_job->width = BED_WIDTH;
 	print_job->focus = false;
@@ -29,9 +29,58 @@ print_job_t *print_job_destroy(print_job_t *self)
 {
 	if (self == NULL)
 		return NULL;
-	free(self->raster);
+
+	free(self->source_filename);
+	free(self->host);
+	free(self->name);
+
+	raster_destroy(self->raster);
+
+	for (vector_list_config_t *config = self->configs; config != NULL; config = config->next)
+		vector_list_config_destroy(config);
+
 	free(self);
 	return NULL;
+}
+
+char *print_job_inspect(print_job_t *self)
+{
+	char *s = calloc(30, sizeof(char));
+	snprintf(s, 30, "<PrintJob:0x%016lx>", (uintptr_t)self);
+	return s;
+}
+
+char *print_job_to_string(print_job_t *self)
+{
+	int32_t length = 0;
+	vector_list_config_t *configs = self->configs;
+	while (configs) {
+		length += 1;
+		configs = configs->next;
+	}
+
+	int32_t max_str_size =
+		6 + strnlen(self->name, 1024) + 39 + (65 * (int)length) + 1;
+	char *s = calloc(max_str_size, sizeof(char));
+
+	snprintf(s, max_str_size,
+			 "Job: %s\nRaster: speed=%d power=%d dpi=%d\n",
+			 self->name,
+			 self->raster->speed,
+			 self->raster->power,
+			 self->raster->resolution);
+
+	for (vector_list_config_t *config = self->configs;
+		 config != NULL;
+		 config = config->next) {
+
+		strncat(s, vector_list_config_to_string(config), max_str_size);
+
+		if (config->next)
+			strncat(s, "\n", max_str_size);
+	}
+
+	return s;
 }
 
 vector_list_config_t *print_job_append_vector_list_config(print_job_t *self, vector_list_config_t *new_config)
@@ -86,44 +135,4 @@ vector_list_config_t *print_job_find_vector_list_config_by_id(print_job_t *self,
 vector_list_config_t *print_job_find_vector_list_config_by_rgb(print_job_t *self, int32_t red, int32_t green, int32_t blue)
 {
 	return print_job_find_vector_list_config_by_id(self, vector_list_config_rgb_to_id(red, green, blue));
-}
-
-char *print_job_inspect(print_job_t *self)
-{
-	char *s = calloc(30, sizeof(char));
-	snprintf(s, 30, "<PrintJob:0x%016lx>", (uintptr_t)self);
-	return s;
-}
-
-char *print_job_to_string(print_job_t *self)
-{
-	int32_t length = 0;
-	vector_list_config_t *configs = self->configs;
-	while (configs) {
-		length += 1;
-		configs = configs->next;
-	}
-
-	int32_t max_str_size =
-		6 + strnlen(self->name, 1024) + 39 + (65 * (int)length) + 1;
-	char *s = calloc(max_str_size, sizeof(char));
-
-	snprintf(s, max_str_size,
-			 "Job: %s\nRaster: speed=%d power=%d dpi=%d\n",
-			 self->name,
-			 self->raster->speed,
-			 self->raster->power,
-			 self->raster->resolution);
-
-	for (vector_list_config_t *config = self->configs;
-		 config != NULL;
-		 config = config->next) {
-
-		strncat(s, vector_list_config_to_string(config), max_str_size);
-
-		if (config->next)
-			strncat(s, "\n", max_str_size);
-	}
-
-	return s;
 }

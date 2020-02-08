@@ -198,7 +198,7 @@ bool pdf2laser_optparse(print_job_t *print_job, int32_t argc, char **argv)
 			break;
 
 		case 'p':
-			print_job->host = options.optarg;
+			print_job->host = strndup(options.optarg, 1024);
 			break;
 
 		case 'P':
@@ -206,7 +206,7 @@ bool pdf2laser_optparse(print_job_t *print_job, int32_t argc, char **argv)
 			break;
 
 		case 'n':
-			print_job->name = options.optarg;
+			print_job->name = strndup(options.optarg, 1024);
 			break;
 
 		case 'd':

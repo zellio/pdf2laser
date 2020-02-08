@@ -9,8 +9,20 @@ vector_list_t *vector_list_create(void)
 	list->head = NULL;
 	list->tail = NULL;
 	list->length = 0;
-	// list->pass = 0;
 	return list;
+}
+
+vector_list_t *vector_list_destroy(vector_list_t *self)
+{
+	if (self == NULL)
+		return NULL;
+
+	for (vector_t *vector = self->head; vector != NULL; vector = vector->next)
+		vector_destroy(vector);
+
+	free(self);
+
+	return NULL;
 }
 
 vector_list_t *vector_list_append(vector_list_t *self, vector_t *vector)

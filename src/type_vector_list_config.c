@@ -33,7 +33,7 @@ vector_list_config_t *vector_list_config_shallow_clone(vector_list_config_t *sel
 
 vector_list_config_t *vector_list_config_destroy(vector_list_config_t *self) {
 	if (self != NULL) {
-		free(self->vector_list);
+		vector_list_destroy(self->vector_list);
 	}
 
 	free(self);

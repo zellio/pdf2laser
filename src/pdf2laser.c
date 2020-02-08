@@ -56,6 +56,7 @@
 #include "pdf2laser_printer.h"      // for pritner_send
 #include "type_print_job.h"         // for print_job_t, raster_t
 #include "type_vector_list.h"       // for vector_list_t, vector_list_create
+#include "config.h"
 
 FILE *fh_vector;
 static int GSDLLCALL gsdll_stdout(__attribute__ ((unused)) void *minst, const char *str, int len)
@@ -81,13 +82,8 @@ static int GSDLLCALL gsdll_stdout(__attribute__ ((unused)) void *minst, const ch
  * @return Return true if the execution of ghostscript succeeds, false
  * otherwise.
  */
-static bool execute_ghostscript(print_job_t *print_job,
-								const char * const filename_bitmap,
-								const char * const filename_eps,
-								const char * const filename_vector,
-								const char * const bmp_mode)
+static bool execute_ghostscript(print_job_t *print_job, const char * const filename_bitmap, const char * const filename_eps, const char * const filename_vector, const char * const bmp_mode)
 {
-
 	int gs_argc = 8;
 	char *gs_argv[8];
 
@@ -175,7 +171,7 @@ int main(int argc, char *argv[])
 
 	// If no job name is specified, use just the filename if there
 	if (!print_job->name) {
-		print_job->name = source_basename;
+		print_job->name = strndup(source_basename, 1024);
 	}
 
 	// Report the settings on stdout

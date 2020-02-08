@@ -549,7 +549,6 @@ bool vectors_parse(print_job_t *print_job, FILE * const vector_file)
 	ssize_t length_read = 0;
 
 	while ((length_read = getline(&line, &length, vector_file)) != -1) {
-
 		switch (*line) {
 		case 'P': {
 			// Note: Colours are stored as blue, green, red in the vector file
@@ -558,16 +557,6 @@ bool vectors_parse(print_job_t *print_job, FILE * const vector_file)
 			vector_list_config_t *config = print_job_find_vector_list_config_by_rgb(print_job, red, green, blue);
 			if (config == NULL)
 				config = print_job_clone_last_vector_list_config(print_job, red, green, blue);
-
-			/*
-			  vector_list_config_t *vector_config_list =
-			  print_job_find_vector_list_config_by_rgb(print_job, red, green, blue); if
-			  (vector_config_list == NULL) vector_config_list =
-			  print_job_clone_last_vector_list(print_job, red, green, blue);
-
-			  current_list = vector_config_list->vector_list;
-			  current_list->pass = vector_config_list->index;
-			*/
 			break;
 		}
 		case 'M': {

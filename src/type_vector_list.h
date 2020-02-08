@@ -18,15 +18,14 @@ struct vector_list {
 	vector_t *head;
 	vector_t *tail;
 	int32_t length;
-	// int32_t pass;
 };
 
 vector_list_t *vector_list_create(void);
-vector_list_t *vector_list_shallow_clone(vector_list_t *vector_list);
+vector_list_t *vector_list_destroy(vector_list_t *self);
 vector_list_t *vector_list_append(vector_list_t *self, vector_t *vector);
+vector_t *vector_list_remove(vector_list_t *self, vector_t *vector);
 vector_list_t *vector_list_stats(vector_list_t *self);
 vector_t *vector_list_find_closest(vector_list_t *list, point_t *point);
-vector_t *vector_list_remove(vector_list_t *self, vector_t *vector);
 vector_list_t *vector_list_optimize(vector_list_t *self);
 bool vector_list_contains(vector_list_t *self, vector_t *vector);
 
