@@ -1,14 +1,43 @@
 #include "type_vector_list_config.h"
+#include <bits/stdint-intn.h>
 #include <stdlib.h>
 #include <stdio.h>
 
-vector_list_config_t *vector_list_config_create(void) {
+vector_list_config_t *vector_list_config_create(int32_t red, int32_t green, int32_t blue)
+{
 	vector_list_config_t *vector_list_config = calloc(1, sizeof(vector_list_config_t));
+
+	vector_list_config->id = vector_list_config_rgb_to_id(red, green, blue);
+
+	vector_list_config->vector_list = vector_list_create();
+
+	vector_list_config->power = 0;
+	vector_list_config->speed = 0;
+	vector_list_config->multipass = 1;
+	vector_list_config->frequency = 10;
+
 	return vector_list_config;
 }
 
+vector_list_config_t *vector_list_config_shallow_clone(vector_list_config_t *self, int32_t red, int32_t green, int32_t blue)
+{
+	vector_list_config_t *config = vector_list_config_create(red, green, blue);
+
+	config->power = self->power;
+	config->speed = self->speed;
+	config->multipass = self->multipass;
+	config->frequency = self->frequency;
+
+	return config;
+}
+
 vector_list_config_t *vector_list_config_destroy(vector_list_config_t *self) {
+	if (self != NULL) {
+		free(self->vector_list);
+	}
+
 	free(self);
+
 	return NULL;
 }
 
@@ -21,17 +50,15 @@ char *vector_list_config_inspect(vector_list_config_t *self)
 
 char *vector_list_config_to_string(vector_list_config_t *self)
 {
+	static char *template = "Vector: pass=%d color=%02x%02x%02x speed=%d power=%d multipass=%d frequency=%d";
+
 	int32_t red, green, blue;
 	vector_list_config_id_to_rgb(self->id, &red, &green, &blue);
 
-	char *s = calloc(64, sizeof(char));
-	snprintf(s,
-			 64,
-			 "Vector: pass=%d color=%02x%02x%02x speed=%d power=%d multipass=%d",
-			 self->index,
-			 red, green, blue,
-			 self->vector_list->speed,
-			 self->vector_list->power, self->vector_list->multipass);
+	size_t s_len = 1 + sprintf(NULL, template, self->index, red, green, blue, self->speed, self->power, self->multipass, self->frequency);
+
+	char *s = calloc(s_len, sizeof(char));
+	snprintf(s, s_len, template, self->index, red, green, blue, self->speed, self->power, self->multipass, self->frequency);
 	return s;
 }
 

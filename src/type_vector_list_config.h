@@ -18,11 +18,17 @@ struct vector_list_config {
 
 	vector_list_t *vector_list;
 
+	int32_t power;
+	int32_t speed;
+	int32_t multipass;
+	int32_t frequency;
+
 	vector_list_config_t *next;
 };
 
-vector_list_config_t *vector_list_config_create(void);
+vector_list_config_t *vector_list_config_create(int32_t red, int32_t green, int32_t blue);
 vector_list_config_t *vector_list_config_destroy(vector_list_config_t *self);
+vector_list_config_t *vector_list_config_shallow_clone(vector_list_config_t *self, int32_t red, int32_t green, int32_t blue);
 
 char *vector_list_config_inspect(vector_list_config_t *self);
 char *vector_list_config_to_string(vector_list_config_t *self);

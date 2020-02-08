@@ -5,7 +5,6 @@
 #include "optparse.h"
 
 #include <ctype.h>                  // for tolower
-//#include <getopt.h>                 // for optarg, required_argument, no_arg...
 #include <stdint.h>                 // for int32_t
 #include <stdio.h>                  // for NULL, fprintf, sscanf, stderr
 #include <stdlib.h>                 // for atoi, EXIT_FAILURE, exit, EXIT_SU...
@@ -90,13 +89,11 @@ static int32_t vector_config_set_param_offset(print_job_t *print_job, char *opta
 		int32_t red, green, blue;
 		vector_list_config_id_to_rgb(values[0], &red, &green, &blue);
 
-		vector_list_config_t *vector_list_config =
-			print_job_find_vector_list_config_by_rgb(print_job, red, green, blue);
+		vector_list_config_t *vector_list_config = print_job_find_vector_list_config_by_rgb(print_job, red, green, blue);
 		if (vector_list_config == NULL)
-			vector_list_config =
-				print_job_append_new_vector_list(print_job, red, green, blue);
+			vector_list_config = print_job_append_new_vector_list_config(print_job, red, green, blue);
 
-		uint8_t *base = (uint8_t *)(vector_list_config->vector_list);
+		uint8_t *base = (uint8_t *)(vector_list_config);
 		int32_t *field = (int32_t *)(base + FIELD);
 		*field = (int32_t)values[1];
 
@@ -107,22 +104,22 @@ static int32_t vector_config_set_param_offset(print_job_t *print_job, char *opta
 
 static int32_t vector_config_set_param_speed(print_job_t *print_job, char *optarg)
 {
-	return vector_config_set_param_offset(print_job, optarg, offsetof(vector_list_t, speed));
+	return vector_config_set_param_offset(print_job, optarg, offsetof(vector_list_config_t, speed));
 }
 
 static int32_t vector_config_set_param_power(print_job_t *print_job, char *optarg)
 {
-	return vector_config_set_param_offset(print_job, optarg, offsetof(vector_list_t, power));
+	return vector_config_set_param_offset(print_job, optarg, offsetof(vector_list_config_t, power));
 }
 
 static int32_t vector_config_set_param_multipass(print_job_t *print_job, char *optarg)
 {
-	return vector_config_set_param_offset(print_job, optarg, offsetof(vector_list_t, multipass));
+	return vector_config_set_param_offset(print_job, optarg, offsetof(vector_list_config_t, multipass));
 }
 
 static int32_t vector_config_set_param_frequency(print_job_t *print_job, char *optarg)
 {
-	return vector_config_set_param_offset(print_job, optarg, offsetof(vector_list_t, frequency));
+	return vector_config_set_param_offset(print_job, optarg, offsetof(vector_list_config_t, frequency));
 }
 
 /**
@@ -159,36 +156,30 @@ static void range_checks(print_job_t *print_job)
 		print_job->raster->screen_size = 1;
 	}
 
-	vector_list_t *current_vector_list = NULL;
-	for (vector_list_config_t *current_vector_config_list = print_job->configs;
-		 current_vector_config_list != NULL;
-		 current_vector_config_list = current_vector_config_list->next) {
-
-		current_vector_list = current_vector_config_list->vector_list;
-
-		if (current_vector_list->power > 100) {
-			current_vector_list->power = 100;
+	for (vector_list_config_t *current_config = print_job->configs; current_config != NULL; current_config = current_config->next) {
+		if (current_config->power > 100) {
+			current_config->power = 100;
 		}
-		else if (current_vector_list->power < 0) {
-			current_vector_list->power = 0;
+		else if (current_config->power < 0) {
+			current_config->power = 0;
 		}
 
-		if (current_vector_list->speed > 100) {
-			current_vector_list->speed = 100;
+		if (current_config->speed > 100) {
+			current_config->speed = 100;
 		}
-		else if (current_vector_list->speed < 1) {
-			current_vector_list->speed = 1;
-		}
-
-		if (current_vector_list->multipass < 1) {
-			current_vector_list->multipass = 1;
+		else if (current_config->speed < 1) {
+			current_config->speed = 1;
 		}
 
-		if (current_vector_list->frequency < 10) {
-			current_vector_list->frequency = 10;
+		if (current_config->multipass < 1) {
+			current_config->multipass = 1;
 		}
-		else if (current_vector_list->frequency > 5000) {
-			current_vector_list->frequency = 5000;
+
+		if (current_config->frequency < 10) {
+			current_config->frequency = 10;
+		}
+		else if (current_config->frequency > 5000) {
+			current_config->frequency = 5000;
 		}
 	}
 }

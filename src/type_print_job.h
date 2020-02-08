@@ -38,9 +38,10 @@ struct print_job {
 print_job_t *print_job_create(void);
 print_job_t *print_job_destroy(print_job_t *self);
 
-vector_list_config_t *print_job_append_vector_list(print_job_t *self, vector_list_t *vector_list, int32_t red, int32_t green, int32_t blue);
-vector_list_config_t *print_job_append_new_vector_list(print_job_t *self, int32_t red, int32_t green, int32_t blue);
-vector_list_config_t *print_job_clone_last_vector_list(print_job_t *self, int32_t red, int32_t green, int32_t blue);
+vector_list_config_t *print_job_clone_last_vector_list_config(print_job_t *self, int32_t red, int32_t green, int32_t blue);
+vector_list_config_t *print_job_append_vector_list_config(print_job_t *self, vector_list_config_t *new_config);
+vector_list_config_t *print_job_append_new_vector_list_config(print_job_t *self, int32_t red, int32_t green, int32_t blue);
+
 vector_list_config_t *print_job_find_vector_list_config_by_id(print_job_t *self, uint32_t id);
 vector_list_config_t *print_job_find_vector_list_config_by_rgb(print_job_t *self, int32_t red, int32_t green, int32_t blue);
 

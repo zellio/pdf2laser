@@ -1,4 +1,5 @@
 #include "pdf2laser_generator.h"
+#include "type_vector_list_config.h"
 #include <errno.h>
 #include <ghostscript/gserrors.h>   // for gs_error_type::gs_error_Quit
 #include <ghostscript/iapi.h>       // for gsapi_delete_instance, gsapi_exit
@@ -554,12 +555,19 @@ bool vectors_parse(print_job_t *print_job, FILE * const vector_file)
 			// Note: Colours are stored as blue, green, red in the vector file
 			int32_t red, green, blue;
 			sscanf(line, "P,%d,%d,%d", &blue, &green, &red);
-			vector_list_config_t *vector_config_list = print_job_find_vector_list_config_by_rgb(print_job, red, green, blue);
-			if (vector_config_list == NULL)
-				vector_config_list = print_job_clone_last_vector_list(print_job, red, green, blue);
+			vector_list_config_t *config = print_job_find_vector_list_config_by_rgb(print_job, red, green, blue);
+			if (config == NULL)
+				config = print_job_clone_last_vector_list_config(print_job, red, green, blue);
 
-			current_list = vector_config_list->vector_list;
-			current_list->pass = vector_config_list->index;
+			/*
+			  vector_list_config_t *vector_config_list =
+			  print_job_find_vector_list_config_by_rgb(print_job, red, green, blue); if
+			  (vector_config_list == NULL) vector_config_list =
+			  print_job_clone_last_vector_list(print_job, red, green, blue);
+
+			  current_list = vector_config_list->vector_list;
+			  current_list->pass = vector_config_list->index;
+			*/
 			break;
 		}
 		case 'M': {
@@ -653,20 +661,19 @@ bool generate_vector(print_job_t *print_job, FILE * const pjl_file, FILE * const
 		 vector_list_config != NULL;
 		 vector_list_config = vector_list_config->next) {
 
-		fprintf(pjl_file, "XR%04d;", vector_list_config->vector_list->frequency);
+		fprintf(pjl_file, "XR%04d;", vector_list_config->frequency);
 
-		vector_list_t *vector_list = vector_list_config->vector_list;
 		if (print_job->vector_optimize) {
+			vector_list_t *vector_list = vector_list_config->vector_list;
 			vector_list_config->vector_list = vector_list_optimize(vector_list);
 			free(vector_list);
-			vector_list = vector_list_config->vector_list;
 		}
 
-		fprintf(pjl_file, "YP%03d;", vector_list->power);
-		fprintf(pjl_file, "ZS%03d", vector_list->speed); // NB. no ";"
+		fprintf(pjl_file, "YP%03d;", vector_list_config->power);
+		fprintf(pjl_file, "ZS%03d", vector_list_config->speed); // NB. no ";"
 
-		for (int pass = 0; pass < vector_list->multipass; pass++) {
-			output_vector(vector_list, pjl_file);
+		for (int pass = 0; pass < vector_list_config->multipass; pass++) {
+			output_vector(vector_list_config->vector_list, pjl_file);
 		}
 	}
 

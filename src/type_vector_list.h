@@ -18,11 +18,7 @@ struct vector_list {
 	vector_t *head;
 	vector_t *tail;
 	int32_t length;
-	int32_t pass;
-	int32_t power;
-	int32_t speed;
-	int32_t multipass;
-	int32_t frequency;
+	// int32_t pass;
 };
 
 vector_list_t *vector_list_create(void);
