@@ -1,1 +1,2 @@
 SUBDIRS = bash zsh
+MAINTAINERCLEANFILES = Makefile.in

@@ -1,9 +1,9 @@
 #ifndef __PDF2LASER_GENERATOR_H__
 #define __PDF2LASER_GENERATOR_H__ 1
 
-#include <stdio.h>           // for FILE
+#include "type_print_job.h"  // for print_job_t
 #include <stdbool.h>         // for bool
-#include "pdf2laser_type.h"  // for print_job_t
+#include <stdio.h>           // for FILE
 
 #ifdef __cplusplus
 extern "C" {

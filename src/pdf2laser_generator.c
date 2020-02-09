@@ -1,23 +1,23 @@
 #include "pdf2laser_generator.h"
-#include <errno.h>
-#include <ghostscript/gserrors.h>   // for gs_error_type::gs_error_Quit
-#include <ghostscript/iapi.h>       // for gsapi_delete_instance, gsapi_exit
-#include <stdint.h>                 // for int32_t, uint8_t
-#include <stdio.h>                  // for fprintf, fputc, printf, stderr, NULL
-#include <stdlib.h>                 // for free, calloc
-#include <string.h>                 // for strncmp
-#include <strings.h>                // for strncasecmp
-#include <unistd.h>
+#include <errno.h>                    // for errno, EAGAIN, EINTR
+#include <ghostscript/gserrors.h>     // for gs_error_Quit
+#include <ghostscript/iapi.h>         // for gsapi_delete_instance, gsapi_exit, gsapi_init_with_args, gsapi_new_instance, gsapi_set_arg_encoding, GS_ARG_ENCODING_UTF8
+#include <stdint.h>                   // for int32_t, uint8_t, uint32_t
+#include <stdio.h>                    // for fprintf, fputc, fread, perror, sscanf, FILE, NULL, printf, fileno, getline, size_t, stderr, fflush, fseek, snprintf, SEEK_SET
+#include <stdlib.h>                   // for free, calloc, exit, EXIT_FAILURE
+#include <string.h>                   // for strncmp, strndup
+#include <strings.h>                  // for strncasecmp
 #ifdef __linux
-#include <sys/sendfile.h>           // for sendfile
+#include <sys/sendfile.h>             // for sendfile
 #endif
-#include <sys/stat.h>               // for fstat, stat
-#include <sys/types.h>              // for ssize_t
-#include "pdf2laser_type.h"         // for print_job_t, raster_t
-#include "pdf2laser_vector.h"       // for vector_t, point_t, point_compare
-#include "pdf2laser_vector_list.h"  // for vector_list_t, vector_list_optimize
-
-
+#include <sys/stat.h>                 // for fstat, stat
+#include <sys/types.h>                // for ssize_t, off_t
+#include "type_point.h"               // for point_t, point_compare
+#include "type_raster.h"              // for raster_t
+#include "type_print_job.h"           // for print_job_t, print_job_clone_last_vector_list_config, print_job_find_vector_list_config_by_rgb
+#include "type_vector.h"              // for vector_t, vector_create
+#include "type_vector_list.h"         // for vector_list_append, vector_list_contains, vector_list_t, vector_list_optimize
+#include "type_vector_list_config.h"  // for vector_list_config_t, vector_list_config_id_to_rgb
 
 /**
  * Convert a big endian value stored in the array starting at the given pointer
@@ -541,25 +541,25 @@ bool vectors_parse(print_job_t *print_job, FILE * const vector_file)
 	vector_list_t *current_list = NULL;
 
 	int32_t vector_count = 0;
-	int32_t x_start, y_start, x_current, y_current;
+
+	int32_t x_start = 0;
+	int32_t y_start = 0;
+	int32_t x_current = 0;
+	int32_t y_current = 0;
 
 	char *line = NULL;
 	size_t length = 0;
 	ssize_t length_read = 0;
 
 	while ((length_read = getline(&line, &length, vector_file)) != -1) {
-
 		switch (*line) {
 		case 'P': {
 			// Note: Colours are stored as blue, green, red in the vector file
 			int32_t red, green, blue;
 			sscanf(line, "P,%d,%d,%d", &blue, &green, &red);
-			vector_list_config_t *vector_config_list = print_job_find_vector_list_config_by_rgb(print_job, red, green, blue);
-			if (vector_config_list == NULL)
-				vector_config_list = print_job_clone_last_vector_list(print_job, red, green, blue);
-
-			current_list = vector_config_list->vector_list;
-			current_list->pass = vector_config_list->index;
+			vector_list_config_t *config = print_job_find_vector_list_config_by_rgb(print_job, red, green, blue);
+			if (config == NULL)
+				config = print_job_clone_last_vector_list_config(print_job, red, green, blue);
 			break;
 		}
 		case 'M': {
@@ -618,15 +618,15 @@ static void output_vector(vector_list_t *list, FILE * const pjl_file)
 	int32_t current_y = 0;
 	vector_t *vector = list->head;
 	while (vector) {
-		if (point_compare(vector->start, &(point_t){ current_x, current_y }) != 0) {
-			// Stop the laser; we need to transit and then start the laser as
-			// we go to the next point.  Note initial ";"
-			fprintf(pjl_file, ";PU%d,%d;PD%d,%d", vector->start->y, vector->start->x, vector->end->y, vector->end->x);
-		}
-		else {
+		if (point_compare(vector->start, &(point_t){ current_x, current_y })) {
 			// This is the continuation of a line, so just add additional
 			// points
 			fprintf(pjl_file, ",%d,%d", vector->end->y, vector->end->x);
+		}
+		else {
+			// Stop the laser; we need to transit and then start the laser as
+			// we go to the next point.  Note initial ";"
+			fprintf(pjl_file, ";PU%d,%d;PD%d,%d", vector->start->y, vector->start->x, vector->end->y, vector->end->x);
 		}
 
 		// Changing power on the fly is not supported for now
@@ -648,24 +648,24 @@ bool generate_vector(print_job_t *print_job, FILE * const pjl_file, FILE * const
 	vectors_parse(print_job, vector_file);
 
 	fprintf(pjl_file, "IN;");
-	fprintf(pjl_file, "XR%04d;", print_job->vector_frequency);
 
 	for (vector_list_config_t *vector_list_config = print_job->configs;
 		 vector_list_config != NULL;
 		 vector_list_config = vector_list_config->next) {
 
-		vector_list_t *vector_list = vector_list_config->vector_list;
+		fprintf(pjl_file, "XR%04d;", vector_list_config->frequency);
+
 		if (print_job->vector_optimize) {
+			vector_list_t *vector_list = vector_list_config->vector_list;
 			vector_list_config->vector_list = vector_list_optimize(vector_list);
 			free(vector_list);
-			vector_list = vector_list_config->vector_list;
 		}
 
-		fprintf(pjl_file, "YP%03d;", vector_list->power);
-		fprintf(pjl_file, "ZS%03d", vector_list->speed); // NB. no ";"
+		fprintf(pjl_file, "YP%03d;", vector_list_config->power);
+		fprintf(pjl_file, "ZS%03d", vector_list_config->speed); // NB. no ";"
 
-		for (int pass = 0; pass < vector_list->multipass; pass++) {
-			output_vector(vector_list, pjl_file);
+		for (int pass = 0; pass < vector_list_config->multipass; pass++) {
+			output_vector(vector_list_config->vector_list, pjl_file);
 		}
 	}
 

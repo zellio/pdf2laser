@@ -1,7 +1,9 @@
-#include "pdf2laser_vector_list.h"
-#include <math.h>    // for pow, powl, sqrt
-#include <stdio.h>   // for NULL, printf
-#include <stdlib.h>  // for calloc
+#include "type_vector_list.h"
+#include <inttypes.h>     // for PRId32, PRId64
+#include <math.h>         // for pow, powl, sqrt
+#include <stdio.h>        // for NULL, printf
+#include <stdlib.h>       // for calloc, free
+#include "type_vector.h"  // for vector_t, vector_compare, vector_destroy, vector_flip
 
 vector_list_t *vector_list_create(void)
 {
@@ -9,24 +11,20 @@ vector_list_t *vector_list_create(void)
 	list->head = NULL;
 	list->tail = NULL;
 	list->length = 0;
-	list->pass = 0;
-	list->power = 0;
-	list->speed = 0;
-	list->multipass = 1;
 	return list;
 }
 
-vector_list_t *vector_list_shallow_clone(vector_list_t *self)
+vector_list_t *vector_list_destroy(vector_list_t *self)
 {
-       vector_list_t *list = vector_list_create();
-       list->head = NULL;
-       list->tail = NULL;
-       list->length = self->length;
-       list->pass = self->pass;
-       list->power = self->power;
-       list->speed = self->speed;
-       list->multipass = self->multipass;
-       return list;
+	if (self == NULL)
+		return NULL;
+
+	for (vector_t *vector = self->head; vector != NULL; vector = vector->next)
+		vector_destroy(vector);
+
+	free(self);
+
+	return NULL;
 }
 
 vector_list_t *vector_list_append(vector_list_t *self, vector_t *vector)
@@ -174,7 +172,6 @@ vector_t *vector_list_find_closest(vector_list_t *list, point_t *point)
  *
  * This does not split vectors.
  */
-//static int vector_optimize(vectors_t * const vectors)
 vector_list_t *vector_list_optimize(vector_list_t *self)
 {
 	vector_list_t *list = vector_list_create();
@@ -187,11 +184,6 @@ vector_list_t *vector_list_optimize(vector_list_t *self)
 	}
 
 	vector_list_stats(list);
-
-	list->pass = self->pass;
-	list->power = self->power;
-	list->speed = self->speed;
-	list->multipass = self->multipass;
 
 	return list;
 }

@@ -1,4 +1,3 @@
-
 /// pdf2laser.c --- tool for printing to Epilog Fusion laser cutters
 
 // Copyright (C) 2015-2020 Zachary Elliott <contact@zell.io>
@@ -38,24 +37,26 @@
 #define _XOPEN_SOURCE 700
 
 #include "pdf2laser.h"
-#include <errno.h>                  // for errno, EAGAIN, EINTR
-#include <ghostscript/gserrors.h>   // for gs_error_type::gs_error_Quit
-#include <ghostscript/iapi.h>       // for gsapi_new_instance, gsapi_set_arg_encoding, gsapi_set_stdio, gsapi_init_with_args, gsapi_delete_instance, gsapi_exit
-#include <libgen.h>                 // for basename
-#include <stdint.h>                 // for int32_t, uint8_t
-#include <stdio.h>                  // for perror, snprintf, fclose, fopen
-#include <stdlib.h>                 // for calloc, mkdtemp
-#include <string.h>                 // for strrchr, strncmp
+#include <errno.h>                 // for errno, EAGAIN, EINTR
+#include <ghostscript/gserrors.h>  // for gs_error_Quit
+#include <ghostscript/iapi.h>      // for gsapi_delete_instance, gsapi_exit, gsapi_init_with_args, gsapi_new_instance, gsapi_set_arg_encoding, gsapi_set_stdio, GSDLLCALL, GS_ARG_ENCODING_UTF8
+#include <libgen.h>                // for basename
+#include <stdbool.h>               // for false, bool, true
+#include <stdint.h>                // for int32_t, uint8_t
+#include <stdio.h>                 // for perror, snprintf, fclose, fopen, FILE, NULL, fileno, fwrite, printf, size_t, fflush, fprintf, fread, stdin, stderr
+#include <stdlib.h>                // for calloc, mkdtemp
+#include <string.h>                // for strndup, strncmp, strrchr
 #ifdef __linux
-#include <sys/sendfile.h>           // for sendfile
+#include <sys/sendfile.h>          // for sendfile
 #endif
-#include <sys/stat.h>               // for fstat, stat
-#include <unistd.h>                 // for unlink, rmdir, ssize_t
-#include "pdf2laser_cli.h"          // for optparse
-#include "pdf2laser_generator.h"    // for VECTOR_PASSES, generate_ps, generate_eps, generate_pjl
-#include "pdf2laser_printer.h"      // for pritner_send
-#include "pdf2laser_type.h"         // for print_job_t, raster_t
-#include "pdf2laser_vector_list.h"  // for vector_list_t, vector_list_create
+#include <sys/stat.h>              // for fstat, stat
+#include <unistd.h>                // for unlink, rmdir, ssize_t
+#include "config.h"                // for FILENAME_NCHARS, TMP_DIRECTORY
+#include "pdf2laser_cli.h"         // for pdf2laser_optparse
+#include "pdf2laser_generator.h"   // for generate_eps, generate_pjl, generate_ps
+#include "pdf2laser_printer.h"     // for printer_send
+#include "type_raster.h"           // for raster_t
+#include "type_print_job.h"        // for print_job_t, print_job_to_string, print_job_create
 
 FILE *fh_vector;
 static int GSDLLCALL gsdll_stdout(__attribute__ ((unused)) void *minst, const char *str, int len)
@@ -81,13 +82,8 @@ static int GSDLLCALL gsdll_stdout(__attribute__ ((unused)) void *minst, const ch
  * @return Return true if the execution of ghostscript succeeds, false
  * otherwise.
  */
-static bool execute_ghostscript(print_job_t *print_job,
-								const char * const filename_bitmap,
-								const char * const filename_eps,
-								const char * const filename_vector,
-								const char * const bmp_mode)
+static bool execute_ghostscript(print_job_t *print_job, const char * const filename_bitmap, const char * const filename_eps, const char * const filename_vector, const char * const bmp_mode)
 {
-
 	int gs_argc = 8;
 	char *gs_argv[8];
 
@@ -102,11 +98,10 @@ static bool execute_ghostscript(print_job_t *print_job,
 	gs_argv[5] = calloc(1024, sizeof(char));
 	snprintf(gs_argv[5], 1024, "-sDEVICE=%s", bmp_mode);
 
-	gs_argv[6] = calloc(1024, sizeof(char));
-	snprintf(gs_argv[6], 1024, "-sOutputFile=%s", filename_bitmap);
+	gs_argv[6] = calloc(1037, sizeof(char));
+	snprintf(gs_argv[6], 1037, "-sOutputFile=%s", filename_bitmap);
 
-	gs_argv[7] = calloc(1024, sizeof(char));
-	snprintf(gs_argv[7], 1024, "%s", filename_eps);
+	gs_argv[7] = strndup(filename_eps, FILENAME_NCHARS);
 
 	fh_vector = fopen(filename_vector, "w");
 
@@ -161,29 +156,9 @@ int main(int argc, char *argv[])
 
 	// Default host is defined in config.h, and can be overridden at configuration time, e.g.
 	//   ./configure DEFAULT_HOST=foo
-	char *host = DEFAULT_HOST;
+	/* char *host = DEFAULT_HOST; */
 
-	// Job struct defaults
-	print_job_t *print_job = &(print_job_t){
-		// .flip = FLIP,
-		.host = host,
-		.height = BED_HEIGHT,
-		.width = BED_WIDTH,
-		.focus = false,
-		.raster = &(raster_t){
-			.resolution = RESOLUTION_DEFAULT,
-			.mode = RASTER_MODE_DEFAULT,
-			.speed = RASTER_SPEED_DEFAULT,
-			.power = RASTER_POWER_DEFAULT,
-			.repeat = RASTER_REPEAT,
-			.screen_size = SCREEN_DEFAULT,
-		},
-		.vector_frequency = VECTOR_FREQUENCY_DEFAULT,
-		.vector_optimize = true,
-		.vector_fallthrough = true,
-		.configs = NULL,
-		.debug = DEBUG,
-	};
+	print_job_t *print_job = print_job_create();
 
 	// Process command line options
 	pdf2laser_optparse(print_job, argc, argv);
@@ -195,18 +170,18 @@ int main(int argc, char *argv[])
 
 	// If no job name is specified, use just the filename if there
 	if (!print_job->name) {
-		print_job->name = source_basename;
+		print_job->name = strndup(source_basename, 1024);
 	}
 
 	// Report the settings on stdout
 	printf("Configured values:\n%s\n", print_job_to_string(print_job));
 
-	char *target_base = strndup(source_basename, FILENAME_NCHARS);
+	char *target_base = strndup(source_basename, FILENAME_NCHARS - 8);
 	char *last_dot = strrchr(target_base, '.');
 	if (last_dot != NULL)
 		*last_dot = '\0';
 
-	char target_basename[FILENAME_NCHARS] = { '\0' };
+	char target_basename[FILENAME_NCHARS - 8] = { '\0' };
 	char target_bitmap[FILENAME_NCHARS] = { '\0' };
 	char target_eps[FILENAME_NCHARS] = { '\0' };
 	char target_pdf[FILENAME_NCHARS] = { '\0' };
