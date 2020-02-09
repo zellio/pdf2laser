@@ -92,12 +92,22 @@ char *ini_file_to_string(ini_file_t *self)
     return s;
 }
 
-ini_section_t *ini_file_find_section(ini_file_t *self, char *name)
+ini_section_t *ini_file_lookup_section(ini_file_t *self, char *section_name)
 {
     for (ini_section_t *section = self->sections; section != NULL; section = section->next) {
-        if (!strncasecmp(section->name, name, MAX_FIELD_LENGTH)) {
+		if (!strncasecmp(section->name, section_name, MAX_FIELD_LENGTH)) {
             return section;
         }
     }
     return NULL;
+}
+
+ini_entry_t *ini_section_lookup_entry(ini_section_t *self, char *entry_key)
+{
+	for (ini_entry_t *entry = self->entries; entry != NULL; entry = entry->next) {
+		if (!strncasecmp(entry->key, entry_key, MAX_FIELD_LENGTH)) {
+			return entry;
+		}
+	}
+	return NULL;
 }

@@ -41,6 +41,7 @@ char *ini_section_to_string(ini_section_t *self);
 char *ini_file_to_string(ini_file_t *self);
 
 ini_section_t *ini_file_lookup_section(ini_file_t *self, char *section_name);
+ini_entry_t *ini_section_lookup_entry(ini_section_t *self, char *entry_key);
 
 #ifdef __cplusplus
 };

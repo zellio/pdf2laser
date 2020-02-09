@@ -67,7 +67,7 @@ entry:
 
 %%
 
-void yyerror(void *scanner, const char *s)
+void yyerror(__attribute__ ((unused)) void *scanner, const char *s)
 {
 	printf("ERROR: %s\n", s);
 }

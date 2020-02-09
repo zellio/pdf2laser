@@ -1,5 +1,5 @@
-#ifndef __PDF2LASER_PRESET_FILE_H__
-#define __PDF2LASER_PRESET_FILE_H__ 1
+#ifndef __PDF2LASER_TYPE_PRESET_FILE_H__
+#define __PDF2LASER_TYPE_PRESET_FILE_H__ 1
 
 #ifdef __cplusplus
 extern "C" {
