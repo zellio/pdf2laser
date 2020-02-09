@@ -7,6 +7,7 @@ AC_INIT([pdf2laser], [0.5.1], [https://github.com/zellio/pdf2laser/issues], [pdf
 AM_INIT_AUTOMAKE([-Wall])
 AC_CONFIG_SRCDIR([src/pdf2laser.c])
 AC_CONFIG_HEADERS([config.h])
+AC_USE_SYSTEM_EXTENSIONS
 
 # Define configurable defaults.
 AC_ARG_VAR([DEFAULT_HOST], [Default host address when -p/--printer is not specified. If not overridden, defaults to the NYC Resistor laser host (192.168.1.4).])
@@ -54,15 +55,6 @@ AC_DEFINE_UNQUOTED([TMP_DIRECTORY], ["${TMP_DIRECTORY=/tmp}"], [Temporary direct
 AC_ARG_VAR([VECTOR_FREQUENCY_DEFAULT], [FIXME])
 AC_DEFINE_UNQUOTED([VECTOR_FREQUENCY_DEFAULT], [(${VECTOR_FREQUENCY_DEFAULT=5000})], [FIXME])
 
-dnl /* /\** Default power level for vector cutting. *\/ */
-dnl /* #define VECTOR_POWER_DEFAULT (50) */
-
-dnl /* /\** Default speed level for vector cutting. *\/ */
-dnl /* #define VECTOR_SPEED_DEFAULT (30) */
-
-dnl /* static void range_checks(print_job_t *print_job); */
-dnl /* static void usage(int rc, const char* const msg); */
-
 # Checks for programs.
 AC_PROG_CC([clang gcc])
 AC_PROG_INSTALL
@@ -84,6 +76,7 @@ math.h \
 netdb.h \
 netinet/in.h \
 stdbool.h \
+stddef.h \
 stdint.h \
 stdio.h \
 stdlib.h \
@@ -98,15 +91,21 @@ unistd.h \
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_CHECK_HEADER_STDBOOL
-AC_TYPE_INT8_T
-AC_TYPE_UINT8_T
 AC_TYPE_INT32_T
-AC_TYPE_UINT32_T
 AC_TYPE_INT64_T
+AC_TYPE_INT8_T
+AC_TYPE_OFF_T
+AC_TYPE_SIZE_T
+AC_TYPE_SSIZE_T
+AC_TYPE_UINT32_T
 AC_TYPE_UINT64_T
+AC_TYPE_UINT8_T
 
 # Checks for library functions.
+AC_FUNC_STRNLEN
+
 AC_CHECK_FUNCS([ \
+strnlen \
 addrinfo \
 alarm \
 atoi \
@@ -124,6 +123,7 @@ free \
 freeaddrinfo \
 fstat \
 getaddrinfo \
+gethostname \
 gs_error_type \
 gsapi_delete_instance \
 gsapi_exit \
@@ -141,6 +141,7 @@ rmdir \
 sendfile \
 sleep \
 snprintf \
+socket \
 sqrt \
 sscanf \
 stat \

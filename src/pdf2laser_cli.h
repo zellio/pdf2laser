@@ -1,11 +1,10 @@
 #ifndef __PDF2LASER_CLI_H__
 #define __PDF2LASER_CLI_H__ 1
 
-#include <stdint.h>          // for int32_t
-#include <stdbool.h>         // for bool
-#include "type_print_job.h"  // for print_job_t
-
 #include "config.h"
+#include "type_print_job.h"  // for print_job_t
+#include <stdbool.h>         // for bool
+#include <stdint.h>          // for int32_t
 
 #ifdef __cplusplus
 extern "C" {

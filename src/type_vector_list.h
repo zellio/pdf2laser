@@ -1,10 +1,9 @@
 #ifndef __PDF2LASER_TYPE_VECTOR_LIST_H__
 #define __PDF2LASER_TYPE_VECTOR_LIST_H__ 1
 
+#include "type_vector.h"  // for vector_t, point_t
 #include <stdbool.h>      // for bool
 #include <stdint.h>       // for int32_t
-#include <inttypes.h>     // for PRId64, PRId32
-#include "type_vector.h"  // for vector_t, point_t
 
 #ifdef __cplusplus
 extern "C" {

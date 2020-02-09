@@ -1,11 +1,10 @@
 #ifndef __PDF2LASER_TYPE_PRINT_JOB_H__
 #define __PDF2LASER_TYPE_PRINT_JOB_H__ 1
 
+#include "type_raster.h"              // for raster_t
+#include "type_vector_list_config.h"  // for vector_list_config_t
 #include <stdbool.h>                  // for bool
 #include <stdint.h>                   // for int32_t, uint32_t, int8_t
-#include "type_raster.h"              // for raster_t
-#include "type_vector_list.h"         // for vector_list_t
-#include "type_vector_list_config.h"  // for vector_list_config_t
 
 #ifdef __cplusplus
 extern "C" {
@@ -21,7 +20,7 @@ struct print_job {
 
 	char *name;
 	bool focus;
-	//uint8_t flip;
+
 	uint32_t height;
 	uint32_t width;
 

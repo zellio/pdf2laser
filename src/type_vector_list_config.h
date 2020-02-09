@@ -1,8 +1,8 @@
 #ifndef __PDF2LASER_TYPE_VECTOR_LIST_CONFIG_H__
 #define __PDF2LASER_TYPE_VECTOR_LIST_CONFIG_H__ 1
 
-#include <stdint.h>            // for int32_t
 #include "type_vector_list.h"  // for vector_list_t
+#include <stdint.h>            // for int32_t
 
 #ifdef __cplusplus
 extern "C" {
