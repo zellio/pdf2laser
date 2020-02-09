@@ -1,12 +1,11 @@
 #include "type_print_job.h"
-#include "pdf2laser.h"
-#include "type_raster.h"
-#include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
-#include "config.h"
-#include "type_vector_list_config.h"
-#include <stdbool.h>
+#include <stdbool.h>                  // for true, false
+#include <stdio.h>                    // for NULL, snprintf
+#include <stdlib.h>                   // for free, calloc
+#include <string.h>                   // for strncat, strndup, strnlen
+#include "config.h"                   // for BED_HEIGHT, BED_WIDTH, DEBUG, DEFAULT_HOST
+#include "type_raster.h"              // for raster_create, raster_destroy, raster_t
+#include "type_vector_list_config.h"  // for vector_list_config_t, vector_list_config_create, vector_list_config_destroy, vector_list_config_rgb_to_id, vector_list_config_shallow_clone, vector_list_config_to_string
 
 print_job_t *print_job_create(void)
 {

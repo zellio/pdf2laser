@@ -1,8 +1,9 @@
 #include "type_vector_list.h"
-#include <math.h>    // for pow, powl, sqrt
-#include <stdio.h>   // for NULL, printf
-#include <stdlib.h>  // for calloc
-#include <inttypes.h>
+#include <inttypes.h>     // for PRId32, PRId64
+#include <math.h>         // for pow, powl, sqrt
+#include <stdio.h>        // for NULL, printf
+#include <stdlib.h>       // for calloc, free
+#include "type_vector.h"  // for vector_t, vector_compare, vector_destroy, vector_flip
 
 vector_list_t *vector_list_create(void)
 {

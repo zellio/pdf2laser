@@ -1,10 +1,10 @@
 #ifndef __PDF2LASER_TYPE_PRINT_JOB_H__
 #define __PDF2LASER_TYPE_PRINT_JOB_H__ 1
 
+#include <stdbool.h>                  // for bool
+#include <stdint.h>                   // for int32_t, uint32_t
 #include "type_raster.h"              // for raster_t
 #include "type_vector_list_config.h"  // for vector_list_config_t
-#include <stdbool.h>                  // for bool
-#include <stdint.h>                   // for int32_t, uint32_t, int8_t
 
 #ifdef __cplusplus
 extern "C" {

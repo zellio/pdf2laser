@@ -1,7 +1,7 @@
 #include "type_vector_list_config.h"
-#include <bits/stdint-intn.h>
-#include <stdlib.h>
-#include <stdio.h>
+#include <stdio.h>             // for snprintf, NULL, sprintf, size_t
+#include <stdlib.h>            // for calloc, free
+#include "type_vector_list.h"  // for vector_list_create, vector_list_destroy
 
 vector_list_config_t *vector_list_config_create(int32_t red, int32_t green, int32_t blue)
 {

@@ -1,18 +1,18 @@
 #include "pdf2laser_cli.h"
 
+#include <ctype.h>                    // for tolower
+#include <stddef.h>                   // for offsetof, NULL, size_t
+#include <stdint.h>                   // for int32_t, int64_t, uint8_t
+#include <stdio.h>                    // for fprintf, sscanf, NULL, stderr, stdout
+#include <stdlib.h>                   // for atoi, exit, EXIT_FAILURE, calloc, EXIT_SUCCESS
+#include <string.h>                   // for strndup, strtok, strncpy, strnlen
+#include "config.h"                   // for PACKAGE, VERSION
 #define OPTPARSE_IMPLEMENTATION
 #define OPTPARSE_API static
-#include "optparse.h"
-
-#include <ctype.h>                  // for tolower
-#include <stdint.h>                 // for int32_t
-#include <stdio.h>                  // for NULL, fprintf, sscanf, stderr
-#include <stdlib.h>                 // for atoi, EXIT_FAILURE, exit, EXIT_SU...
-#include <string.h>                 // for strndup
-#include "config.h"                 // for PACKAGE, VERSION
-#include "type_print_job.h"         // for print_job_t, raster_t
-#include "type_vector_list.h"       // for vector_list_t
-#include <stddef.h>                 // for offsetof
+#include "optparse.h"                 // for OPTPARSE_REQUIRED, OPTPARSE_NONE, optparse, optparse_long, optparse_init
+#include "type_print_job.h"           // for print_job_t, print_job_append_new_vector_list_config, print_job_find_vector_list_config_by_rgb
+#include "type_raster.h"              // for raster_t
+#include "type_vector_list_config.h"  // for vector_list_config_t, vector_list_config_id_to_rgb
 
 static const struct optparse_long long_options[] = {
 	{"debug",           'D',  OPTPARSE_NONE},
