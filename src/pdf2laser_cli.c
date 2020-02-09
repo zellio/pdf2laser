@@ -2,7 +2,7 @@
 
 #include <ctype.h>                    // for tolower
 #include <stddef.h>                   // for offsetof, NULL, size_t
-#include <stdint.h>                   // for int32_t, int64_t, uint8_t
+#include <stdint.h>                   // for int32_t, int64_t, uint8_t, uint64_t
 #include <stdio.h>                    // for fprintf, sscanf, NULL, stderr, stdout
 #include <stdlib.h>                   // for atoi, exit, EXIT_FAILURE, calloc, EXIT_SUCCESS
 #include <string.h>                   // for strndup, strtok, strncpy, strnlen
@@ -81,8 +81,8 @@ static int32_t vector_config_set_param_offset(print_job_t *print_job, char *opta
 
 	char *token = strtok(s, ",");
 	while (token) {
-		int64_t values[2] = {0, 0};
-		int32_t rc = sscanf(token, "%lx=%ld", &values[0], &values[1]);
+		uint64_t values[2] = {0, 0};
+		int32_t rc = sscanf(token, "%lx=%lu", &values[0], &values[1]);
 		if (rc != 2)
 			return -1;
 

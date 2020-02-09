@@ -1,4 +1,3 @@
-
 /// pdf2laser.c --- tool for printing to Epilog Fusion laser cutters
 
 // Copyright (C) 2015-2020 Zachary Elliott <contact@zell.io>
@@ -99,11 +98,10 @@ static bool execute_ghostscript(print_job_t *print_job, const char * const filen
 	gs_argv[5] = calloc(1024, sizeof(char));
 	snprintf(gs_argv[5], 1024, "-sDEVICE=%s", bmp_mode);
 
-	gs_argv[6] = calloc(1024, sizeof(char));
-	snprintf(gs_argv[6], 1024, "-sOutputFile=%s", filename_bitmap);
+	gs_argv[6] = calloc(1037, sizeof(char));
+	snprintf(gs_argv[6], 1037, "-sOutputFile=%s", filename_bitmap);
 
-	gs_argv[7] = calloc(1024, sizeof(char));
-	snprintf(gs_argv[7], 1024, "%s", filename_eps);
+	gs_argv[7] = strndup(filename_eps, FILENAME_NCHARS);
 
 	fh_vector = fopen(filename_vector, "w");
 
@@ -178,12 +176,12 @@ int main(int argc, char *argv[])
 	// Report the settings on stdout
 	printf("Configured values:\n%s\n", print_job_to_string(print_job));
 
-	char *target_base = strndup(source_basename, FILENAME_NCHARS);
+	char *target_base = strndup(source_basename, FILENAME_NCHARS - 8);
 	char *last_dot = strrchr(target_base, '.');
 	if (last_dot != NULL)
 		*last_dot = '\0';
 
-	char target_basename[FILENAME_NCHARS] = { '\0' };
+	char target_basename[FILENAME_NCHARS - 8] = { '\0' };
 	char target_bitmap[FILENAME_NCHARS] = { '\0' };
 	char target_eps[FILENAME_NCHARS] = { '\0' };
 	char target_pdf[FILENAME_NCHARS] = { '\0' };

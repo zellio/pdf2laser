@@ -541,7 +541,11 @@ bool vectors_parse(print_job_t *print_job, FILE * const vector_file)
 	vector_list_t *current_list = NULL;
 
 	int32_t vector_count = 0;
-	int32_t x_start, y_start, x_current, y_current;
+
+	int32_t x_start = 0;
+	int32_t y_start = 0;
+	int32_t x_current = 0;
+	int32_t y_current = 0;
 
 	char *line = NULL;
 	size_t length = 0;
@@ -614,15 +618,15 @@ static void output_vector(vector_list_t *list, FILE * const pjl_file)
 	int32_t current_y = 0;
 	vector_t *vector = list->head;
 	while (vector) {
-		if (point_compare(vector->start, &(point_t){ current_x, current_y }) != 0) {
-			// Stop the laser; we need to transit and then start the laser as
-			// we go to the next point.  Note initial ";"
-			fprintf(pjl_file, ";PU%d,%d;PD%d,%d", vector->start->y, vector->start->x, vector->end->y, vector->end->x);
-		}
-		else {
+		if (point_compare(vector->start, &(point_t){ current_x, current_y })) {
 			// This is the continuation of a line, so just add additional
 			// points
 			fprintf(pjl_file, ",%d,%d", vector->end->y, vector->end->x);
+		}
+		else {
+			// Stop the laser; we need to transit and then start the laser as
+			// we go to the next point.  Note initial ";"
+			fprintf(pjl_file, ";PU%d,%d;PD%d,%d", vector->start->y, vector->start->x, vector->end->y, vector->end->x);
 		}
 
 		// Changing power on the fly is not supported for now

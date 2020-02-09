@@ -1,5 +1,5 @@
 #include "type_vector_list_config.h"
-#include <stdio.h>             // for snprintf, NULL, sprintf, size_t
+#include <stdio.h>             // for snprintf, NULL, size_t
 #include <stdlib.h>            // for calloc, free
 #include "type_vector_list.h"  // for vector_list_create, vector_list_destroy
 
@@ -55,7 +55,7 @@ char *vector_list_config_to_string(vector_list_config_t *self)
 	int32_t red, green, blue;
 	vector_list_config_id_to_rgb(self->id, &red, &green, &blue);
 
-	size_t s_len = 1 + sprintf(NULL, template, self->index, red, green, blue, self->speed, self->power, self->multipass, self->frequency);
+	size_t s_len = 1 + snprintf(NULL, 0, template, self->index, red, green, blue, self->speed, self->power, self->multipass, self->frequency);
 
 	char *s = calloc(s_len, sizeof(char));
 	snprintf(s, s_len, template, self->index, red, green, blue, self->speed, self->power, self->multipass, self->frequency);
