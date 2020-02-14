@@ -198,7 +198,7 @@ bool pdf2laser_optparse(print_job_t *print_job, int32_t argc, char **argv)
 			break;
 
 		case 'p':
-			print_job->host = strndup(options.optarg, 1024);
+			print_job->host = strndup(options.optarg, HOSTNAME_NCHARS);
 			break;
 
 		case 'P':
@@ -206,7 +206,7 @@ bool pdf2laser_optparse(print_job_t *print_job, int32_t argc, char **argv)
 			break;
 
 		case 'n':
-			print_job->name = strndup(options.optarg, 1024);
+			print_job->name = strndup(options.optarg, FILENAME_NCHARS);
 			break;
 
 		case 'd':
@@ -290,7 +290,7 @@ bool pdf2laser_optparse(print_job_t *print_job, int32_t argc, char **argv)
 	if (argc > 1)
 		usage(EXIT_FAILURE, "Only one input file may be specified\n");
 
-	print_job->source_filename = argc ? strndup(argv[0], 1024) : "stdin";
+	print_job->source_filename = argc ? strndup(argv[0], FILENAME_NCHARS) : "stdin";
 
 	return true;
 }

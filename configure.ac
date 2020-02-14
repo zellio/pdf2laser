@@ -28,6 +28,12 @@ AC_DEFINE_UNQUOTED([DEBUG], [(${DEBUG=true})], [Default for debug mode.])
 AC_ARG_VAR([FILENAME_NCHARS], [Number of characters allowable for a filename.])
 AC_DEFINE_UNQUOTED([FILENAME_NCHARS], [(${FILENAME_NCHARS=1024})], [Number of characters allowable for a filename.])
 
+AC_ARG_VAR([HOSTNAME_NCHARS], [Number of characters allowable for a hostname.])
+AC_DEFINE_UNQUOTED([HOSTNAME_NCHARS], [(${HOSTNAME_NCHARS=1024})], [Number of characters allowable for a hostname.])
+
+AC_ARG_VAR([GS_ARG_NCHARS], [Number of characters allowable for a hostname.])
+AC_DEFINE_UNQUOTED([GS_ARG_NCHARS], [(${GS_ARG_NCHARS=1024})], [Number of characters allowable gs args.])
+
 AC_ARG_VAR([FLIP], [default on whether or not the result is supposed to be flipped along the X axis.])
 AC_DEFINE_UNQUOTED([FLIP], [(${FLIP=false})], [default on whether or not the result is supposed to be flipped along the X axis.])
 

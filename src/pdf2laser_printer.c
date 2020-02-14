@@ -13,6 +13,7 @@
 #include <sys/socket.h>       // for connect, socket, PF_UNSPEC, SOCK_STREAM
 #include <sys/stat.h>         // for fstat, stat
 #include <unistd.h>           // for alarm, close, sleep, ssize_t
+#include "config.h"
 
 //bool debug = false;
 char *queue = "";
@@ -125,10 +126,10 @@ static bool printer_disconnect(int32_t socket_descriptor)
  */
 bool printer_send(const char *host, FILE *pjl_file, const char *job_name)
 {
-	char local_hostname[1024];
+	char local_hostname[HOSTNAME_NCHARS];
 	char *first_dot;
 
-	gethostname(local_hostname, 1024);
+	gethostname(local_hostname, HOSTNAME_NCHARS);
 	if ((first_dot = strchr(local_hostname, '.'))) {
 		*first_dot = '\0';
 	}
@@ -149,7 +150,8 @@ bool printer_send(const char *host, FILE *pjl_file, const char *job_name)
 		return false;
 	}
 
-	char job_header[10240];
+	size_t job_header_size = snprintf(NULL, 0, "\003%u dfA%s%s\r\n", (uint32_t)file_stat.st_size, job_name, local_hostname);
+	char job_header[job_header_size];
 	snprintf(job_header, 10240, "\003%u dfA%s%s\r\n", (uint32_t)file_stat.st_size, job_name, local_hostname);
 
 	write(p_sock, job_header, strlen(job_header));

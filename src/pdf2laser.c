@@ -95,11 +95,11 @@ static bool execute_ghostscript(print_job_t *print_job, const char * const filen
 	gs_argv[4] = calloc(64, sizeof(char));
 	snprintf(gs_argv[4], 64, "-r%d", print_job->raster->resolution);
 
-	gs_argv[5] = calloc(1024, sizeof(char));
-	snprintf(gs_argv[5], 1024, "-sDEVICE=%s", bmp_mode);
+	gs_argv[5] = calloc(GS_ARG_NCHARS, sizeof(char));
+	snprintf(gs_argv[5], GS_ARG_NCHARS, "-sDEVICE=%s", bmp_mode);
 
-	gs_argv[6] = calloc(1037, sizeof(char));
-	snprintf(gs_argv[6], 1037, "-sOutputFile=%s", filename_bitmap);
+	gs_argv[6] = calloc(GS_ARG_NCHARS + 13, sizeof(char));
+	snprintf(gs_argv[6], GS_ARG_NCHARS + 13, "-sOutputFile=%s", filename_bitmap);
 
 	gs_argv[7] = strndup(filename_eps, FILENAME_NCHARS);
 
@@ -145,8 +145,8 @@ static bool execute_ghostscript(print_job_t *print_job, const char * const filen
 int main(int argc, char *argv[])
 {
 	// Create tmp working directory
-	char tmpdir_template[1024] = { '\0' };
-	snprintf(tmpdir_template, 1024, "%s/%s.XXXXXX", TMP_DIRECTORY, basename(argv[0]));
+	char tmpdir_template[FILENAME_NCHARS] = { '\0' };
+	snprintf(tmpdir_template, FILENAME_NCHARS, "%s/%s.XXXXXX", TMP_DIRECTORY, basename(argv[0]));
 	char *tmpdir_name = mkdtemp(tmpdir_template);
 
 	if (tmpdir_name == NULL) {
@@ -170,7 +170,7 @@ int main(int argc, char *argv[])
 
 	// If no job name is specified, use just the filename if there
 	if (!print_job->name) {
-		print_job->name = strndup(source_basename, 1024);
+		print_job->name = strndup(source_basename, FILENAME_NCHARS);
 	}
 
 	// Report the settings on stdout

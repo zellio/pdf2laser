@@ -18,6 +18,7 @@
 #include "type_vector.h"              // for vector_t, vector_create
 #include "type_vector_list.h"         // for vector_list_append, vector_list_contains, vector_list_t, vector_list_optimize
 #include "type_vector_list_config.h"  // for vector_list_config_t, vector_list_config_id_to_rgb
+#include "config.h"
 
 /**
  * Convert a big endian value stored in the array starting at the given pointer
@@ -57,14 +58,14 @@ bool generate_ps(const char *target_pdf, const char *target_ps)
 	gs_argv[5] = "-dSAFER";
 	gs_argv[6] = "-sDEVICE=ps2write";
 
-	gs_argv[7] = calloc(1024, sizeof(char));
-	snprintf(gs_argv[7], 1024, "-sOutputFile=%s", target_ps);
+	gs_argv[7] = calloc(GS_ARG_NCHARS + 13, sizeof(char));
+	snprintf(gs_argv[7], GS_ARG_NCHARS + 13, "-sOutputFile=%s", target_ps);
 
 	gs_argv[8] = "-c";
 	gs_argv[9] = "save";
 	gs_argv[10] = "pop";
 	gs_argv[11] = "-f";
-	gs_argv[12] = strndup(target_pdf, 1024);
+	gs_argv[12] = strndup(target_pdf, GS_ARG_NCHARS);
 
 	int32_t rc;
 	void *minst = NULL;
