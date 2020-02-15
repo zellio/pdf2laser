@@ -26,7 +26,7 @@ vector_list_t *vector_list_destroy(vector_list_t *self)
 		index += 1;
 	}
 
-	for (index = 0; index < self->length; index += 1) {
+	for (index = 0; index < (size_t)self->length; index += 1) {
         vector_destroy(vectors[index]);
 	}
 
