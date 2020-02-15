@@ -46,9 +46,6 @@
 #include <stdio.h>                 // for perror, snprintf, fclose, fopen, FILE, NULL, fileno, fwrite, printf, size_t, fflush, fprintf, fread, stdin, stderr
 #include <stdlib.h>                // for calloc, mkdtemp
 #include <string.h>                // for strndup, strncmp, strrchr
-#ifdef __linux
-#include <sys/sendfile.h>          // for sendfile
-#endif
 #include <sys/stat.h>              // for fstat, stat
 #include <unistd.h>                // for unlink, rmdir, ssize_t
 #include "config.h"                // for FILENAME_NCHARS, TMP_DIRECTORY
@@ -57,6 +54,7 @@
 #include "pdf2laser_printer.h"     // for printer_send
 #include "type_raster.h"           // for raster_t
 #include "type_print_job.h"        // for print_job_t, print_job_to_string, print_job_create
+#include "pdf2laser_util.h"        // for pdf2laser_sendfile
 
 FILE *fh_vector;
 static int GSDLLCALL gsdll_stdout(__attribute__ ((unused)) void *minst, const char *str, int len)
@@ -217,38 +215,7 @@ int main(int argc, char *argv[])
 	}
 	else {
 		FILE *fh_source = fopen(source_filename, "r");
-		int32_t source_fno = fileno(fh_source);
-
-		struct stat file_stat;
-		if (fstat(source_fno, &file_stat)) {
-			perror("Error reading pjl file\n");
-			return false;
-		}
-
-#ifdef __linux
-		ssize_t bs = 0;
-		size_t bytes_sent = 0;
-		size_t count = file_stat.st_size;
-
-		while (bytes_sent < count) {
-			if ((bs = sendfile(fileno(fh_pdf), source_fno, 0, count - bytes_sent)) <= 0) {
-				if (errno == EINTR || errno == EAGAIN)
-					continue;
-				perror("sendfile filed");
-				return -1;
-			}
-			bytes_sent += bs;
-		}
-#else
-		{
-			char buffer[102400];
-			size_t rc;
-			while ((rc = fread(buffer, 1, 102400, fh_source)) > 0)
-				fwrite(buffer, 1, rc, fh_pdf);
-		}
-
-#endif
-
+		pdf2laser_sendfile(fileno(fh_pdf), fileno(fh_source));
 		fclose(fh_source);
 	}
 

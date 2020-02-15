@@ -7,9 +7,6 @@
 #include <stdlib.h>                   // for free, calloc, exit, EXIT_FAILURE
 #include <string.h>                   // for strncmp, strndup
 #include <strings.h>                  // for strncasecmp
-#ifdef __linux
-#include <sys/sendfile.h>             // for sendfile
-#endif
 #include <sys/stat.h>                 // for fstat, stat
 #include <sys/types.h>                // for ssize_t, off_t
 #include "type_point.h"               // for point_t, point_compare
@@ -19,6 +16,7 @@
 #include "type_vector_list.h"         // for vector_list_append, vector_list_contains, vector_list_t, vector_list_optimize
 #include "type_vector_list_config.h"  // for vector_list_config_t, vector_list_config_id_to_rgb
 #include "config.h"
+#include "pdf2laser_util.h"        // for pdf2laser_sendfile
 
 /**
  * Convert a big endian value stored in the array starting at the given pointer
@@ -233,40 +231,8 @@ bool generate_eps(print_job_t *print_job, FILE *ps_file, FILE *eps_file)
 
 	free(line);
 
-#ifdef __linux
-	// write out the buffered data before abusing the kernel
 	fflush(eps_file);
-
-	int32_t ps_fno = fileno(ps_file);
-
-	struct stat ps_stat;
-	if (fstat(ps_fno, &ps_stat)) {
-		perror("Error reading ps file");
-		return false;
-	}
-
-	ssize_t bs = 0;
-	size_t bytes_sent = 0;
-	size_t count = ps_stat.st_size;
-	off_t offset = 0;
-
-	while (bytes_sent < count) {
-		if ((bs = sendfile(fileno(eps_file), ps_fno, &offset, count)) <= 0) {
-			if (errno == EINTR || errno == EAGAIN)
-				continue;
-			perror("sendfile failed");
-			exit(EXIT_FAILURE);
-		}
-		bytes_sent += bs;
-	}
-#else
-	{
-		size_t length;
-		uint8_t buffer[102400];
-		while ((length = fread(buffer, 1, 102400, ps_file)) > 0)
-			fwrite(buffer, 1, length, eps_file);
-	}
-#endif
+	pdf2laser_sendfile(fileno(eps_file), fileno(ps_file));
 
 	return true;
 }
