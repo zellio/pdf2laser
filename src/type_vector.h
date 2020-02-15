@@ -1,8 +1,8 @@
 #ifndef __PDF2LASER_TYPE_VECTOR_H__
 #define __PDF2LASER_TYPE_VECTOR_H__ 1
 
-#include "type_point.h"
-#include <stdint.h>   // for int32_t
+#include <stdint.h>      // for int32_t
+#include "type_point.h"  // for point_t
 
 #ifdef __cplusplus
 extern "C" {

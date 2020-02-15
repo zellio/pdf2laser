@@ -1,11 +1,12 @@
 #include "type_print_job.h"
-#include <stddef.h>                   // for size_t
+
 #include <stdbool.h>                  // for true, false
-#include <stdio.h>                    // for NULL, snprintf
+#include <stddef.h>                   // for NULL, size_t
+#include <stdio.h>                    // for snprintf
 #include <stdlib.h>                   // for free, calloc
-#include <string.h>                   // for strncat, strndup, strlen, strnlen
-#include "config.h"                   // for BED_HEIGHT, BED_WIDTH, DEBUG, DEFAULT_HOST
-#include "type_raster.h"              // for raster_create, raster_destroy, raster_t
+#include <string.h>                   // for strlen, strndup
+#include "config.h"                   // for BED_HEIGHT, BED_WIDTH, DEBUG, DEFAULT_HOST, HOSTNAME_NCHARS
+#include "type_raster.h"              // for raster_t, raster_create, raster_destroy
 #include "type_vector_list_config.h"  // for vector_list_config_t, vector_list_config_create, vector_list_config_destroy, vector_list_config_rgb_to_id, vector_list_config_shallow_clone, vector_list_config_to_string
 
 print_job_t *print_job_create(void)

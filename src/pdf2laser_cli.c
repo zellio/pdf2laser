@@ -2,11 +2,11 @@
 
 #include <ctype.h>                    // for tolower
 #include <stddef.h>                   // for offsetof, NULL, size_t
-#include <stdint.h>                   // for int32_t, int64_t, uint8_t, uint64_t
+#include <stdint.h>                   // for int32_t, uint64_t, uint8_t
 #include <stdio.h>                    // for fprintf, sscanf, NULL, stderr, stdout
 #include <stdlib.h>                   // for atoi, exit, EXIT_FAILURE, calloc, EXIT_SUCCESS
 #include <string.h>                   // for strndup, strtok, strncpy, strnlen
-#include "config.h"                   // for PACKAGE, VERSION
+#include "config.h"                   // for FILENAME_NCHARS, HOSTNAME_NCHARS, PACKAGE, VERSION
 #define OPTPARSE_IMPLEMENTATION
 #define OPTPARSE_API static
 #include "optparse.h"                 // for OPTPARSE_REQUIRED, OPTPARSE_NONE, optparse, optparse_long, optparse_init

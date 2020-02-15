@@ -1,4 +1,5 @@
 #include "type_vector_list_config.h"
+
 #include <stdio.h>             // for snprintf, NULL, size_t
 #include <stdlib.h>            // for calloc, free
 #include "type_vector_list.h"  // for vector_list_create, vector_list_destroy

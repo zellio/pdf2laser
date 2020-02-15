@@ -37,24 +37,24 @@
 #define _XOPEN_SOURCE 700
 
 #include "pdf2laser.h"
-#include <errno.h>                 // for errno, EAGAIN, EINTR
+
 #include <ghostscript/gserrors.h>  // for gs_error_Quit
 #include <ghostscript/iapi.h>      // for gsapi_delete_instance, gsapi_exit, gsapi_init_with_args, gsapi_new_instance, gsapi_set_arg_encoding, gsapi_set_stdio, GSDLLCALL, GS_ARG_ENCODING_UTF8
 #include <libgen.h>                // for basename
 #include <stdbool.h>               // for false, bool, true
 #include <stdint.h>                // for int32_t, uint8_t
-#include <stdio.h>                 // for perror, snprintf, fclose, fopen, FILE, NULL, fileno, fwrite, printf, size_t, fflush, fprintf, fread, stdin, stderr
+#include <stdio.h>                 // for perror, fclose, snprintf, fopen, FILE, NULL, fileno, fwrite, printf, fflush, fprintf, fread, size_t, stdin, stderr
 #include <stdlib.h>                // for calloc, mkdtemp
 #include <string.h>                // for strndup, strncmp, strrchr
-#include <sys/stat.h>              // for fstat, stat
-#include <unistd.h>                // for unlink, rmdir, ssize_t
-#include "config.h"                // for FILENAME_NCHARS, TMP_DIRECTORY
+#include <unistd.h>                // for unlink, rmdir
+#include "config.h"                // for FILENAME_NCHARS, GS_ARG_NCHARS, TMP_DIRECTORY
 #include "pdf2laser_cli.h"         // for pdf2laser_optparse
 #include "pdf2laser_generator.h"   // for generate_eps, generate_pjl, generate_ps
 #include "pdf2laser_printer.h"     // for printer_send
-#include "type_raster.h"           // for raster_t
-#include "type_print_job.h"        // for print_job_t, print_job_to_string, print_job_create
 #include "pdf2laser_util.h"        // for pdf2laser_sendfile
+#include "type_print_job.h"        // for print_job_t, print_job_to_string, print_job_create
+#include "type_raster.h"           // for raster_t
+
 
 FILE *fh_vector;
 static int GSDLLCALL gsdll_stdout(__attribute__ ((unused)) void *minst, const char *str, int len)

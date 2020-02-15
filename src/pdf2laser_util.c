@@ -1,14 +1,14 @@
 #include "pdf2laser_util.h"
-#include <errno.h>
-#include <stddef.h>        // for ssize_t, size_t
-#include <inttypes.h>      // for PRId64
-#include <sys/stat.h>      // for fstat, stat
+
+#include <errno.h>         // for errno, EAGAIN, EINTR
+#include <inttypes.h>      // for PRId64, PRIu64
+#include <stddef.h>        // for size_t, NULL
+#include <stdio.h>         // for perror, printf
 #ifdef __linux
 #include <sys/sendfile.h>  // for sendfile
 #endif
-#include <stdio.h>         // for printf
-//#include <fcntl.h>
-#include <unistd.h>
+#include <sys/stat.h>      // for fstat, stat
+#include <unistd.h>        // for ssize_t
 
 int pdf2laser_sendfile(int out_fd, int in_fd)
 {

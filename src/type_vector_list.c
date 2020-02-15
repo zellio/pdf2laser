@@ -1,4 +1,5 @@
 #include "type_vector_list.h"
+
 #include <inttypes.h>     // for PRId32, PRId64
 #include <math.h>         // for pow, powl, sqrt
 #include <stdio.h>        // for NULL, printf

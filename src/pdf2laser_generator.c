@@ -1,22 +1,21 @@
 #include "pdf2laser_generator.h"
-#include <errno.h>                    // for errno, EAGAIN, EINTR
+
 #include <ghostscript/gserrors.h>     // for gs_error_Quit
 #include <ghostscript/iapi.h>         // for gsapi_delete_instance, gsapi_exit, gsapi_init_with_args, gsapi_new_instance, gsapi_set_arg_encoding, GS_ARG_ENCODING_UTF8
 #include <stdint.h>                   // for int32_t, uint8_t, uint32_t
-#include <stdio.h>                    // for fprintf, fputc, fread, perror, sscanf, FILE, NULL, printf, fileno, getline, size_t, stderr, fflush, fseek, snprintf, SEEK_SET
-#include <stdlib.h>                   // for free, calloc, exit, EXIT_FAILURE
+#include <stdio.h>                    // for fprintf, fputc, fread, sscanf, FILE, NULL, printf, fileno, getline, perror, stderr, size_t, fflush, fseek, snprintf, SEEK_SET
+#include <stdlib.h>                   // for free, calloc
 #include <string.h>                   // for strncmp, strndup
 #include <strings.h>                  // for strncasecmp
-#include <sys/stat.h>                 // for fstat, stat
-#include <sys/types.h>                // for ssize_t, off_t
+#include <sys/types.h>                // for ssize_t
+#include "config.h"                   // for GS_ARG_NCHARS
+#include "pdf2laser_util.h"           // for pdf2laser_sendfile
 #include "type_point.h"               // for point_t, point_compare
-#include "type_raster.h"              // for raster_t
 #include "type_print_job.h"           // for print_job_t, print_job_clone_last_vector_list_config, print_job_find_vector_list_config_by_rgb
+#include "type_raster.h"              // for raster_t
 #include "type_vector.h"              // for vector_t, vector_create
 #include "type_vector_list.h"         // for vector_list_append, vector_list_contains, vector_list_t, vector_list_optimize
 #include "type_vector_list_config.h"  // for vector_list_config_t, vector_list_config_id_to_rgb
-#include "config.h"
-#include "pdf2laser_util.h"        // for pdf2laser_sendfile
 
 /**
  * Convert a big endian value stored in the array starting at the given pointer

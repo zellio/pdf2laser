@@ -1,19 +1,18 @@
 #include "pdf2laser_printer.h"
-#include <arpa/inet.h>        // for inet_ntoa
-#include <errno.h>            // for errno, EINTR, EAGAIN, EBADF, EIO
-#include <inttypes.h>         // for PRId64
-#include <netdb.h>            // for addrinfo, freeaddrinfo, getaddrinfo
-#include <netinet/in.h>       // for sockaddr_in, ntohs
-#include <stdint.h>           // for int32_t, uint32_t, uint8_t
-#include <stdio.h>            // for perror, fprintf, NULL, fileno, printf, snprintf
-#include <string.h>           // for strchr
-#include <sys/socket.h>       // for connect, socket, PF_UNSPEC, SOCK_STREAM
-#include <sys/stat.h>         // for fstat, stat
-#include <unistd.h>           // for alarm, close, sleep, ssize_t
-#include "config.h"
-#include "pdf2laser_util.h"   // for pdf2laser_sendfile
 
-//bool debug = false;
+#include <arpa/inet.h>       // for inet_ntoa
+#include <errno.h>           // for EBADF, EINTR, EIO, errno
+#include <netdb.h>           // for addrinfo, freeaddrinfo, getaddrinfo
+#include <netinet/in.h>      // for sockaddr_in, ntohs
+#include <stdint.h>          // for int32_t, uint32_t, uint8_t
+#include <stdio.h>           // for perror, fprintf, fileno, snprintf, NULL, printf, stderr, FILE, size_t
+#include <string.h>          // for strchr, strlen
+#include <sys/socket.h>      // for connect, socket, PF_UNSPEC, SOCK_STREAM
+#include <sys/stat.h>        // for fstat, stat
+#include <unistd.h>          // for alarm, close, read, write, gethostname, sleep
+#include "config.h"          // for HOSTNAME_NCHARS
+#include "pdf2laser_util.h"  // for pdf2laser_sendfile
+
 char *queue = "";
 
 /**

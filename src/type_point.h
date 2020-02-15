@@ -1,7 +1,7 @@
 #ifndef __PDF2LASER_TYPE_POINT_H__
 #define __PDF2LASER_TYPE_POINT_H__ 1
 
-#include <stdint.h>   // for int32_t
+#include <stdint.h>  // for int32_t
 
 #ifdef __cplusplus
 extern "C" {
