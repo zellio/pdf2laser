@@ -29,6 +29,75 @@ ini_file_t *ini_file_create(char *path)
     return ini_file;
 }
 
+ini_entry_t *ini_entry_destroy(ini_entry_t *self)
+{
+	if (self == NULL)
+		return NULL;
+
+	free(self->key);
+	free(self->value);
+	free(self);
+
+	return NULL;
+}
+
+ini_section_t *ini_section_destroy(ini_section_t *self)
+{
+	if (self == NULL)
+		return NULL;
+
+	free(self->name);
+
+	size_t entry_count = 0;
+	for (ini_entry_t *entry = self->entries; entry != NULL; entry = entry->next) {
+		entry_count += 1;
+	}
+
+	ini_entry_t *entries[entry_count];
+	size_t index = 0;
+	for (ini_entry_t *entry = self->entries; entry != NULL; entry = entry->next) {
+		entries[index] = entry;
+		index += 1;
+	}
+
+	for (index = 0; index < entry_count; index += 1) {
+		ini_entry_destroy(entries[index]);
+	}
+
+	free(self);
+
+	return NULL;
+}
+
+ini_file_t *ini_file_destroy(ini_file_t *self)
+{
+	if (self == NULL)
+		return NULL;
+
+	free(self->path);
+
+	size_t section_count = 0;
+	for (ini_section_t *section = self->sections; section != NULL; section = section->next) {
+		section_count += 1;
+	}
+
+	ini_section_t *sections[section_count];
+	size_t index = 0;
+	for (ini_section_t *section = self->sections; section != NULL; section = section->next) {
+		sections[index] = section;
+		index += 1;
+	}
+
+	for (index = 0; index < section_count; index += 1) {
+		ini_section_destroy(sections[index]);
+	}
+
+	free(self);
+
+	return NULL;
+}
+
+
 char *ini_entry_to_string(ini_entry_t *self)
 {
     size_t key_length = strnlen(self->key, MAX_FIELD_LENGTH);

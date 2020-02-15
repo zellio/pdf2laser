@@ -35,8 +35,21 @@ print_job_t *print_job_destroy(print_job_t *self)
 
 	raster_destroy(self->raster);
 
-	for (vector_list_config_t *config = self->configs; config != NULL; config = config->next)
-		vector_list_config_destroy(config);
+	size_t config_count = 0;
+	for (vector_list_config_t *config = self->configs; config != NULL; config = config->next) {
+		config_count += 1;
+	}
+
+	vector_list_config_t *configs[config_count];
+	size_t index = 0;
+	for (vector_list_config_t *config = self->configs; config != NULL; config = config->next) {
+		configs[index] = config;
+		index += 1;
+	}
+
+	for (index = 0; index < config_count; index += 1) {
+		vector_list_config_destroy(configs[index]);
+	}
 
 	free(self);
 	return NULL;

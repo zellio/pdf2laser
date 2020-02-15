@@ -36,6 +36,10 @@ ini_file_t *ini_file_create(char *path);
 ini_section_t *ini_section_create(char *name);
 ini_entry_t *ini_entry_create(char *key, char *value);
 
+ini_file_t *ini_file_destroy(ini_file_t *self);
+ini_section_t *ini_section_destroy(ini_section_t *self);
+ini_entry_t *ini_entry_destroy(ini_entry_t *self);
+
 char *ini_entry_to_string(ini_entry_t *self);
 char *ini_section_to_string(ini_section_t *self);
 char *ini_file_to_string(ini_file_t *self);

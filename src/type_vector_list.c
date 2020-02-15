@@ -19,8 +19,16 @@ vector_list_t *vector_list_destroy(vector_list_t *self)
 	if (self == NULL)
 		return NULL;
 
-	for (vector_t *vector = self->head; vector != NULL; vector = vector->next)
-		vector_destroy(vector);
+	vector_t *vectors[self->length];
+	size_t index = 0;
+	for (vector_t *vector = self->head; vector != NULL; vector = vector->next) {
+		vectors[index] = vector;
+		index += 1;
+	}
+
+	for (index = 0; index < self->length; index += 1) {
+        vector_destroy(vectors[index]);
+	}
 
 	free(self);
 
