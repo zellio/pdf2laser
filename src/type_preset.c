@@ -10,15 +10,17 @@
 #include "type_print_job.h"           // for print_job_t, print_job_append_new_vector_list_config, print_job_create, print_job_destroy, print_job_find_vector_list_config_by_rgb
 #include "type_raster.h"              // for raster_t, raster_create, raster_mode
 #include "type_vector_list_config.h"  // for vector_list_config_t, vector_list_config_id_to_rgb
+#include "config.h"
 
-preset_t *preset_create(void)
+preset_t *preset_create(char *name)
 {
 	preset_t *preset = calloc(1, sizeof(preset_t));
+	preset->name = strndup(name, PRESET_NAME_NCHARS);
 	preset->print_job = print_job_create();
 	return preset;
 }
 
-preset_t *preset_file_destroy(preset_t *self)
+preset_t *preset_destroy(preset_t *self)
 {
 	if (self == NULL)
 		return NULL;
@@ -113,7 +115,6 @@ preset_t *preset_load_ini_section_vector(preset_t *self, ini_section_t *section)
 		config = print_job_append_new_vector_list_config(self->print_job, red, green, blue);
 	}
 
-	// config_t *config = config_config->config;
 	for (ini_entry_t *entry = section->entries; entry != NULL; entry = entry->next) {
 		switch (*entry->key) {
 		case 'c': { // color
@@ -201,10 +202,4 @@ preset_t *preset_load_ini_file(preset_t *self, ini_file_t *file)
 		preset_load_ini_section(self, section);
 	}
 	return self;
-}
-
-preset_t *ini_file_to_preset(ini_file_t *file)
-{
-	preset_t *preset = preset_create();
-	return preset_load_ini_file(preset, file);
 }

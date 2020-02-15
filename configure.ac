@@ -58,6 +58,9 @@ AC_DEFINE_UNQUOTED([TMP_DIRECTORY], ["${TMP_DIRECTORY=/tmp}"], [Temporary direct
 AC_ARG_VAR([VECTOR_FREQUENCY_DEFAULT], [FIXME])
 AC_DEFINE_UNQUOTED([VECTOR_FREQUENCY_DEFAULT], [(${VECTOR_FREQUENCY_DEFAULT=5000})], [FIXME])
 
+AC_ARG_VAR([PRESET_NAME_NCHARS], [Number of characters allowable for a preset name.])
+AC_DEFINE_UNQUOTED([PRESET_NAME_NCHARS], [(${PRESET_NAME_NCHARS=1024})], [Number of characters allowable for a preset name.])
+
 # Checks for programs.
 AC_PROG_CC([clang gcc])
 AC_PROG_YACC([bison yacc])
