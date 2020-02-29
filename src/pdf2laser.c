@@ -37,26 +37,30 @@
 #define _XOPEN_SOURCE 700
 
 #include "pdf2laser.h"
+#include <dirent.h>                // for closedir, opendir, readdir, DIR, dirent
 #include <errno.h>                 // for errno, EAGAIN, EINTR
 #include <ghostscript/gserrors.h>  // for gs_error_Quit
 #include <ghostscript/iapi.h>      // for gsapi_delete_instance, gsapi_exit, gsapi_init_with_args, gsapi_new_instance, gsapi_set_arg_encoding, gsapi_set_stdio, GSDLLCALL, GS_ARG_ENCODING_UTF8
 #include <libgen.h>                // for basename
+#include <limits.h>                // for PATH_MAX
 #include <stdbool.h>               // for false, bool, true
+#include <stddef.h>                // for size_t, NULL
 #include <stdint.h>                // for int32_t, uint8_t
-#include <stdio.h>                 // for perror, snprintf, fclose, fopen, FILE, NULL, fileno, fwrite, printf, size_t, fflush, fprintf, fread, stdin, stderr
-#include <stdlib.h>                // for calloc, mkdtemp
-#include <string.h>                // for strndup, strncmp, strrchr
+#include <stdio.h>                 // for perror, snprintf, fclose, fopen, FILE, fileno, fwrite, printf, fflush, fprintf, fread, stdin, stderr
+#include <stdlib.h>                // for calloc, free, getenv, mkdtemp
+#include <string.h>                // for strndup, strnlen, strncmp, strrchr
 #ifdef __linux
 #include <sys/sendfile.h>          // for sendfile
 #endif
-#include <sys/stat.h>              // for fstat, stat
+#include <sys/stat.h>              // for stat, fstat, S_ISREG
 #include <unistd.h>                // for unlink, rmdir, ssize_t
-#include "config.h"                // for FILENAME_NCHARS, TMP_DIRECTORY
+#include "config.h"                // for FILENAME_NCHARS, DEBUG, TMP_DIRECTORY
 #include "pdf2laser_cli.h"         // for pdf2laser_optparse
 #include "pdf2laser_generator.h"   // for generate_eps, generate_pjl, generate_ps
 #include "pdf2laser_printer.h"     // for printer_send
-#include "type_raster.h"           // for raster_t
+#include "type_preset_file.h"      // for preset_file_t, preset_file_create
 #include "type_print_job.h"        // for print_job_t, print_job_to_string, print_job_create
+#include "type_raster.h"           // for raster_t
 
 FILE *fh_vector;
 static int GSDLLCALL gsdll_stdout(__attribute__ ((unused)) void *minst, const char *str, int len)
@@ -133,6 +137,93 @@ static bool execute_ghostscript(print_job_t *print_job, const char * const filen
 	return true;
 }
 
+static char *append_directory(char *base_directory, char *directory_name)
+{
+	static const char *path_template = "%s/%s";
+
+	size_t path_length = 1;
+	path_length += snprintf(NULL, 0, path_template, base_directory, directory_name);
+
+	char *s = calloc(path_length, sizeof(char));
+	snprintf(s, path_length, path_template, base_directory, directory_name);
+
+	return s;
+}
+
+static int pdf2laser_load_presets(preset_file_t ***preset_files, size_t *preset_files_count) {
+	char *search_dirs[3];
+	search_dirs[0] = strndup("/usr/lib/pdf2laser/presets", 27);
+	search_dirs[1] = strndup("/etc/pdf2laser/presets", 23);
+
+	size_t homedir_len = strnlen(getenv("HOME"), PATH_MAX) + strnlen(".pdf2laser/presets", 19) + 2;
+	search_dirs[2] = calloc(homedir_len, sizeof(char));
+	snprintf(search_dirs[2], homedir_len, "%s/.pdf2laser/presets", getenv("HOME"));
+
+	size_t preset_file_count = 0;
+	size_t preset_file_index = 0;
+	struct dirent *directory_entry;
+
+	for (size_t index = 0; index < 3; index += 1) {
+		DIR *preset_dir = opendir(search_dirs[index]);
+		if (preset_dir == NULL) {
+			if (DEBUG) {
+				perror("opendir failed");
+			}
+			continue;
+		}
+		while ((directory_entry = readdir(preset_dir))) {
+			char *preset_file_path = append_directory(search_dirs[index], directory_entry->d_name);
+
+			struct stat preset_file_stat;
+			if (stat(preset_file_path, &preset_file_stat))
+				continue;
+
+			if (!S_ISREG(preset_file_stat.st_mode))
+				continue;
+
+			preset_file_count += 1;
+
+			free(preset_file_path);
+		}
+		closedir(preset_dir);
+	}
+
+	*preset_files_count = preset_file_count;
+	*preset_files = calloc(preset_file_count, sizeof(preset_file_t*));
+	for (size_t index = 0; index < 3; index += 1) {
+		DIR *preset_dir = opendir(search_dirs[index]);
+		if (preset_dir == NULL) {
+			if (DEBUG) {
+                  perror("opendir failed");
+			}
+			continue;
+		}
+		while ((directory_entry = readdir(preset_dir))) {
+			char *preset_file_path = append_directory(search_dirs[index], directory_entry->d_name);
+
+			struct stat preset_file_stat;
+			if (stat(preset_file_path, &preset_file_stat))
+				continue;
+
+			if (!S_ISREG(preset_file_stat.st_mode))
+				continue;
+
+			if (preset_file_index < preset_file_count) {
+				(*preset_files)[preset_file_index] = preset_file_create(preset_file_path);
+				preset_file_index += 1;
+			}
+
+			free(preset_file_path);
+		}
+		closedir(preset_dir);
+	}
+
+	for (size_t index = 0; index < 3; index += 1)
+		free(search_dirs[index]);
+
+	return  0;
+}
+
 /**
  * Main entry point for the program.
  *
@@ -158,10 +249,14 @@ int main(int argc, char *argv[])
 	//   ./configure DEFAULT_HOST=foo
 	/* char *host = DEFAULT_HOST; */
 
+	preset_file_t **preset_files;
+	size_t preset_files_count;
+	pdf2laser_load_presets(&preset_files, &preset_files_count);
+
 	print_job_t *print_job = print_job_create();
 
 	// Process command line options
-	pdf2laser_optparse(print_job, argc, argv);
+	pdf2laser_optparse(print_job, preset_files, preset_files_count, argc, argv);
 
 	const char *source_filename = print_job->source_filename;
 
@@ -189,7 +284,7 @@ int main(int argc, char *argv[])
 	char target_ps[FILENAME_NCHARS] = { '\0' };
 	char target_vector[FILENAME_NCHARS] = { '\0' };
 
-	snprintf(target_basename, FILENAME_NCHARS, "%s/%s", tmpdir_name, target_base);
+	snprintf(target_basename, FILENAME_NCHARS - 8, "%s/%s", tmpdir_name, target_base);
 	snprintf(target_bitmap, FILENAME_NCHARS, "%s.bmp", target_basename);
 	snprintf(target_eps, FILENAME_NCHARS, "%s.eps", target_basename);
 	snprintf(target_pdf, FILENAME_NCHARS, "%s.pdf", target_basename);

@@ -40,6 +40,8 @@ print_job_t *print_job_destroy(print_job_t *self);
 char *print_job_inspect(print_job_t *self);
 char *print_job_to_string(print_job_t *self);
 
+print_job_t *print_job_merge(print_job_t *self, print_job_t *other);
+
 vector_list_config_t *print_job_clone_last_vector_list_config(print_job_t *self, int32_t red, int32_t green, int32_t blue);
 vector_list_config_t *print_job_append_vector_list_config(print_job_t *self, vector_list_config_t *new_config);
 vector_list_config_t *print_job_append_new_vector_list_config(print_job_t *self, int32_t red, int32_t green, int32_t blue);

@@ -13,7 +13,7 @@ extern "C" {
 typedef struct preset_file preset_file_t;
 struct preset_file {
     char *path;
-	preset_t *preset;
+    preset_t *preset;
 };
 
 preset_file_t *preset_file_create(char *path);

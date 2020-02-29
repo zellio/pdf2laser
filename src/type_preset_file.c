@@ -1,19 +1,15 @@
 #include "type_preset_file.h"
-#include "config.h"
-#include "ini_file.h"
-#include "ini_parser.h"
-#include "libgen.h"
-#include "type_preset.h"
-#include <fcntl.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdlib.h>  // for calloc, free, NULL
-#include <string.h>
-#include <sys/mman.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <unistd.h>
-
+#include <fcntl.h>        // for open, O_RDONLY
+#include <stdio.h>        // for NULL
+#include <stdlib.h>       // for free, calloc
+#include <string.h>       // for strndup
+#include <sys/mman.h>     // for mmap, munmap, MAP_PRIVATE, PROT_READ
+#include <sys/stat.h>     // for fstat, stat
+#include <unistd.h>       // for close
+#include "config.h"       // for FILENAME_NCHARS
+#include "ini_parser.h"   // for ini_file_parse
+#include "libgen.h"       // for basename
+#include "type_preset.h"  // for preset_create, preset_destroy, preset_t
 
 preset_file_t *preset_file_create(char *path)
 {
@@ -31,12 +27,7 @@ preset_file_t *preset_file_create(char *path)
 	char *mmap_data = mmap((void*)NULL, stat.st_size, PROT_READ, MAP_PRIVATE, source_fd, 0);
 	char *buffer = mmap_data;
 
-	ini_file_t *source_ini_file;
-	ini_file_parse(buffer, &source_ini_file);
-
-	preset_load_ini_file(preset_file->preset, source_ini_file);
-
-	ini_file_destroy(source_ini_file);
+	ini_file_parse(buffer, &(preset_file->preset->config));
 
 	free(preset_basename);
 

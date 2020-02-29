@@ -71,8 +71,7 @@ char *print_job_to_string(print_job_t *self)
 		configs = configs->next;
 	}
 
-	int32_t max_str_size =
-		6 + strnlen(self->name, 1024) + 39 + (65 * (int)length) + 1;
+	int32_t max_str_size = 6 + strnlen(self->name, 1024) + 39 + (65 * (int)length) + 1;
 	char *s = calloc(max_str_size, sizeof(char));
 
 	snprintf(s, max_str_size,

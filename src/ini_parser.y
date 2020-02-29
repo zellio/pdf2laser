@@ -1,6 +1,6 @@
 %{
 #include "ini_parser.h"
-#include "ini_lexer.h"
+#include "ini_lexer.h"  // for yy_delete_buffer, yy_scan_string, yylex_destroy, yylex_init, YY_BUFFER_STATE, yyscan_t
 
 extern int yylex();
 void yyerror(void *scanner, const char *s);
