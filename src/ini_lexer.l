@@ -25,7 +25,7 @@
 
 [\]] {
 	if (DEBUG) {
-		printf("(%u:lbracket)", yylineno);
+		printf("(%u:rbracket)", yylineno);
 	}
 	return TOKEN_RBRACKET;
 }
