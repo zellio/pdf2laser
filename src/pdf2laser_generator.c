@@ -560,6 +560,7 @@ bool vectors_parse(print_job_t *print_job, FILE * const vector_file)
 			vector_list_config_t *config = print_job_find_vector_list_config_by_rgb(print_job, red, green, blue);
 			if (config == NULL)
 				config = print_job_clone_last_vector_list_config(print_job, red, green, blue);
+			current_list = config->vector_list;
 			break;
 		}
 		case 'M': {
