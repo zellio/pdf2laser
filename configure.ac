@@ -77,10 +77,12 @@ AC_CHECK_HEADERS([ \
 arpa/inet.h \
 ctype.h \
 errno.h \
+fcntl.h \
 getopt.h \
 ghostscript/gserrors.h \
 ghostscript/iapi.h \
 libgen.h \
+limits.h \
 math.h \
 netdb.h \
 netinet/in.h \
@@ -112,9 +114,9 @@ AC_TYPE_UINT8_T
 
 # Checks for library functions.
 AC_FUNC_STRNLEN
+AC_FUNC_MMAP
 
 AC_CHECK_FUNCS([ \
-strnlen \
 addrinfo \
 alarm \
 atoi \
@@ -142,6 +144,7 @@ gsapi_set_arg_encoding \
 gsapi_set_stdio \
 inet_ntoa \
 mkdtemp \
+munmap \
 perror \
 pow \
 powl \
@@ -159,6 +162,7 @@ strchr \
 strncasecmp \
 strncmp \
 strndup \
+strnlen \
 strrchr \
 tolower \
 unlink \
