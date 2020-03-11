@@ -19,6 +19,7 @@ static const struct optparse_long long_options[] = {
 	{"printer",         'p',  OPTPARSE_REQUIRED},
 	{"preset",          'P',  OPTPARSE_REQUIRED},
 	{"autofocus",       'a',  OPTPARSE_NONE},
+	{"job-mode",        'j',  OPTPARSE_REQUIRED},
 	{"job",             'n',  OPTPARSE_REQUIRED},
 	{"dpi",             'd',  OPTPARSE_REQUIRED},
 	{"raster-power",    'R',  OPTPARSE_REQUIRED},
@@ -46,6 +47,7 @@ static void usage(int rc, const char * const msg)
 		"    -n JOBNAME, --job=JOBNAME         Set the job name to display\n"
 		"    -p ADDRESS, --printer=ADDRESS     ADDRESS of the printer\n"
 		"    -P PRESET, --preset=PRESET        Select a default preset\n"
+		"    -j MODE, --job-mode=MODE          Set job mode to Vector, Raster, or Combined\n"
 		"\n"
 		"Raster options:\n"
 		"    -d DPI, --dpi DPI                 Resolution of raster artwork\n"
@@ -207,6 +209,10 @@ bool pdf2laser_optparse(print_job_t *print_job, int32_t argc, char **argv)
 
 		case 'n':
 			print_job->name = strndup(options.optarg, FILENAME_NCHARS);
+			break;
+
+		case 'j':
+			print_job->mode = tolower(*options.optarg);
 			break;
 
 		case 'd':
