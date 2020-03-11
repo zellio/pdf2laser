@@ -13,6 +13,7 @@ print_job_t *print_job_create(void)
 	print_job->raster = raster_create();
 
 	print_job->host = strndup(DEFAULT_HOST, 1024);
+	print_job->mode = PRINT_JOB_MODE_COMBINED;
 	print_job->height = BED_HEIGHT;
 	print_job->width = BED_WIDTH;
 	print_job->focus = false;
