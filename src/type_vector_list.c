@@ -1,8 +1,7 @@
 #include "type_vector_list.h"
-
 #include <inttypes.h>     // for PRId32, PRId64
 #include <math.h>         // for pow, powl, sqrt
-#include <stdio.h>        // for NULL, printf
+#include <stdio.h>        // for NULL, printf, size_t
 #include <stdlib.h>       // for calloc, free
 #include "type_vector.h"  // for vector_t, vector_compare, vector_destroy, vector_flip
 
@@ -20,8 +19,16 @@ vector_list_t *vector_list_destroy(vector_list_t *self)
 	if (self == NULL)
 		return NULL;
 
-	for (vector_t *vector = self->head; vector != NULL; vector = vector->next)
-		vector_destroy(vector);
+	vector_t *vectors[self->length];
+	size_t index = 0;
+	for (vector_t *vector = self->head; vector != NULL; vector = vector->next) {
+		vectors[index] = vector;
+		index += 1;
+	}
+
+	for (index = 0; index < (size_t)self->length; index += 1) {
+        vector_destroy(vectors[index]);
+	}
 
 	free(self);
 

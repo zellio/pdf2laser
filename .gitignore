@@ -19,6 +19,10 @@ config.sub
 configure
 configure.scan
 depcomp
+ini_lexer.c
+ini_lexer.h
+ini_parser.c
+ini_parser.h
 install-sh
 libtool
 ltmain.sh
@@ -26,3 +30,4 @@ missing
 pdf2laser
 src/.deps/*
 stamp-h1
+ylwrap

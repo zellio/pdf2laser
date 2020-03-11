@@ -7,9 +7,11 @@ AC_INIT([pdf2laser], [0.5.1], [https://github.com/zellio/pdf2laser/issues], [pdf
 AM_INIT_AUTOMAKE([-Wall])
 AC_CONFIG_SRCDIR([src/pdf2laser.c])
 AC_CONFIG_HEADERS([config.h])
-AC_USE_SYSTEM_EXTENSIONS
 
 # Define configurable defaults.
+AC_ARG_VAR([DEBUG], [Print debug messages])
+AC_DEFINE_UNQUOTED([DEBUG], [${DEBUG=false}], [Print debug messages])
+
 AC_ARG_VAR([DEFAULT_HOST], [Default host address when -p/--printer is not specified. If not overridden, defaults to the NYC Resistor laser host (192.168.1.4).])
 AC_DEFINE_UNQUOTED([DEFAULT_HOST], ["${DEFAULT_HOST=192.168.1.4}"], [Default host address when -p/--printer is not specified.])
 
@@ -58,23 +60,32 @@ AC_DEFINE_UNQUOTED([SCREEN_DEFAULT], [(${SCREEN_DEFAULT=8})], [Pixel size of scr
 AC_ARG_VAR([TMP_DIRECTORY], [Temporary directory to store files.])
 AC_DEFINE_UNQUOTED([TMP_DIRECTORY], ["${TMP_DIRECTORY=/tmp}"], [Temporary directory to store files.])
 
+AC_ARG_VAR([PRESET_NAME_NCHARS], [Number of characters allowable for a preset name.])
+AC_DEFINE_UNQUOTED([PRESET_NAME_NCHARS], [(${PRESET_NAME_NCHARS=1024})], [Number of characters allowable for a preset name.])
+
 # Checks for programs.
 AC_PROG_CC([clang gcc])
+AC_PROG_YACC([bison yacc])
+AC_PROG_LEX([flex lex])
 AC_PROG_INSTALL
 
 # Checks for libraries.
 AC_SEARCH_LIBS([sqrt], [m])
 AC_SEARCH_LIBS([gsapi_new_instance], [gs])
 
+AC_USE_SYSTEM_EXTENSIONS
+
 # Checks for header files.
 AC_CHECK_HEADERS([ \
 arpa/inet.h \
 ctype.h \
 errno.h \
+fcntl.h \
 getopt.h \
 ghostscript/gserrors.h \
 ghostscript/iapi.h \
 libgen.h \
+limits.h \
 math.h \
 netdb.h \
 netinet/in.h \
@@ -106,9 +117,9 @@ AC_TYPE_UINT8_T
 
 # Checks for library functions.
 AC_FUNC_STRNLEN
+AC_FUNC_MMAP
 
 AC_CHECK_FUNCS([ \
-strnlen \
 addrinfo \
 alarm \
 atoi \
@@ -136,6 +147,7 @@ gsapi_set_arg_encoding \
 gsapi_set_stdio \
 inet_ntoa \
 mkdtemp \
+munmap \
 perror \
 pow \
 powl \
@@ -153,6 +165,7 @@ strchr \
 strncasecmp \
 strncmp \
 strndup \
+strnlen \
 strrchr \
 tolower \
 unlink \

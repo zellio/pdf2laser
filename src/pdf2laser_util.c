@@ -1,5 +1,4 @@
 #include "pdf2laser_util.h"
-
 #include <errno.h>         // for errno, EAGAIN, EINTR
 #include <inttypes.h>      // for PRId64, PRIu64
 #include <stddef.h>        // for size_t, NULL

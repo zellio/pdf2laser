@@ -1,7 +1,7 @@
 #include "type_vector.h"
-
 #include <math.h>        // for atan2
-#include <stdlib.h>      // for NULL, calloc, free
+#include <stdio.h>       // for NULL
+#include <stdlib.h>      // for calloc, free
 #include "type_point.h"  // for point_t, point_create, point_destroy
 
 #ifndef M_PI

@@ -1,5 +1,4 @@
 #include "type_print_job.h"
-
 #include <stdbool.h>                  // for true, false
 #include <stddef.h>                   // for NULL, size_t
 #include <stdio.h>                    // for snprintf
@@ -38,8 +37,21 @@ print_job_t *print_job_destroy(print_job_t *self)
 
 	raster_destroy(self->raster);
 
-	for (vector_list_config_t *config = self->configs; config != NULL; config = config->next)
-		vector_list_config_destroy(config);
+	size_t config_count = 0;
+	for (vector_list_config_t *config = self->configs; config != NULL; config = config->next) {
+		config_count += 1;
+	}
+
+	vector_list_config_t *configs[config_count];
+	size_t index = 0;
+	for (vector_list_config_t *config = self->configs; config != NULL; config = config->next) {
+		configs[index] = config;
+		index += 1;
+	}
+
+	for (index = 0; index < config_count; index += 1) {
+		vector_list_config_destroy(configs[index]);
+	}
 
 	free(self);
 	return NULL;
@@ -54,7 +66,6 @@ char *print_job_inspect(print_job_t *self)
 
 char *print_job_to_string(print_job_t *self)
 {
-
 	const char *print_job_string_header_template = "Job: %s\nRaster: speed=%d power=%d dpi=%d\n";
 
 	size_t s_len = 1;  // \0

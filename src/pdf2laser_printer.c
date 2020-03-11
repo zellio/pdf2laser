@@ -1,5 +1,4 @@
 #include "pdf2laser_printer.h"
-
 #include <arpa/inet.h>       // for inet_ntoa
 #include <errno.h>           // for EBADF, EINTR, EIO, errno
 #include <netdb.h>           // for addrinfo, freeaddrinfo, getaddrinfo

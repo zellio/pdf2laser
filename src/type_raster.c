@@ -1,6 +1,5 @@
 #include "type_raster.h"
-
-#include <stdlib.h>  // for calloc, free, NULL
+#include <stdlib.h>  // for NULL, calloc, free
 #include "config.h"  // for RASTER_MODE_DEFAULT, RASTER_POWER_DEFAULT, RASTER_REPEAT, RASTER_SPEED_DEFAULT, RESOLUTION_DEFAULT, SCREEN_DEFAULT
 
 raster_t *raster_create(void)

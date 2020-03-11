@@ -1,15 +1,16 @@
 #include "pdf2laser_cli.h"
-
 #include <ctype.h>                    // for tolower
-#include <stddef.h>                   // for offsetof, NULL, size_t
+#include <stddef.h>                   // for NULL, offsetof, size_t
 #include <stdint.h>                   // for int32_t, uint64_t, uint8_t
-#include <stdio.h>                    // for fprintf, sscanf, NULL, stderr, stdout
-#include <stdlib.h>                   // for atoi, exit, EXIT_FAILURE, calloc, EXIT_SUCCESS
-#include <string.h>                   // for strndup, strtok, strncpy, strnlen
+#include <stdio.h>                    // for fprintf, sscanf, stderr, stdout
+#include <stdlib.h>                   // for atoi, exit, EXIT_FAILURE, calloc, free, EXIT_SUCCESS
+#include <string.h>                   // for strndup, strtok, strncmp, strncpy, strnlen
 #include "config.h"                   // for FILENAME_NCHARS, HOSTNAME_NCHARS, PACKAGE, VERSION
 #define OPTPARSE_IMPLEMENTATION
 #define OPTPARSE_API static
-#include "optparse.h"                 // for OPTPARSE_REQUIRED, OPTPARSE_NONE, optparse, optparse_long, optparse_init
+#include "optparse.h"                 // for OPTPARSE_REQUIRED, optparse, OPTPARSE_NONE, optparse_long, optparse_init
+#include "type_preset.h"              // for preset_apply_to_print_job, preset_t
+#include "type_preset_file.h"         // for preset_file_t
 #include "type_print_job.h"           // for print_job_t, print_job_append_new_vector_list_config, print_job_find_vector_list_config_by_rgb
 #include "type_raster.h"              // for raster_t
 #include "type_vector_list_config.h"  // for vector_list_config_t, vector_list_config_id_to_rgb
@@ -36,6 +37,13 @@ static const struct optparse_long long_options[] = {
 	{"version",         '@',  OPTPARSE_NONE},
 	{0}
 };
+
+
+static const struct optparse_long preset_long_option[] = {
+	{"preset", 'P',  OPTPARSE_REQUIRED},
+	{0}
+};
+
 
 static void usage(int rc, const char * const msg)
 {
@@ -186,11 +194,39 @@ static void range_checks(print_job_t *print_job)
 	}
 }
 
-bool pdf2laser_optparse(print_job_t *print_job, int32_t argc, char **argv)
+bool pdf2laser_optparse(print_job_t *print_job, preset_file_t **preset_files, size_t preset_files_count, int32_t argc, char **argv)
 {
 	struct optparse options;
 	int option;
 
+	// First we look for a preset file because command line options override preset values.
+	optparse_init(&options, argv);
+
+	char *preset = NULL;
+	while ((option = optparse_long( &options, preset_long_option, NULL)) != -1) {
+		switch (option) {
+		case 'P':
+			preset = strndup(options.optarg, 1024);
+			break;
+		default:
+			continue;
+		}
+	}
+
+	if (preset) {
+		for (size_t index = 0; index < preset_files_count; index += 1) {
+			if (strncmp(preset, preset_files[index]->preset->name, 1024)) {
+				continue;
+			}
+			preset_apply_to_print_job(preset_files[index]->preset, print_job);
+		}
+
+		// locate preset file
+		// merge preset file
+		free(preset);
+	}
+
+	// Now we load command line options
 	optparse_init(&options, argv);
 
 	while ((option = optparse_long(&options, long_options, NULL)) != -1) {
@@ -204,7 +240,7 @@ bool pdf2laser_optparse(print_job_t *print_job, int32_t argc, char **argv)
 			break;
 
 		case 'P':
-			usage(EXIT_FAILURE, "Presets are not supported yet\n");
+			// usage(EXIT_FAILURE, "Presets are not supported yet\n");
 			break;
 
 		case 'n':
@@ -281,7 +317,6 @@ bool pdf2laser_optparse(print_job_t *print_job, int32_t argc, char **argv)
 
 		default:
 			usage(EXIT_FAILURE, "Unknown argument\n");
-
 		}
 	}
 
