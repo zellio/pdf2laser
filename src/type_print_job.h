@@ -13,6 +13,12 @@ extern "C" {
 }
 #endif
 
+typedef enum {
+	PRINT_JOB_MODE_VECTOR = 'v',    // Vector: Only cut
+	PRINT_JOB_MODE_RASTER = 'r',    // Raster: Only etch
+	PRINT_JOB_MODE_COMBINED = 'c',  // Combined: Run both vector and raster
+} print_job_mode;
+
 typedef struct print_job print_job_t;
 struct print_job {
 	char *source_filename;
@@ -20,6 +26,8 @@ struct print_job {
 
 	char *name;
 	bool focus;
+
+	print_job_mode mode;
 
 	uint32_t height;
 	uint32_t width;

@@ -708,7 +708,8 @@ bool generate_pjl(print_job_t *print_job, FILE *bitmap_file, FILE *pjl_file, FIL
 	/* If raster power is enabled and raster mode is not 'n' then add that
 	 * information to the print job.
 	 */
-	if (print_job->raster->power && print_job->raster->mode != 'n') {
+	if (print_job->mode == PRINT_JOB_MODE_RASTER ||
+		print_job->mode == PRINT_JOB_MODE_COMBINED) {
 		/* FIXME unknown purpose. */
 		fprintf(pjl_file, "\033&y0C");
 
@@ -726,8 +727,12 @@ bool generate_pjl(print_job_t *print_job, FILE *bitmap_file, FILE *pjl_file, FIL
 	fprintf(pjl_file, "\033*rC");
 	fprintf(pjl_file, "\033%%1B");
 
-	/* We're going to perform a vector print. */
-	generate_vector(print_job, pjl_file, vector_file);
+	if (print_job->mode == PRINT_JOB_MODE_VECTOR ||
+		print_job->mode == PRINT_JOB_MODE_COMBINED) {
+
+		/* We're going to perform a vector print. */
+		generate_vector(print_job, pjl_file, vector_file);
+	}
 
 	/* Footer for printer job language. */
 
