@@ -1,7 +1,7 @@
 #include "type_point.h"
-#include <stdint.h>  // for int64_t
-#include <stdlib.h>  // for calloc, free
 #include <math.h>    // for atan2
+#include <stdint.h>  // for int32_t
+#include <stdlib.h>  // for calloc, free, NULL
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846

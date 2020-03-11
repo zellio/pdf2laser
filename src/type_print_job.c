@@ -1,10 +1,12 @@
 #include "type_print_job.h"
+
 #include <stdbool.h>                  // for true, false
-#include <stdio.h>                    // for NULL, snprintf
+#include <stddef.h>                   // for NULL, size_t
+#include <stdio.h>                    // for snprintf
 #include <stdlib.h>                   // for free, calloc
-#include <string.h>                   // for strncat, strndup, strnlen
-#include "config.h"                   // for BED_HEIGHT, BED_WIDTH, DEBUG, DEFAULT_HOST
-#include "type_raster.h"              // for raster_create, raster_destroy, raster_t
+#include <string.h>                   // for strlen, strndup
+#include "config.h"                   // for BED_HEIGHT, BED_WIDTH, DEBUG, DEFAULT_HOST, HOSTNAME_NCHARS
+#include "type_raster.h"              // for raster_t, raster_create, raster_destroy
 #include "type_vector_list_config.h"  // for vector_list_config_t, vector_list_config_create, vector_list_config_destroy, vector_list_config_rgb_to_id, vector_list_config_shallow_clone, vector_list_config_to_string
 
 print_job_t *print_job_create(void)
@@ -12,7 +14,7 @@ print_job_t *print_job_create(void)
 	print_job_t *print_job = calloc(1, sizeof(print_job_t));
 	print_job->raster = raster_create();
 
-	print_job->host = strndup(DEFAULT_HOST, 1024);
+	print_job->host = strndup(DEFAULT_HOST, HOSTNAME_NCHARS);
 	print_job->height = BED_HEIGHT;
 	print_job->width = BED_WIDTH;
 	print_job->focus = false;
@@ -51,32 +53,34 @@ char *print_job_inspect(print_job_t *self)
 
 char *print_job_to_string(print_job_t *self)
 {
-	int32_t length = 0;
-	vector_list_config_t *configs = self->configs;
-	while (configs) {
-		length += 1;
-		configs = configs->next;
+
+	const char *print_job_string_header_template = "Job: %s\nRaster: speed=%d power=%d dpi=%d\n";
+
+	size_t s_len = 1;  // \0
+	s_len += snprintf(NULL, 0, print_job_string_header_template, self->name, self->raster->speed, self->raster->power, self->raster->resolution);
+
+	size_t config_count = 0;
+	for (vector_list_config_t *config = self->configs; config != NULL; config = config->next)
+		config_count += 1;
+
+	// size_t buffer_size = 1;  // '\0'
+	char *configs[config_count];
+	size_t index = 0;
+	for (vector_list_config_t *config = self->configs; config != NULL; config = config->next) {
+		configs[index] = vector_list_config_to_string(config);
+		s_len += 1;  // '\n'
+		// should be safe because we generate this string
+		s_len += strlen(configs[index]);
 	}
 
-	int32_t max_str_size =
-		6 + strnlen(self->name, 1024) + 39 + (65 * (int)length) + 1;
-	char *s = calloc(max_str_size, sizeof(char));
 
-	snprintf(s, max_str_size,
-			 "Job: %s\nRaster: speed=%d power=%d dpi=%d\n",
-			 self->name,
-			 self->raster->speed,
-			 self->raster->power,
-			 self->raster->resolution);
+	char *s = calloc(s_len, sizeof(char));
+	size_t rc = 0;
+	rc += snprintf(s + rc, s_len - rc, print_job_string_header_template, self->name, self->raster->speed, self->raster->power, self->raster->resolution);
 
-	for (vector_list_config_t *config = self->configs;
-		 config != NULL;
-		 config = config->next) {
-
-		strncat(s, vector_list_config_to_string(config), max_str_size);
-
-		if (config->next)
-			strncat(s, "\n", max_str_size);
+	for (size_t index = 0; index < config_count; index++) {
+		rc += snprintf(s + rc, s_len - rc, "\n%s", configs[index]);
+		free(configs[index]);
 	}
 
 	return s;

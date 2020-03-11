@@ -1,20 +1,18 @@
 #include "pdf2laser_printer.h"
-#include <arpa/inet.h>        // for inet_ntoa
-#include <errno.h>            // for errno, EINTR, EAGAIN, EBADF, EIO
-#include <inttypes.h>         // for PRId64
-#include <netdb.h>            // for addrinfo, freeaddrinfo, getaddrinfo
-#include <netinet/in.h>       // for sockaddr_in, ntohs
-#include <stdint.h>           // for int32_t, uint32_t, uint8_t
-#include <stdio.h>            // for perror, fprintf, NULL, fileno, printf, snprintf
-#include <string.h>           // for strchr
-#ifdef __linux
-#include <sys/sendfile.h>     // for sendfile
-#endif
-#include <sys/socket.h>       // for connect, socket, PF_UNSPEC, SOCK_STREAM
-#include <sys/stat.h>         // for fstat, stat
-#include <unistd.h>           // for alarm, close, sleep, ssize_t
 
-//bool debug = false;
+#include <arpa/inet.h>       // for inet_ntoa
+#include <errno.h>           // for EBADF, EINTR, EIO, errno
+#include <netdb.h>           // for addrinfo, freeaddrinfo, getaddrinfo
+#include <netinet/in.h>      // for sockaddr_in, ntohs
+#include <stdint.h>          // for int32_t, uint32_t, uint8_t
+#include <stdio.h>           // for perror, fprintf, fileno, snprintf, NULL, printf, stderr, FILE, size_t
+#include <string.h>          // for strchr, strlen
+#include <sys/socket.h>      // for connect, socket, PF_UNSPEC, SOCK_STREAM
+#include <sys/stat.h>        // for fstat, stat
+#include <unistd.h>          // for alarm, close, read, write, gethostname, sleep
+#include "config.h"          // for HOSTNAME_NCHARS
+#include "pdf2laser_util.h"  // for pdf2laser_sendfile
+
 char *queue = "";
 
 /**
@@ -125,10 +123,10 @@ static bool printer_disconnect(int32_t socket_descriptor)
  */
 bool printer_send(const char *host, FILE *pjl_file, const char *job_name)
 {
-	char local_hostname[1024];
+	char local_hostname[HOSTNAME_NCHARS];
 	char *first_dot;
 
-	gethostname(local_hostname, 1024);
+	gethostname(local_hostname, HOSTNAME_NCHARS);
 	if ((first_dot = strchr(local_hostname, '.'))) {
 		*first_dot = '\0';
 	}
@@ -149,7 +147,8 @@ bool printer_send(const char *host, FILE *pjl_file, const char *job_name)
 		return false;
 	}
 
-	char job_header[10240];
+	size_t job_header_size = snprintf(NULL, 0, "\003%u dfA%s%s\r\n", (uint32_t)file_stat.st_size, job_name, local_hostname);
+	char job_header[job_header_size];
 	snprintf(job_header, 10240, "\003%u dfA%s%s\r\n", (uint32_t)file_stat.st_size, job_name, local_hostname);
 
 	write(p_sock, job_header, strlen(job_header));
@@ -159,33 +158,7 @@ bool printer_send(const char *host, FILE *pjl_file, const char *job_name)
 		return false;
 	}
 
-#ifdef __linux
-	ssize_t bs = 0;
-	size_t bytes_sent = 0;
-	size_t count = file_stat.st_size;
-
-	while (bytes_sent < count) {
-		if ((bs = sendfile(p_sock, fileno(pjl_file), 0, count - bytes_sent)) <= 0) {
-			if (errno == EINTR || errno == EAGAIN)
-				continue;
-			perror("sendfile filed");
-			return -1;
-		}
-		bytes_sent += bs;
-	}
-
-	printf("Job size: %"PRIu64"(%"PRId64")\n", bytes_sent, count);
-#else
-	{
-		char buffer[102400];
-		size_t rc;
-		while ((rc = fread(buffer, 1, 102400, pjl_file)) > 0)
-			write(p_sock, buffer, rc);
-
-		printf("Job size: %d\n", (int)file_stat.st_size);
-	}
-#endif
-
+	pdf2laser_sendfile(p_sock, fileno(pjl_file));
 
 	return printer_disconnect(p_sock);
 }

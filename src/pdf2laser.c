@@ -37,26 +37,24 @@
 #define _XOPEN_SOURCE 700
 
 #include "pdf2laser.h"
-#include <errno.h>                 // for errno, EAGAIN, EINTR
+
 #include <ghostscript/gserrors.h>  // for gs_error_Quit
 #include <ghostscript/iapi.h>      // for gsapi_delete_instance, gsapi_exit, gsapi_init_with_args, gsapi_new_instance, gsapi_set_arg_encoding, gsapi_set_stdio, GSDLLCALL, GS_ARG_ENCODING_UTF8
 #include <libgen.h>                // for basename
 #include <stdbool.h>               // for false, bool, true
 #include <stdint.h>                // for int32_t, uint8_t
-#include <stdio.h>                 // for perror, snprintf, fclose, fopen, FILE, NULL, fileno, fwrite, printf, size_t, fflush, fprintf, fread, stdin, stderr
+#include <stdio.h>                 // for perror, fclose, snprintf, fopen, FILE, NULL, fileno, fwrite, printf, fflush, fprintf, fread, size_t, stdin, stderr
 #include <stdlib.h>                // for calloc, mkdtemp
 #include <string.h>                // for strndup, strncmp, strrchr
-#ifdef __linux
-#include <sys/sendfile.h>          // for sendfile
-#endif
-#include <sys/stat.h>              // for fstat, stat
-#include <unistd.h>                // for unlink, rmdir, ssize_t
-#include "config.h"                // for FILENAME_NCHARS, TMP_DIRECTORY
+#include <unistd.h>                // for unlink, rmdir
+#include "config.h"                // for FILENAME_NCHARS, GS_ARG_NCHARS, TMP_DIRECTORY
 #include "pdf2laser_cli.h"         // for pdf2laser_optparse
 #include "pdf2laser_generator.h"   // for generate_eps, generate_pjl, generate_ps
 #include "pdf2laser_printer.h"     // for printer_send
-#include "type_raster.h"           // for raster_t
+#include "pdf2laser_util.h"        // for pdf2laser_sendfile
 #include "type_print_job.h"        // for print_job_t, print_job_to_string, print_job_create
+#include "type_raster.h"           // for raster_t
+
 
 FILE *fh_vector;
 static int GSDLLCALL gsdll_stdout(__attribute__ ((unused)) void *minst, const char *str, int len)
@@ -95,11 +93,11 @@ static bool execute_ghostscript(print_job_t *print_job, const char * const filen
 	gs_argv[4] = calloc(64, sizeof(char));
 	snprintf(gs_argv[4], 64, "-r%d", print_job->raster->resolution);
 
-	gs_argv[5] = calloc(1024, sizeof(char));
-	snprintf(gs_argv[5], 1024, "-sDEVICE=%s", bmp_mode);
+	gs_argv[5] = calloc(GS_ARG_NCHARS, sizeof(char));
+	snprintf(gs_argv[5], GS_ARG_NCHARS, "-sDEVICE=%s", bmp_mode);
 
-	gs_argv[6] = calloc(1037, sizeof(char));
-	snprintf(gs_argv[6], 1037, "-sOutputFile=%s", filename_bitmap);
+	gs_argv[6] = calloc(GS_ARG_NCHARS + 13, sizeof(char));
+	snprintf(gs_argv[6], GS_ARG_NCHARS + 13, "-sOutputFile=%s", filename_bitmap);
 
 	gs_argv[7] = strndup(filename_eps, FILENAME_NCHARS);
 
@@ -145,8 +143,8 @@ static bool execute_ghostscript(print_job_t *print_job, const char * const filen
 int main(int argc, char *argv[])
 {
 	// Create tmp working directory
-	char tmpdir_template[1024] = { '\0' };
-	snprintf(tmpdir_template, 1024, "%s/%s.XXXXXX", TMP_DIRECTORY, basename(argv[0]));
+	char tmpdir_template[FILENAME_NCHARS] = { '\0' };
+	snprintf(tmpdir_template, FILENAME_NCHARS, "%s/%s.XXXXXX", TMP_DIRECTORY, basename(argv[0]));
 	char *tmpdir_name = mkdtemp(tmpdir_template);
 
 	if (tmpdir_name == NULL) {
@@ -170,7 +168,7 @@ int main(int argc, char *argv[])
 
 	// If no job name is specified, use just the filename if there
 	if (!print_job->name) {
-		print_job->name = strndup(source_basename, 1024);
+		print_job->name = strndup(source_basename, FILENAME_NCHARS);
 	}
 
 	// Report the settings on stdout
@@ -217,38 +215,7 @@ int main(int argc, char *argv[])
 	}
 	else {
 		FILE *fh_source = fopen(source_filename, "r");
-		int32_t source_fno = fileno(fh_source);
-
-		struct stat file_stat;
-		if (fstat(source_fno, &file_stat)) {
-			perror("Error reading pjl file\n");
-			return false;
-		}
-
-#ifdef __linux
-		ssize_t bs = 0;
-		size_t bytes_sent = 0;
-		size_t count = file_stat.st_size;
-
-		while (bytes_sent < count) {
-			if ((bs = sendfile(fileno(fh_pdf), source_fno, 0, count - bytes_sent)) <= 0) {
-				if (errno == EINTR || errno == EAGAIN)
-					continue;
-				perror("sendfile filed");
-				return -1;
-			}
-			bytes_sent += bs;
-		}
-#else
-		{
-			char buffer[102400];
-			size_t rc;
-			while ((rc = fread(buffer, 1, 102400, fh_source)) > 0)
-				fwrite(buffer, 1, rc, fh_pdf);
-		}
-
-#endif
-
+		pdf2laser_sendfile(fileno(fh_pdf), fileno(fh_source));
 		fclose(fh_source);
 	}
 

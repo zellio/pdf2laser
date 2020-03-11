@@ -1,20 +1,18 @@
 #include "pdf2laser_generator.h"
-#include <errno.h>                    // for errno, EAGAIN, EINTR
+
 #include <ghostscript/gserrors.h>     // for gs_error_Quit
 #include <ghostscript/iapi.h>         // for gsapi_delete_instance, gsapi_exit, gsapi_init_with_args, gsapi_new_instance, gsapi_set_arg_encoding, GS_ARG_ENCODING_UTF8
 #include <stdint.h>                   // for int32_t, uint8_t, uint32_t
-#include <stdio.h>                    // for fprintf, fputc, fread, perror, sscanf, FILE, NULL, printf, fileno, getline, size_t, stderr, fflush, fseek, snprintf, SEEK_SET
-#include <stdlib.h>                   // for free, calloc, exit, EXIT_FAILURE
+#include <stdio.h>                    // for fprintf, fputc, fread, sscanf, FILE, NULL, printf, fileno, getline, perror, stderr, size_t, fflush, fseek, snprintf, SEEK_SET
+#include <stdlib.h>                   // for free, calloc
 #include <string.h>                   // for strncmp, strndup
 #include <strings.h>                  // for strncasecmp
-#ifdef __linux
-#include <sys/sendfile.h>             // for sendfile
-#endif
-#include <sys/stat.h>                 // for fstat, stat
-#include <sys/types.h>                // for ssize_t, off_t
+#include <sys/types.h>                // for ssize_t
+#include "config.h"                   // for GS_ARG_NCHARS
+#include "pdf2laser_util.h"           // for pdf2laser_sendfile
 #include "type_point.h"               // for point_t, point_compare
-#include "type_raster.h"              // for raster_t
 #include "type_print_job.h"           // for print_job_t, print_job_clone_last_vector_list_config, print_job_find_vector_list_config_by_rgb
+#include "type_raster.h"              // for raster_t
 #include "type_vector.h"              // for vector_t, vector_create
 #include "type_vector_list.h"         // for vector_list_append, vector_list_contains, vector_list_t, vector_list_optimize
 #include "type_vector_list_config.h"  // for vector_list_config_t, vector_list_config_id_to_rgb
@@ -57,14 +55,14 @@ bool generate_ps(const char *target_pdf, const char *target_ps)
 	gs_argv[5] = "-dSAFER";
 	gs_argv[6] = "-sDEVICE=ps2write";
 
-	gs_argv[7] = calloc(1024, sizeof(char));
-	snprintf(gs_argv[7], 1024, "-sOutputFile=%s", target_ps);
+	gs_argv[7] = calloc(GS_ARG_NCHARS + 13, sizeof(char));
+	snprintf(gs_argv[7], GS_ARG_NCHARS + 13, "-sOutputFile=%s", target_ps);
 
 	gs_argv[8] = "-c";
 	gs_argv[9] = "save";
 	gs_argv[10] = "pop";
 	gs_argv[11] = "-f";
-	gs_argv[12] = strndup(target_pdf, 1024);
+	gs_argv[12] = strndup(target_pdf, GS_ARG_NCHARS);
 
 	int32_t rc;
 	void *minst = NULL;
@@ -232,40 +230,8 @@ bool generate_eps(print_job_t *print_job, FILE *ps_file, FILE *eps_file)
 
 	free(line);
 
-#ifdef __linux
-	// write out the buffered data before abusing the kernel
 	fflush(eps_file);
-
-	int32_t ps_fno = fileno(ps_file);
-
-	struct stat ps_stat;
-	if (fstat(ps_fno, &ps_stat)) {
-		perror("Error reading ps file");
-		return false;
-	}
-
-	ssize_t bs = 0;
-	size_t bytes_sent = 0;
-	size_t count = ps_stat.st_size;
-	off_t offset = 0;
-
-	while (bytes_sent < count) {
-		if ((bs = sendfile(fileno(eps_file), ps_fno, &offset, count)) <= 0) {
-			if (errno == EINTR || errno == EAGAIN)
-				continue;
-			perror("sendfile failed");
-			exit(EXIT_FAILURE);
-		}
-		bytes_sent += bs;
-	}
-#else
-	{
-		size_t length;
-		uint8_t buffer[102400];
-		while ((length = fread(buffer, 1, 102400, ps_file)) > 0)
-			fwrite(buffer, 1, length, eps_file);
-	}
-#endif
+	pdf2laser_sendfile(fileno(eps_file), fileno(ps_file));
 
 	return true;
 }
