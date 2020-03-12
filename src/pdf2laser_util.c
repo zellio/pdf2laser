@@ -1,6 +1,6 @@
 #include "pdf2laser_util.h"
 #include <errno.h>         // for errno, EAGAIN, EINTR
-#include <inttypes.h>      // for PRId64, PRIu64
+#include <inttypes.h>      // for PRId64, PRIu64, int64_t
 #include <stddef.h>        // for size_t, NULL
 #include <stdio.h>         // for perror, printf
 #ifdef __linux
@@ -39,7 +39,7 @@ int pdf2laser_sendfile(int out_fd, int in_fd)
 	while ((rc = read(in_fd, buffer, 102400)) > 0)
 		write(out_fd, buffer, rc);
 
-	printf("Job size: %d\n", (int)file_stat.st_size);
+	printf("Job size: %"PRId64"\n", (int64_t)file_stat.st_size);
 #endif
 
 	return 0;

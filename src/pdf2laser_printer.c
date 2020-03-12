@@ -1,6 +1,7 @@
 #include "pdf2laser_printer.h"
 #include <arpa/inet.h>       // for inet_ntoa
 #include <errno.h>           // for EBADF, EINTR, EIO, errno
+#include <inttypes.h>        // for PRIu8
 #include <netdb.h>           // for addrinfo, freeaddrinfo, getaddrinfo
 #include <netinet/in.h>      // for sockaddr_in, ntohs
 #include <stdint.h>          // for int32_t, uint32_t, uint8_t
@@ -136,7 +137,7 @@ bool printer_send(const char *host, FILE *pjl_file, const char *job_name)
 	write(p_sock, "\002\r\n", 3);
 	read(p_sock, &lpdres, 1);
 	if (lpdres) {
-		fprintf (stderr, "Bad response from %s, %u\n", host, lpdres);
+		fprintf (stderr, "Bad response from %s, %"PRIu8"\n", host, lpdres);
 		return false;
 	}
 
@@ -146,14 +147,14 @@ bool printer_send(const char *host, FILE *pjl_file, const char *job_name)
 		return false;
 	}
 
-	size_t job_header_size = snprintf(NULL, 0, "\003%u dfA%s%s\r\n", (uint32_t)file_stat.st_size, job_name, local_hostname);
+	size_t job_header_size = snprintf(NULL, 0, "\003%"PRIu32" dfA%s%s\r\n", (uint32_t)file_stat.st_size, job_name, local_hostname);
 	char job_header[job_header_size];
-	snprintf(job_header, 10240, "\003%u dfA%s%s\r\n", (uint32_t)file_stat.st_size, job_name, local_hostname);
+	snprintf(job_header, 10240, "\003%"PRIu32" dfA%s%s\r\n", (uint32_t)file_stat.st_size, job_name, local_hostname);
 
 	write(p_sock, job_header, strlen(job_header));
 	read(p_sock, &lpdres, 1);
 	if (lpdres) {
-		fprintf(stderr, "Bad response from %s, %u\n", host, lpdres);
+		fprintf(stderr, "Bad response from %s, %"PRIu8"\n", host, lpdres);
 		return false;
 	}
 

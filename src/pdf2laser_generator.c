@@ -1,6 +1,7 @@
 #include "pdf2laser_generator.h"
 #include <ghostscript/gserrors.h>     // for gs_error_Quit
 #include <ghostscript/iapi.h>         // for gsapi_delete_instance, gsapi_exit, gsapi_init_with_args, gsapi_new_instance, gsapi_set_arg_encoding, GS_ARG_ENCODING_UTF8
+#include <inttypes.h>                 // for PRId32
 #include <stdint.h>                   // for int32_t, uint8_t, uint32_t
 #include <stdio.h>                    // for fprintf, fputc, fread, sscanf, FILE, NULL, printf, fileno, getline, perror, stderr, size_t, fflush, fseek, snprintf, SEEK_SET
 #include <stdlib.h>                   // for free, calloc
@@ -126,11 +127,11 @@ bool generate_eps(print_job_t *print_job, FILE *ps_file, FILE *eps_file)
 					vector_list_config_id_to_rgb(vector_list_config->id, &red, &green, &blue);
 
 					fprintf(eps_file, "currentrgbcolor "
-							"255 mul round cvi %d eq "
+							"255 mul round cvi %"PRId32" eq "
 							"exch "
-							"255 mul round cvi %d eq "
+							"255 mul round cvi %"PRId32" eq "
 							"and exch "
-							"255 mul round cvi %d eq "
+							"255 mul round cvi %"PRId32" eq "
 							"and ", blue, green, red);
 
 					if (vector_list_config->index > 0) {
@@ -191,10 +192,10 @@ bool generate_eps(print_job_t *print_job, FILE *ps_file, FILE *eps_file)
 					if (print_job->raster->resolution >= 600) {
 						// adjust for overprint
 						fprintf(eps_file,
-								"{dup 0 ne{%d %d div add}if}settransfer\n",
+								"{dup 0 ne{%"PRId32" %"PRId32" div add}if}settransfer\n",
 								print_job->raster->resolution / 600, screen_size);
 					}
-					fprintf(eps_file, "%d 30{%s}setscreen\n", print_job->raster->resolution / screen_size,
+					fprintf(eps_file, "%"PRId32" 30{%s}setscreen\n", print_job->raster->resolution / screen_size,
 							(print_job->raster->screen_size > 0) ? "pop abs 1 exch sub" :
 							"180 mul cos exch 180 mul cos add 2 div");
 				}
@@ -222,7 +223,7 @@ bool generate_eps(print_job_t *print_job, FILE *ps_file, FILE *eps_file)
 				fprintf(eps_file, "/setpagedevice{pop}def\n"); // use bbox
 
 				if (x_offset || y_offset) {
-					fprintf(eps_file, "%d %d translate\n", -x_offset, -y_offset);
+					fprintf(eps_file, "%"PRId32" %"PRId32" translate\n", -x_offset, -y_offset);
 				}
 			}
 		}
@@ -285,26 +286,26 @@ bool generate_raster(print_job_t *print_job, FILE *pjl_file, FILE *bitmap_file)
 	}
 
 	if (print_job->debug)
-		printf("Width %d Height %d Bytes %d Line %d\n", width, height, h, d);
+		printf("Width %"PRId32" Height %"PRId32" Bytes %"PRId32" Line %"PRId32"\n", width, height, h, d);
 
 	/* Raster Orientation */
 	fprintf(pjl_file, "\033*r0F");
 
 	/* Raster power -- color and gray scaled before, but scale with the user provided power */
-	fprintf(pjl_file, "\033&y%dP", print_job->raster->power);
+	fprintf(pjl_file, "\033&y%"PRId32"P", print_job->raster->power);
 
 	/* Raster speed */
-	fprintf(pjl_file, "\033&z%dS", print_job->raster->speed);
-	fprintf(pjl_file, "\033*r%dT", height);
-	fprintf(pjl_file, "\033*r%dS", width);
+	fprintf(pjl_file, "\033&z%"PRId32"S", print_job->raster->speed);
+	fprintf(pjl_file, "\033*r%"PRId32"T", height);
+	fprintf(pjl_file, "\033*r%"PRId32"S", width);
 	/* Raster compression */
-	fprintf(pjl_file, "\033*b%dM", (print_job->raster->mode == 'c' || print_job->raster->mode == 'g') ? 7 : 2);
+	fprintf(pjl_file, "\033*b%"PRId32"M", (print_job->raster->mode == 'c' || print_job->raster->mode == 'g') ? 7 : 2);
 	/* Raster direction (1 = up) */
 	fprintf(pjl_file, "\033&y1O");
 
 	if (print_job->debug) {
 		/* Output raster debug information */
-		printf("Raster power=%d speed=%d\n",
+		printf("Raster power=%"PRId32" speed=%"PRId32"\n",
 			   ((print_job->raster->mode == 'c' || print_job->raster->mode == 'g') ?
 				100 : print_job->raster->power),
 			   print_job->raster->speed);
@@ -332,7 +333,7 @@ bool generate_raster(print_job_t *print_job, FILE *pjl_file, FILE *bitmap_file)
 						}
 						l = fread ((char *)buf, 1, d, bitmap_file);
 						if (l != d) {
-							fprintf(stderr, "Bad bit data from gs %d/%d (y=%d)\n", l, d, y);
+							fprintf(stderr, "Bad bit data from gs %"PRId32"/%"PRId32" (y=%"PRId32")\n", l, d, y);
 							return false;
 						}
 						while (l--) {
@@ -372,7 +373,7 @@ bool generate_raster(print_job_t *print_job, FILE *pjl_file, FILE *bitmap_file)
 						}
 						l = fread((char *)buf, 1, d, bitmap_file);
 						if (l != d) {
-							fprintf (stderr, "Bad bit data from gs %d/%d (y=%d)\n", l, d, y);
+							fprintf (stderr, "Bad bit data from gs %"PRId32"/%"PRId32" (y=%d)\n", l, d, y);
 							return false;
 						}
 						for (l = 0; l < h; l++) {
@@ -394,7 +395,7 @@ bool generate_raster(print_job_t *print_job, FILE *pjl_file, FILE *bitmap_file)
 						}
 						l = fread((char *) buf, 1, d, bitmap_file);
 						if (l != d) {
-							fprintf(stderr, "Bad bit data from gs %d/%d (y=%d)\n", l, d, y);
+							fprintf(stderr, "Bad bit data from gs %"PRId32"/%"PRId32" (y=%"PRId32")\n", l, d, y);
 							return false;
 						}
 					}
@@ -422,11 +423,11 @@ bool generate_raster(print_job_t *print_job, FILE *pjl_file, FILE *bitmap_file)
 							;
 
 						r++;
-						fprintf(pjl_file, "\033*p%dY", basey + offy + y);
-						fprintf(pjl_file, "\033*p%dX", basex + offx +
+						fprintf(pjl_file, "\033*p%"PRId32"Y", basey + offy + y);
+						fprintf(pjl_file, "\033*p%"PRId32"X", basex + offx +
 								((print_job->raster->mode == 'c' || print_job->raster->mode == 'g') ? l : l * 8));
 						if (dir) {
-							fprintf(pjl_file, "\033*b%dA", -(r - l));
+							fprintf(pjl_file, "\033*b%"PRId32"A", -(r - l));
 							// reverse bytes!
 							for (n = 0; n < (r - l) / 2; n++){
 								unsigned char t = buf[l + n];
@@ -434,7 +435,7 @@ bool generate_raster(print_job_t *print_job, FILE *pjl_file, FILE *bitmap_file)
 								buf[r - n - 1] = t;
 							}
 						} else {
-							fprintf(pjl_file, "\033*b%dA", (r - l));
+							fprintf(pjl_file, "\033*b%"PRId32"A", (r - l));
 						}
 						dir = 1 - dir;
 						// pack
@@ -464,7 +465,7 @@ bool generate_raster(print_job_t *print_job, FILE *pjl_file, FILE *bitmap_file)
 								}
 							}
 						}
-						fprintf(pjl_file, "\033*b%dW", (n + 7) / 8 * 8);
+						fprintf(pjl_file, "\033*b%"PRId32"W", (n + 7) / 8 * 8);
 						r = 0;
 						while (r < n)
 							fputc(pack[r++], pjl_file);
@@ -588,12 +589,12 @@ static void output_vector(vector_list_t *list, FILE * const pjl_file)
 		if (point_compare(vector->start, &(point_t){ current_x, current_y })) {
 			// This is the continuation of a line, so just add additional
 			// points
-			fprintf(pjl_file, ",%d,%d", vector->end->y, vector->end->x);
+			fprintf(pjl_file, ",%"PRId32",%"PRId32"", vector->end->y, vector->end->x);
 		}
 		else {
 			// Stop the laser; we need to transit and then start the laser as
 			// we go to the next point.  Note initial ";"
-			fprintf(pjl_file, ";PU%d,%d;PD%d,%d", vector->start->y, vector->start->x, vector->end->y, vector->end->x);
+			fprintf(pjl_file, ";PU%"PRId32",%"PRId32";PD%"PRId32",%"PRId32"", vector->start->y, vector->start->x, vector->end->y, vector->end->x);
 		}
 
 		// Changing power on the fly is not supported for now
@@ -620,7 +621,7 @@ bool generate_vector(print_job_t *print_job, FILE * const pjl_file, FILE * const
 		 vector_list_config != NULL;
 		 vector_list_config = vector_list_config->next) {
 
-		fprintf(pjl_file, "XR%04d;", vector_list_config->frequency);
+		fprintf(pjl_file, "XR%04"PRId32";", vector_list_config->frequency);
 
 		if (print_job->vector_optimize) {
 			vector_list_t *vector_list = vector_list_config->vector_list;
@@ -628,8 +629,8 @@ bool generate_vector(print_job_t *print_job, FILE * const pjl_file, FILE * const
 			free(vector_list);
 		}
 
-		fprintf(pjl_file, "YP%03d;", vector_list_config->power);
-		fprintf(pjl_file, "ZS%03d", vector_list_config->speed); // NB. no ";"
+		fprintf(pjl_file, "YP%03"PRId32";", vector_list_config->power);
+		fprintf(pjl_file, "ZS%03"PRId32"", vector_list_config->speed); // NB. no ";"
 
 		for (int pass = 0; pass < vector_list_config->multipass; pass++) {
 			output_vector(vector_list_config->vector_list, pjl_file);
@@ -653,7 +654,7 @@ bool generate_pjl(print_job_t *print_job, FILE *bitmap_file, FILE *pjl_file, FIL
 	fprintf(pjl_file, "@PJL JOB NAME=%s\r\n", print_job->name);
 	fprintf(pjl_file, "@PJL ENTER LANGUAGE=PCL\r\n");
 	/* Set autofocus on or off. */
-	fprintf(pjl_file, "\033&y%dA", print_job->focus);
+	fprintf(pjl_file, "\033&y%"PRId32"A", print_job->focus);
 	/* Left (long-edge) offset registration.  Adjusts the position of the
 	 * logical page across the width of the page.
 	 */
@@ -664,13 +665,13 @@ bool generate_pjl(print_job_t *print_job, FILE *bitmap_file, FILE *pjl_file, FIL
 	fprintf(pjl_file, "\033&l0Z");
 
 	/* Resolution of the print. */
-	fprintf(pjl_file, "\033&u%dD", print_job->raster->resolution);
+	fprintf(pjl_file, "\033&u%"PRId32"D", print_job->raster->resolution);
 	/* X position = 0 */
 	fprintf(pjl_file, "\033*p0X");
 	/* Y position = 0 */
 	fprintf(pjl_file, "\033*p0Y");
 	/* PCL resolution. */
-	fprintf(pjl_file, "\033*t%dR", print_job->raster->resolution);
+	fprintf(pjl_file, "\033*t%"PRId32"R", print_job->raster->resolution);
 
 	/* If raster power is enabled and raster mode is not 'n' then add that
 	 * information to the print job.
@@ -688,8 +689,8 @@ bool generate_pjl(print_job_t *print_job, FILE *bitmap_file, FILE *pjl_file, FIL
 	fprintf(pjl_file, "\033E@PJL ENTER LANGUAGE=PCL\r\n");
 	/* Page Orientation */
 	fprintf(pjl_file, "\033*r0F");
-	fprintf(pjl_file, "\033*r%dT", print_job->height);
-	fprintf(pjl_file, "\033*r%dS", print_job->width);
+	fprintf(pjl_file, "\033*r%"PRId32"T", print_job->height);
+	fprintf(pjl_file, "\033*r%"PRId32"S", print_job->width);
 	fprintf(pjl_file, "\033*r1A");
 	fprintf(pjl_file, "\033*rC");
 	fprintf(pjl_file, "\033%%1B");
