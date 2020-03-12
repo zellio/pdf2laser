@@ -65,9 +65,12 @@ AC_DEFINE_UNQUOTED([PRESET_NAME_NCHARS], [(${PRESET_NAME_NCHARS=1024})], [Number
 
 # Checks for programs.
 AC_PROG_CC([clang gcc])
+AC_PROG_CXX([clang])
 AC_PROG_YACC([bison yacc])
 AC_PROG_LEX([flex lex])
 AC_PROG_INSTALL
+AC_PROG_LN_S
+AC_PROG_RANLIB
 
 # Checks for libraries.
 AC_SEARCH_LIBS([sqrt], [m])
@@ -85,7 +88,9 @@ getopt.h \
 ghostscript/gserrors.h \
 ghostscript/iapi.h \
 libgen.h \
+libintl.h \
 limits.h \
+malloc.h \
 math.h \
 netdb.h \
 netinet/in.h \
@@ -105,19 +110,29 @@ unistd.h \
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_CHECK_HEADER_STDBOOL
+AC_TYPE_INT16_T
 AC_TYPE_INT32_T
 AC_TYPE_INT64_T
 AC_TYPE_INT8_T
 AC_TYPE_OFF_T
 AC_TYPE_SIZE_T
 AC_TYPE_SSIZE_T
+AC_TYPE_UINT16_T
 AC_TYPE_UINT32_T
 AC_TYPE_UINT64_T
 AC_TYPE_UINT8_T
 
+# Check for types
+AC_CHECK_TYPES([ \
+ptrdiff_t \
+])
+
 # Checks for library functions.
-AC_FUNC_STRNLEN
+AC_FUNC_ALLOCA
+AC_FUNC_MALLOC
 AC_FUNC_MMAP
+AC_FUNC_REALLOC
+AC_FUNC_STRNLEN
 
 AC_CHECK_FUNCS([ \
 addrinfo \
@@ -138,7 +153,6 @@ freeaddrinfo \
 fstat \
 getaddrinfo \
 gethostname \
-gs_error_type \
 gsapi_delete_instance \
 gsapi_exit \
 gsapi_init_with_args \
@@ -146,6 +160,7 @@ gsapi_new_instance \
 gsapi_set_arg_encoding \
 gsapi_set_stdio \
 inet_ntoa \
+memset \
 mkdtemp \
 munmap \
 perror \
