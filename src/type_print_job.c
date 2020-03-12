@@ -138,8 +138,8 @@ vector_list_config_t *print_job_clone_last_vector_list_config(print_job_t *self,
 vector_list_config_t *print_job_find_vector_list_config_by_id(print_job_t *self, uint32_t id)
 {
 	for (vector_list_config_t *config = self->configs;
-		 config != NULL;
-		 config = config->next) {
+	     config != NULL;
+	     config = config->next) {
 
 		if (config->id == id)
 			return config;

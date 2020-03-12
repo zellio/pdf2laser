@@ -32,7 +32,7 @@ static const struct optparse_long long_options[] = {
 	{"vector-speed",    'v',  OPTPARSE_REQUIRED},
 	{"multipass",       'M',  OPTPARSE_REQUIRED},
 	{"no-optimize",     'O',  OPTPARSE_NONE},
- 	{"no-fallthrough",  'F',  OPTPARSE_NONE},
+	{"no-fallthrough",  'F',  OPTPARSE_NONE},
 	{"help",            'h',  OPTPARSE_NONE},
 	{"version",         '@',  OPTPARSE_NONE},
 	{0}

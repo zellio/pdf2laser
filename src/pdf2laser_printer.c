@@ -45,14 +45,14 @@ static int32_t printer_connect(const char *host, const uint32_t timeout)
 				const struct sockaddr_in * addr_in = (void*) addr->ai_addr;
 				if (addr_in)
 					printf("trying to connect to %s:%d\n",
-						   inet_ntoa(addr_in->sin_addr),
-						   ntohs(addr_in->sin_port));
+					       inet_ntoa(addr_in->sin_addr),
+					       ntohs(addr_in->sin_port));
 
 				socket_descriptor = socket(addr->ai_family, addr->ai_socktype,
-										   addr->ai_protocol);
+				                           addr->ai_protocol);
 				if (socket_descriptor >= 0) {
 					if (!connect(socket_descriptor, addr->ai_addr,
-								 addr->ai_addrlen)) {
+					             addr->ai_addrlen)) {
 						break;
 					} else {
 						close(socket_descriptor);

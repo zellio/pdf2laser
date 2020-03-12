@@ -119,19 +119,19 @@ bool generate_eps(print_job_t *print_job, FILE *ps_file, FILE *eps_file)
 				fprintf(eps_file, "true ");
 			} else {
 				for (vector_list_config_t *vector_list_config = print_job->configs;
-					 vector_list_config != NULL;
-					 vector_list_config = vector_list_config->next) {
+				     vector_list_config != NULL;
+				     vector_list_config = vector_list_config->next) {
 
 					int32_t red, green, blue;
 					vector_list_config_id_to_rgb(vector_list_config->id, &red, &green, &blue);
 
 					fprintf(eps_file, "currentrgbcolor "
-							"255 mul round cvi %d eq "
-							"exch "
-							"255 mul round cvi %d eq "
-							"and exch "
-							"255 mul round cvi %d eq "
-							"and ", blue, green, red);
+					        "255 mul round cvi %d eq "
+					        "exch "
+					        "255 mul round cvi %d eq "
+					        "and exch "
+					        "255 mul round cvi %d eq "
+					        "and ", blue, green, red);
 
 					if (vector_list_config->index > 0) {
 						fprintf(eps_file, "or ");
@@ -191,12 +191,12 @@ bool generate_eps(print_job_t *print_job, FILE *ps_file, FILE *eps_file)
 					if (print_job->raster->resolution >= 600) {
 						// adjust for overprint
 						fprintf(eps_file,
-								"{dup 0 ne{%d %d div add}if}settransfer\n",
-								print_job->raster->resolution / 600, screen_size);
+						        "{dup 0 ne{%d %d div add}if}settransfer\n",
+						        print_job->raster->resolution / 600, screen_size);
 					}
 					fprintf(eps_file, "%d 30{%s}setscreen\n", print_job->raster->resolution / screen_size,
-							(print_job->raster->screen_size > 0) ? "pop abs 1 exch sub" :
-							"180 mul cos exch 180 mul cos add 2 div");
+					        (print_job->raster->screen_size > 0) ? "pop abs 1 exch sub" :
+					        "180 mul cos exch 180 mul cos add 2 div");
 				}
 			}
 		}
@@ -208,10 +208,10 @@ bool generate_eps(print_job_t *print_job, FILE *ps_file, FILE *eps_file)
 			int32_t x_lower_left, y_lower_left, x_upper_right, y_upper_right;
 
 			if (sscanf(line, "%%%%PageBoundingBox: %d %d %d %d",
-					   &x_lower_left,
-					   &y_lower_left,
-					   &x_upper_right,
-					   &y_upper_right) == 4) {
+			           &x_lower_left,
+			           &y_lower_left,
+			           &x_upper_right,
+			           &y_upper_right) == 4) {
 
 				x_offset = x_lower_left;
 				y_offset = y_lower_left;
@@ -305,9 +305,9 @@ bool generate_raster(print_job_t *print_job, FILE *pjl_file, FILE *bitmap_file)
 	if (print_job->debug) {
 		/* Output raster debug information */
 		printf("Raster power=%d speed=%d\n",
-			   ((print_job->raster->mode == 'c' || print_job->raster->mode == 'g') ?
-				100 : print_job->raster->power),
-			   print_job->raster->speed);
+		       ((print_job->raster->mode == 'c' || print_job->raster->mode == 'g') ?
+		        100 : print_job->raster->power),
+		       print_job->raster->speed);
 	}
 
 	/* start at current position */
@@ -424,7 +424,7 @@ bool generate_raster(print_job_t *print_job, FILE *pjl_file, FILE *bitmap_file)
 						r++;
 						fprintf(pjl_file, "\033*p%dY", basey + offy + y);
 						fprintf(pjl_file, "\033*p%dX", basex + offx +
-								((print_job->raster->mode == 'c' || print_job->raster->mode == 'g') ? l : l * 8));
+						        ((print_job->raster->mode == 'c' || print_job->raster->mode == 'g') ? l : l * 8));
 						if (dir) {
 							fprintf(pjl_file, "\033*b%dA", -(r - l));
 							// reverse bytes!
@@ -451,10 +451,10 @@ bool generate_raster(print_job_t *print_job, FILE *pjl_file, FILE *bitmap_file)
 								l = p;
 							} else {
 								for (p = l;
-									 p < r && p < l + 127 &&
-										 (p + 1 == r || buf[p] !=
-										  buf[p + 1]);
-									 p++) {
+								     p < r && p < l + 127 &&
+									     (p + 1 == r || buf[p] !=
+									      buf[p + 1]);
+								     p++) {
 									;
 								}
 
@@ -481,7 +481,7 @@ bool generate_raster(print_job_t *print_job, FILE *pjl_file, FILE *bitmap_file)
 	fprintf(pjl_file, "\033*rC");       // end raster
 	fputc(26, pjl_file);      // some end of file markers
 	fputc(4, pjl_file);
-		//}
+	//}
 
 	return true;
 }
@@ -541,7 +541,7 @@ bool vectors_parse(print_job_t *print_job, FILE * const vector_file)
 			sscanf(line, "L%d,%d", &x_next, &y_next);
 			vector_t *vector = vector_create(x_current, y_current, x_next, y_next);
 			if (print_job->vector_optimize &&
-				vector_list_contains(current_list, vector)) {
+			    vector_list_contains(current_list, vector)) {
 				free(vector);
 			}
 			else {
@@ -556,7 +556,7 @@ bool vectors_parse(print_job_t *print_job, FILE * const vector_file)
 			// Closing statment from current point to starting point.
 			vector_t *vector = vector_create(x_current, y_current, x_start, y_start);
 			if (print_job->vector_optimize &&
-				vector_list_contains(current_list, vector)) {
+			    vector_list_contains(current_list, vector)) {
 				free(vector);
 			}
 			else {
@@ -617,8 +617,8 @@ bool generate_vector(print_job_t *print_job, FILE * const pjl_file, FILE * const
 	fprintf(pjl_file, "IN;");
 
 	for (vector_list_config_t *vector_list_config = print_job->configs;
-		 vector_list_config != NULL;
-		 vector_list_config = vector_list_config->next) {
+	     vector_list_config != NULL;
+	     vector_list_config = vector_list_config->next) {
 
 		fprintf(pjl_file, "XR%04d;", vector_list_config->frequency);
 
@@ -676,7 +676,7 @@ bool generate_pjl(print_job_t *print_job, FILE *bitmap_file, FILE *pjl_file, FIL
 	 * information to the print job.
 	 */
 	if (print_job->mode == PRINT_JOB_MODE_RASTER ||
-		print_job->mode == PRINT_JOB_MODE_COMBINED) {
+	    print_job->mode == PRINT_JOB_MODE_COMBINED) {
 		/* FIXME unknown purpose. */
 		fprintf(pjl_file, "\033&y0C");
 
@@ -695,7 +695,7 @@ bool generate_pjl(print_job_t *print_job, FILE *bitmap_file, FILE *pjl_file, FIL
 	fprintf(pjl_file, "\033%%1B");
 
 	if (print_job->mode == PRINT_JOB_MODE_VECTOR ||
-		print_job->mode == PRINT_JOB_MODE_COMBINED) {
+	    print_job->mode == PRINT_JOB_MODE_COMBINED) {
 
 		/* We're going to perform a vector print. */
 		generate_vector(print_job, pjl_file, vector_file);

@@ -14,7 +14,7 @@ int pdf2laser_sendfile(int out_fd, int in_fd)
 	struct stat file_stat;
 	if (fstat(in_fd, &file_stat)) {
 		perror("Error stating file");
-          return -1;
+		return -1;
 	}
 
 #ifdef __linux
