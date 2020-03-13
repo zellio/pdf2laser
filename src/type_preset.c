@@ -61,23 +61,31 @@ static preset_t *preset_load_ini_section_raster(preset_t *self, print_job_t *pri
 {
     raster_t *raster = raster_create();
     for (ini_entry_t *entry = section->entries; entry != NULL; entry = entry->next) {
-        switch (*entry->key) {
-        case 'm': { // mode
+        switch (entry->key[0]) {
+        case 'r': { // resolution (-d DPI, --dpi=DPI)
+            raster->resolution = atoi(entry->value);
+			break;
+        }
+        case 'm': { // mode (-m MODE , --mode MODE)
 			raster_mode mode = tolower(*entry->value);
 			raster->mode = mode;
 			break;
         }
-        case 'p': { // power
+        case 'p': { // power (-R POWER, --raster-power=POWER)
             raster->power = atoi(entry->value);
 			break;
         }
-        case 'r': { // resolution
-            raster->resolution = atoi(entry->value);
-			break;
-        }
-        case 's': { // screen-size
-            raster->screen_size = atoi(entry->value);
-			break;
+        case 's': {
+	        switch (entry->key[1]) {
+	        case 'p': { // speed (-r SPEED, --raster-speed=SPEED)
+		        raster->speed = atoi(entry->value);
+		        break;
+	        }
+	        case 'c': { // screen-size (-s SIZE, --screen-size=SIZE)
+		        raster->screen_size = atoi(entry->value);
+		        break;
+	        }
+	        }
         }
         default: {
             // error
