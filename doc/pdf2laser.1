@@ -1,14 +1,31 @@
-.\" INPR
-.TH pdf2laser 1 2015-01-18 GNU "NYC Resistor Tools"
+'\" t
+.TH "pdf2laser" "1" "2020-03-11" "GNU" "NYC Resistor Tools"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.\" -----------------------------------------------------------------
+.\" * set default formatting
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
 .nh
-.ad 1
+.\" disable justification (adjust text to left margin only)
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
 .SH NAME
 pdf2laser \- tool for printing PDF to an Epilog laser cutter over the network
-.
+
 .SH SYNOPSIS
 .B pdf2laser
 .RI [ OPTION "]... [" FILE ]
-.
+
 .SH DESCRIPTION
 .B pdf2laser
 converts PDF files to postscript files via
@@ -21,6 +38,11 @@ While this optimization can be disabled (via
 .BR \-O ", " \-\^\-no-optimize )
 it will lead to locally faster cuts.
 Laser cuts are composed of two components, the raster and the vector.
+You can control what sort of job is being run via the
+.B job-mode
+option.
+The kinds of job are:
+.IR VECTOR ", " RASTER ", and " COMBINED "."
 .PP
 Raster is controlled by the options:
 .IR DPI ", " MODE ", " SPEED ", " POWER ", and " SIZE "."
@@ -28,10 +50,9 @@ Raster is controlled by the options:
 .I DPI
 is the resolution of your print and is dictated by the
 .I DPI
-setting of the PDF file. The
-.I SPEED
-and
-.I POWER
+setting of the PDF file.
+The
+.IR SPEED " and " POWER
 settings are just what is on the tin.
 Values for the material you are cutting can be found on our wiki.
 The
@@ -42,11 +63,9 @@ The three modes are mono, grey, and colour.
 The mono raster mode uses a line or dot screen on any grey levels or colours.
 This can be controlled with the
 .I SIZE
-parameter.
-The default value of 8 makes a nice fine line screen on 600dpi engraving.
-The grey raster mode maps the grey level to power level.
-The power level is scaled to the raster power setting.
-Unlike the windows driver which always 100% in this mode.
+parameter. The default value of 8 makes a nice fine line screen on 600dpi
+engraving. The grey raster mode maps the grey level to power level. The power
+level is scaled to the raster power setting.
 .PP
 In colour mode, the primary and secondary colours are processed as separate
 passes, using the grey level of the colour as a power level. The power level
@@ -60,34 +79,43 @@ between them.
 Vector is controlled by the options:
 .IR FREQUENCY ", " POWER ", " SPEED ", and " PASSES "."
 .PP
-.I FREQUENCY
-controls the duty cycle of the laser. It can be set from values between 10 and
-5000. The higher the value, the more often the laser pulses each second and
-how much energy is transferred to the material. A lower frequency, by merit of
-transferring less heat to the material, will cause less charring and require a
-higher power and lower speed to achieve the same depth of cut. Low frequencies
-will produce perforation instead of a continuous cut in thinner materials like
-paper.
-.PP
 The
-.IR POWER ,
-.I SPEED
-and,
-.I PASSES
-settings take a comma separated list of arguments consisting of Color=Value
-pairs (e.g. ff0000=10,00ff00=20). These correspond to the
-.I POWER
-and
-.I SPEED
+.IR FREQUENCY ", " POWER ", " SPEED ", and " PASSES
+settings take a comma separated list of arguments consisting of
+.B Color=Value
+pairs (e.g.
+.BR ff0000=10,00ff00=20 ")."
+These correspond to the
+.IR FREQUENCY ", " POWER ", and " SPEED
 levels for the RGB color specific by the given color code, and the
 number of times to repeat (that is, the
 .I PASSES
 count) the cut. If your PDF contains a vector color that is not specified by a
-flag, it will use the values of the last configured vector color. There is
-some non-determinism in vector ordering so you are better off specifying all
-of the colors in the file.
-.B DO NOT COUNT ON THIS FUNCTIONALITY, IT WILL CHANGE IN THE FUTURE\fR.
+flag, you can have it use the values of the last configured vector color via the
+.I FALLTHROUGH
+flag. There is some non-determinism in vector ordering so you are better off
+specifying all of the colors in the file.
+.B NB. DO NOT COUNT ON THIS FUNCTIONALITY, IT WILL CHANGE IN THE FUTURE\fR.
 .
+.PP
+A note about
+.IR FREQUENCY ","
+which controls the duty cycle of the laser. It can be set from values between
+10 and 5000. The higher the value, the more often the laser pulses each second
+and how much energy is transferred to the material. A lower frequency, by
+merit of transferring less heat to the material, will cause less charring and
+require a higher power and lower speed to achieve the same depth of cut. Low
+frequencies will produce perforation instead of a continuous cut in thinner
+materials like paper.
+.PP
+.I PRESET
+files provide a way to statically set, and reuse cut configurations. A set of
+useful material defaults ships with
+.B pdf2laser
+and more information about the
+.I PRESET
+format can be found in
+.B pdf2laser.preset(5)
 .SH OPTIONS
 Mandatory arguments to long options are mandatory for short options too.
 .SS GENERAL OPTIONS
@@ -102,7 +130,7 @@ Set the display name of the job.
 IP address of the target printer.
 .TP
 .BI \-P " PRESET" "\fR,\fP \-\^\-preset=" PRESET
-Select a default preset. (NB. Not implemented)
+Select a preset.
 .TP
 .BI \-j " MODE" "\fR,\fP \-\^\-job-mode=" MODE
 Mode for print job (Combined, Vector, or Raster).
@@ -158,7 +186,7 @@ will return 0 and exit. In event of an error
 .B pdf2laser
 will print a message to
 .B stderr\fR,
-return 1 and exit.
+return a non-zero value and exit.
 .
 .SH EXAMPLES
 When running
@@ -241,7 +269,7 @@ When cutting and rastering 1/8th inch birch plywood the call would look as such.
 .SH NOTES
 Currently if you are at the NYC Resistor space you do not need to specify an
 .I ADDRESS
-for the laser cutter as it is hard coded.
+for the laser cutter as it is hard-coded.
 .B DO NOT COUNT ON THIS FUNCTIONALITY, IT WILL CHANGE IN THE FUTURE\fR.
 In general, I have attempted to translate the previous program verbatim except
 where change has been necessary for legal and direct functionality
@@ -279,5 +307,6 @@ was converted to a command line tool by Trammell Hudson <hudson@osresearch.net>.
 .PP
 The current maintainer is Zachary Elliott <contact@zell.io>.
 .
-.\" .SH SEE ALSO
-.\" .
+.SH "SEE ALSO"
+.PP
+.BR pdf2laser.preset "(5)"
