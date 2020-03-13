@@ -160,24 +160,37 @@ static preset_t *preset_load_ini_section_preset(preset_t * self, print_job_t *pr
 {
 	for (ini_entry_t *entry = section->entries; entry != NULL; entry = entry->next) {
 		switch (*entry->key) {
-		case 'n': {
+		case 'n': { // name
 			self->name = strndup(entry->value, MAX_FIELD_LENGTH);
 			break;
 		}
-		case 'a': {
+		case 'a': { // autofocus (--autofocus, --no-autofocus)
 			if (!strncasecmp(entry->value, "true", MAX_FIELD_LENGTH)) {
 				print_job->vector_fallthrough = true;
 			}
-			print_job->focus = false;
+			else {
+				print_job->focus = false;
+			}
 			break;
 		}
-		case 'f': {
+		case 'f': { // fallthrough (-F, --no-fallthrough)
 			if (!strncasecmp(entry->value, "true", MAX_FIELD_LENGTH)) {
 				print_job->vector_fallthrough = true;
 			}
-			print_job->vector_fallthrough = false;
+			else {
+				print_job->vector_fallthrough = false;
+			}
 			break;
 		}
+
+		case 'o': { // optimize (-O, --no-optimize)
+			if (!strncasecmp(entry->value, "true", MAX_FIELD_LENGTH)) {
+				print_job->vector_optimize = true;
+			}
+			else {
+				print_job->vector_optimize = false;
+			}
+			break;
 		default: {
 			// error
 		}
