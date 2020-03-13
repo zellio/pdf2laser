@@ -127,22 +127,25 @@ static preset_t *preset_load_ini_section_vector(preset_t *self, print_job_t *pri
 		case 'c': { // color
 			continue;
 		}
-
-		case 'f': { // frequency
+		case 'f': { // frequency (-f FREQUENCY, --frequency FREQUENCY)
 			config->frequency = atoi(entry->value);
 			break;
 		}
-		case 's': { // speed
+		case 's': { // speed (-v SPEED, --vector-speed=COLOR=SPEED)
 			config->speed = atoi(entry->value);
 			break;
 		}
-		case 'p': { // power
-			config->power = atoi(entry->value);
-			break;
-		}
-		case 'm': { // multipass
-			config->multipass = atoi(entry->value);
-			break;
+		case 'p': { // power (-V POWER, --vector-power=COLOR=POWER)
+			switch (entry->key[1]) {
+			case 'o': {
+				config->power = atoi(entry->value);
+				break;
+			}
+			case 'a': { // passes (-M PASSES, --multipass=COLOR=PASSES)
+				config->multipass = atoi(entry->value);
+				break;
+			}
+			}
 		}
 		default: {
 			// error
