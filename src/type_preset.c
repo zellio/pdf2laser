@@ -182,7 +182,6 @@ static preset_t *preset_load_ini_section_preset(preset_t * self, print_job_t *pr
 			}
 			break;
 		}
-
 		case 'o': { // optimize (-O, --no-optimize)
 			if (!strncasecmp(entry->value, "true", MAX_FIELD_LENGTH)) {
 				print_job->vector_optimize = true;
@@ -191,6 +190,7 @@ static preset_t *preset_load_ini_section_preset(preset_t * self, print_job_t *pr
 				print_job->vector_optimize = false;
 			}
 			break;
+		}
 		default: {
 			// error
 		}
