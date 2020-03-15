@@ -7,6 +7,7 @@ AC_INIT([pdf2laser], [0.5.1], [https://github.com/zellio/pdf2laser/issues], [pdf
 AM_INIT_AUTOMAKE([-Wall])
 AC_CONFIG_SRCDIR([src/pdf2laser.c])
 AC_CONFIG_HEADERS([config.h])
+
 AC_CONFIG_MACRO_DIRS([m4])
 
 # Define configurable defaults.
@@ -71,7 +72,6 @@ AC_PROG_YACC([bison yacc])
 AC_PROG_LEX([flex lex])
 AC_PROG_INSTALL
 AC_PROG_LN_S
-AC_PROG_RANLIB
 
 # Checks for libraries.
 AC_SEARCH_LIBS([sqrt], [m])
