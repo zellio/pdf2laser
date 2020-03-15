@@ -26,22 +26,92 @@ pdf2laser \- tool for printing PDF to an Epilog laser cutter over the network
 .RI [ OPTION "]... [" FILE ]
 .SH DESCRIPTION
 .B pdf2laser
-converts PDF files to postscript files via
+converts PDF files to postscript via
 .B ghostscript
-and then sends them to an Epilog laser cutter for \*(lqprinting\*(rq.
-In addition to conversation
+and sends them over the network to an Epilog laser cutter for printing.
+In addition to conversation,
 .B pdf2laser
-will attempt to optimize the vector path of your cut.
+will attempt to greedily optimize the vector path of a cut.
 While this optimization can be disabled (via
 .BR \-O ", " \-\^\-no-optimize )
-it will lead to locally faster cuts.
-Laser cuts are composed of two components, the raster and the vector.
+it should lead to locally faster cuts.
+.PP
+Laser cuts are composed of two components, the raster and the vector which equates to the cut pass.
+You can control what sort of job is being run via the
+.B job-mode
+option.
+The kinds of job are:
+.IR VECTOR ", " RASTER ", and " COMBINED .
+.SH OPTIONS
+Mandatory arguments to long options are mandatory for short options too.
+.SS Generic Program Information
+.TP
+.B \-\^\-help
+Output a usage message and exit.
+.TP
+.B \-\^\-version
+Output the version number of
+.B pdf2laser
+and exit.
+.SS General Options
+.TP
+.BR \-a ", " \-\^\-autofocus
+Enable auto focus.
+.TP
+.BI \-n " JOBNAME" "\fR,\fP \-\^\-job=" JOBNAME
+Set the display name of the job.
+.TP
+.BI \-p " ADDRESS" "\fR,\fP \-\^\-printer=" ADDRESS
+IP address of the target printer.
+.TP
+.BI \-P " PRESET" "\fR,\fP \-\^\-preset=" PRESET
+Select a preset.
+.TP
+.BI \-j " MODE" "\fR,\fP \-\^\-job-mode=" MODE
+Mode for print job (Combined, Vector, or Raster).
+.SS Raster Options
+.TP
+.BI \-d " DPI" "\fR,\fP \-\^\-dpi=" DPI
+Resolution of raster artwork.
+.TP
+.BI \-m " MODE" "\fR,\fP \-\^\-mode=" MODE
+Mode for rasterization (default mono).
+.TP
+.BI \-r " SPEED" "\fR,\fP \-\^\-raster-speed=" SPEED
+Raster speed (0-100).
+.TP
+.BI \-R " POWER" "\fR,\fP \-\^\-raster-power=" POWER
+Raster power (0-100).
+.TP
+.BI \-s " SIZE" "\fR,\fP \-\^\-screen-size=" SIZE
+Photograph screen size (default 8).
+.SS Vector Options
+.TP
+.BR \-O ", " \-\^\-no-optimize
+Disable vector optimization.
+.TP
+.BR \-F ", " \-\^\-no-fallthrough
+Disables automatic configuration of unspecified colors.
+.TP
+.BI \-f " FREQUENCY" "\fR,\fP \-\^\-frequency=" FREQUENCY
+Vector frequency (10-5000).
+.TP
+.BI \-V " POWER" "\fR,\fP \-\^\-vector-power=" COLOR=POWER
+Vector power for the color specified (Color=POWER).
+.TP
+.BI \-v " SPEED" "\fR,\fP \-\^\-vector-speed=" COLOR=SPEED
+Vector speed for the color specified (Color=SPEED).
+.TP
+.BI \-M " PASSES" "\fR,\fP \-\^\-multipass=" COLOR=PASSES
+Number of times to repeat the specified color (Color=PASSES) (1 or more).
+.SH LASER JOB OPTION DESCRIPTION
+Laser cuts are composed of two components, the raster which equates to the etch pass and the vector which equates to the cut pass.
 You can control what sort of job is being run via the
 .B job-mode
 option.
 The kinds of job are:
 .IR VECTOR ", " RASTER ", and " COMBINED "."
-.PP
+.SS Raster
 Raster is controlled by the options:
 .IR DPI ", " MODE ", " SPEED ", " POWER ", and " SIZE "."
 .PP
@@ -73,7 +143,7 @@ counted as red, but counts as \*(lqgrey\*(rq. 100% red, and 50% green/blue
 counts as red, half power. This means you can make distinct raster areas of
 the page so that you do not waste time moving the head over blank space
 between them.
-.PP
+.SS Vector
 Vector is controlled by the options:
 .IR FREQUENCY ", " POWER ", " SPEED ", and " PASSES "."
 .PP
@@ -93,8 +163,6 @@ flag, you can have it use the values of the last configured vector color via the
 .I FALLTHROUGH
 flag. There is some non-determinism in vector ordering so you are better off
 specifying all of the colors in the file.
-.B NB. DO NOT COUNT ON THIS FUNCTIONALITY, IT WILL CHANGE IN THE FUTURE\fR.
-.
 .PP
 A note about
 .IR FREQUENCY ","
@@ -105,7 +173,7 @@ merit of transferring less heat to the material, will cause less charring and
 require a higher power and lower speed to achieve the same depth of cut. Low
 frequencies will produce perforation instead of a continuous cut in thinner
 materials like paper.
-.PP
+.SS Presets
 .I PRESET
 files provide a way to statically set, and reuse cut configurations. A set of
 useful material defaults ships with
@@ -114,78 +182,14 @@ and more information about the
 .I PRESET
 format can be found in
 .B pdf2laser.preset(5)
-.SH OPTIONS
-Mandatory arguments to long options are mandatory for short options too.
-.SS GENERAL OPTIONS
-.TP
-.BR \-a ", " \-\^\-autofocus
-Enable auto focus.
-.TP
-.BI \-n " JOBNAME" "\fR,\fP \-\^\-job=" JOBNAME
-Set the display name of the job.
-.TP
-.BI \-p " ADDRESS" "\fR,\fP \-\^\-printer=" ADDRESS
-IP address of the target printer.
-.TP
-.BI \-P " PRESET" "\fR,\fP \-\^\-preset=" PRESET
-Select a preset.
-.TP
-.BI \-j " MODE" "\fR,\fP \-\^\-job-mode=" MODE
-Mode for print job (Combined, Vector, or Raster).
-.SS RASTER OPTIONS
-.TP
-.BI \-d " DPI" "\fR,\fP \-\^\-dpi=" DPI
-Resolution of raster artwork.
-.TP
-.BI \-m " MODE" "\fR,\fP \-\^\-mode=" MODE
-Mode for rasterization (default mono).
-.TP
-.BI \-r " SPEED" "\fR,\fP \-\^\-raster-speed=" SPEED
-Raster speed (0-100).
-.TP
-.BI \-R " POWER" "\fR,\fP \-\^\-raster-power=" POWER
-Raster power (0-100).
-.TP
-.BI \-s " SIZE" "\fR,\fP \-\^\-screen-size=" SIZE
-Photograph screen size (default 8).
-.SS VECTOR OPTIONS
-.TP
-.BI \-f " FREQUENCY" "\fR,\fP \-\^\-frequency=" FREQUENCY
-Vector frequency (10-5000).
-.TP
-.BR \-O ", " \-\^\-no-optimize
-Disable vector optimization.
-.TP
-.BR \-F ", " \-\^\-no-fallthrough
-Disables automatic configuration of unspecified colors.
-.TP
-.BI \-V " POWER" "\fR,\fP \-\^\-vector-power=" COLOR=POWER
-Vector power for the color specified (Color=POWER).
-.TP
-.BI \-v " SPEED" "\fR,\fP \-\^\-vector-speed=" COLOR=SPEED
-Vector speed for the color specified (Color=SPEED).
-.TP
-.BI \-M " PASSES" "\fR,\fP \-\^\-multipass=" COLOR=PASSES
-Number of times to repeat the specified color (Color=PASSES) (1 or more).
-.SS GENERIC OPTIONS
-.TP
-.B \-\^\-help
-Output a usage message and exit.
-.TP
-.B \-\^\-version
-Output the version number of
-.B pdf2laser
-and exit.
-.
 .SH EXIT STATUS
 In event of success
 .B pdf2laser
 will return 0 and exit. In event of an error
 .B pdf2laser
 will print a message to
-.B stderr\fR,
-return a non-zero value and exit.
-.
+.BR stderr ", "
+return a non-zero value, and exit.
 .SH EXAMPLES
 When running
 .B pdf2laser
@@ -249,7 +253,7 @@ When cutting and rastering 1/8th inch birch plywood the call would look as such.
 .BI "\-\^\-raster-speed " 100
 \E\
 .br
-.BI "\-\^\-frequency " 5
+.BI "\-\^\-frequency " 000000=5
 \E\
 .br
 .BI "\-\^\-vector-power " 000000=100
@@ -261,9 +265,8 @@ When cutting and rastering 1/8th inch birch plywood the call would look as such.
 .BI "\-\^\-multipass " 000000=1
 \E\
 .br
-.B awesome_design.pdf
+.B design.pdf
 .RE
-.
 .SH NOTES
 Currently if you are at the NYC Resistor space you do not need to specify an
 .I ADDRESS
@@ -277,13 +280,9 @@ will continue in this vein and when I can I'll backport new functionality to
 it. That being said, I have big plans (time permitting) for this tool and that
 will involve some fairly large breaking changes to the interface of the
 program.
-.
 .SH BUGS
 Bug reports and issues may be posted on
 https://github.com/zellio/pdf2laser/issues
-.
-.\" .SH CREDITS
-.\" .
 .SH THANKS
 Thanks goes to Andrew and Arnold LTD and Brandon Edens for the
 .B cups-epilog
@@ -293,7 +292,6 @@ Further thanks goes to Trammel Hudson for converting the
 driver into a command line tool. Finally special thanks goes to NYC Resistor
 for providing a laser cutter to work with and for being a community that
 fosters this kind of work.
-.
 .SH AUTHORS
 .PP
 The authors of the original
@@ -304,7 +302,6 @@ driver are Andrews & Arnold LTD. <info@aaisp.net.uk> and AS220 Labs <brandon@as2
 was converted to a command line tool by Trammell Hudson <hudson@osresearch.net>.
 .PP
 The current maintainer is Zachary Elliott <contact@zell.io>.
-.
 .SH "SEE ALSO"
 .PP
 .BR pdf2laser.preset "(5)"
