@@ -35,13 +35,6 @@ will attempt to greedily optimize the vector path of a cut.
 While this optimization can be disabled (via
 .BR \-O ", " \-\^\-no-optimize )
 it should lead to locally faster cuts.
-.PP
-Laser cuts are composed of two components, the raster and the vector which equates to the cut pass.
-You can control what sort of job is being run via the
-.B job-mode
-option.
-The kinds of job are:
-.IR VECTOR ", " RASTER ", and " COMBINED .
 .SH OPTIONS
 Mandatory arguments to long options are mandatory for short options too.
 .SS Generic Program Information
@@ -218,7 +211,7 @@ the command call will look like so.
 .BI "\-\^\-raster-speed " SPEED
 \E\
 .br
-.BI "\-\^\-frequency " FREQUENCY
+.BI "\-\^\-frequency " COLOR=FREQUENCY
 \E\
 .br
 .BI "\-\^\-vector-power " COLOR=POWER
