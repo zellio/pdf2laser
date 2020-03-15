@@ -26,6 +26,7 @@ ini_parser.h
 install-sh
 libtool
 ltmain.sh
+m4/*
 missing
 pdf2laser
 src/.deps/*

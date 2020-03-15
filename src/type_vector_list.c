@@ -27,7 +27,7 @@ vector_list_t *vector_list_destroy(vector_list_t *self)
 	}
 
 	for (index = 0; index < (size_t)self->length; index += 1) {
-        vector_destroy(vectors[index]);
+		vector_destroy(vectors[index]);
 	}
 
 	free(self);
@@ -43,7 +43,7 @@ vector_list_t *vector_list_append(vector_list_t *self, vector_t *vector)
 		self->length = 1;
 	}
 	else {
- 		vector->prev = self->tail;
+		vector->prev = self->tail;
 		self->tail->next = vector;
 		self->tail = vector;
 		self->length += 1;

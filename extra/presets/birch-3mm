@@ -1,0 +1,12 @@
+[Preset]
+Name = birch-3mm
+
+[Raster]
+Speed = 100
+Power = 40
+
+[Vector]
+Color = 000000
+Speed = 15
+Power = 100
+Frequency = 2500

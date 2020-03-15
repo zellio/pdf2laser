@@ -1,4 +1,5 @@
 #include "type_vector_list_config.h"
+#include <inttypes.h>          // for PRIxPTR
 #include <stdio.h>             // for snprintf, NULL, size_t
 #include <stdlib.h>            // for calloc, free
 #include "type_vector_list.h"  // for vector_list_create, vector_list_destroy
@@ -44,7 +45,7 @@ vector_list_config_t *vector_list_config_destroy(vector_list_config_t *self) {
 char *vector_list_config_inspect(vector_list_config_t *self)
 {
 	char *s = calloc(38, sizeof(char));
-	snprintf(s, 38, "<VectorListConfig:0x%016lx>", (uintptr_t)self);
+	snprintf(s, 38, "<VectorListConfig:0x%016"PRIxPTR">", (uintptr_t)self);
 	return s;
 }
 

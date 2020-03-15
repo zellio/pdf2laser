@@ -3,6 +3,8 @@ SUFFIXES = .c .h .y .l
 AM_LFLAGS =
 AM_YFLAGS = -d -Wno-yacc
 
+AM_CPPFLAGS = -DDATAROOTDIR='"@datarootdir@"' -DSYSCONFDIR='"@sysconfdir@"'
+
 bin_PROGRAMS = pdf2laser
 
 CLEANFILES = ini_lexer.h ini_lexer.c ini_parser.h ini_parser.c

@@ -1,0 +1,12 @@
+[Preset]
+Name = basswood-3mm
+
+[Raster]
+Speed = 100
+Power = 40
+
+[Vector]
+Color = 000000
+Speed = 12
+Power = 88
+Frequency = 2500

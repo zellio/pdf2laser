@@ -1,4 +1,5 @@
 #include "type_print_job.h"
+#include <inttypes.h>                 // for PRIxPTR
 #include <stdbool.h>                  // for true, false
 #include <stddef.h>                   // for NULL, size_t
 #include <stdio.h>                    // for snprintf
@@ -60,7 +61,7 @@ print_job_t *print_job_destroy(print_job_t *self)
 char *print_job_inspect(print_job_t *self)
 {
 	char *s = calloc(30, sizeof(char));
-	snprintf(s, 30, "<PrintJob:0x%016lx>", (uintptr_t)self);
+	snprintf(s, 30, "<PrintJob:0x%016"PRIxPTR">", (uintptr_t)self);
 	return s;
 }
 
@@ -138,8 +139,8 @@ vector_list_config_t *print_job_clone_last_vector_list_config(print_job_t *self,
 vector_list_config_t *print_job_find_vector_list_config_by_id(print_job_t *self, uint32_t id)
 {
 	for (vector_list_config_t *config = self->configs;
-		 config != NULL;
-		 config = config->next) {
+	     config != NULL;
+	     config = config->next) {
 
 		if (config->id == id)
 			return config;

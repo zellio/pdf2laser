@@ -78,7 +78,7 @@ static int GSDLLCALL gsdll_stdout(__attribute__ ((unused)) void *minst, const ch
  * @param filename_vector the filename that will contain the vector
  * information.
  * @param bmp_mode a string which is one of bmp16m, bmpgray, or bmpmono.
-  * @param resolution the encapsulated postscript resolution.
+ * @param resolution the encapsulated postscript resolution.
  *
  * @return Return true if the execution of ghostscript succeeds, false
  * otherwise.
@@ -120,8 +120,8 @@ static bool execute_ghostscript(print_job_t *print_job, const char * const filen
 		rc = gsapi_init_with_args(minst, gs_argc, gs_argv);
 	}
 
-    int32_t rc2 = gsapi_exit(minst);
-    if ((rc == 0) || (rc2 == gs_error_Quit))
+	int32_t rc2 = gsapi_exit(minst);
+	if ((rc == 0) || (rc2 == gs_error_Quit))
 		rc = rc2;
 
 	fclose(fh_vector);
@@ -149,8 +149,8 @@ static char *append_directory(char *base_directory, char *directory_name)
 
 static int pdf2laser_load_presets(preset_file_t ***preset_files, size_t *preset_files_count) {
 	char *search_dirs[3];
-	search_dirs[0] = strndup("/usr/lib/pdf2laser/presets", 27);
-	search_dirs[1] = strndup("/etc/pdf2laser/presets", 23);
+	search_dirs[0] = strndup(DATAROOTDIR"/pdf2laser/presets", PATH_MAX);
+	search_dirs[1] = strndup(SYSCONFDIR"/pdf2laser/presets", PATH_MAX);
 
 	size_t homedir_len = strnlen(getenv("HOME"), PATH_MAX) + strnlen(".pdf2laser/presets", 19) + 2;
 	search_dirs[2] = calloc(homedir_len, sizeof(char));
@@ -191,7 +191,7 @@ static int pdf2laser_load_presets(preset_file_t ***preset_files, size_t *preset_
 		DIR *preset_dir = opendir(search_dirs[index]);
 		if (preset_dir == NULL) {
 			if (DEBUG) {
-                  perror("opendir failed");
+				perror("opendir failed");
 			}
 			continue;
 		}
@@ -364,10 +364,10 @@ int main(int argc, char *argv[])
 
 	fprintf(stderr, "execute_ghostscript\n");
 	if(!execute_ghostscript(print_job,
-							target_bitmap,
-							target_eps,
-							target_vector,
-							raster_string)) {
+	                        target_bitmap,
+	                        target_eps,
+	                        target_vector,
+	                        raster_string)) {
 		perror("Failure to execute ghostscript command.\n");
 		return 1;
 	}

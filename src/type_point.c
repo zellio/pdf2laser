@@ -1,5 +1,5 @@
 #include "type_point.h"
-#include <stdio.h>        // for NULL, printf
+#include <stdio.h>   // for NULL
 #include <math.h>    // for atan2
 #include <stdint.h>  // for int32_t
 #include <stdlib.h>  // for calloc, free, NULL

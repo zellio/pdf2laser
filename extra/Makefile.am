@@ -1,2 +1,2 @@
-SUBDIRS = completion
+SUBDIRS = presets completion
 MAINTAINERCLEANFILES = Makefile.in

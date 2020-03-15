@@ -1,0 +1,8 @@
+[Preset]
+Name = bamboo-2mm
+
+[Vector]
+Color = 000000
+Speed = 40
+Power = 65
+Frequency = 1500
