@@ -7,6 +7,7 @@ AC_INIT([pdf2laser], [0.5.1], [https://github.com/zellio/pdf2laser/issues], [pdf
 AM_INIT_AUTOMAKE([-Wall])
 AC_CONFIG_SRCDIR([src/pdf2laser.c])
 AC_CONFIG_HEADERS([config.h])
+AC_CONFIG_MACRO_DIRS([m4])
 
 # Define configurable defaults.
 AC_ARG_VAR([DEBUG], [Print debug messages])
@@ -77,6 +78,8 @@ AC_SEARCH_LIBS([sqrt], [m])
 AC_SEARCH_LIBS([gsapi_new_instance], [gs])
 
 AC_USE_SYSTEM_EXTENSIONS
+
+LT_INIT
 
 # Checks for header files.
 AC_CHECK_HEADERS([ \
@@ -192,6 +195,7 @@ extra/Makefile
 extra/completion/Makefile
 extra/completion/bash/Makefile
 extra/completion/zsh/Makefile
+extra/presets/Makefile
 Makefile])
 
 AC_OUTPUT
