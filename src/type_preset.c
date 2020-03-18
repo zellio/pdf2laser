@@ -61,13 +61,13 @@ static preset_t *preset_load_ini_section_raster(preset_t *self, print_job_t *pri
 {
 	raster_t *raster = raster_create();
 	for (ini_entry_t *entry = section->entries; entry != NULL; entry = entry->next) {
-		switch (entry->key[0]) {
+		switch (tolower(entry->key[0])) {
 		case 'r': { // resolution (-d DPI, --dpi=DPI)
 			raster->resolution = atoi(entry->value);
 			break;
 		}
 		case 'm': { // mode (-m MODE , --mode MODE)
-			raster_mode mode = tolower(*entry->value);
+			raster_mode mode = tolower(entry->value[0]);
 			raster->mode = mode;
 			break;
 		}
@@ -76,7 +76,7 @@ static preset_t *preset_load_ini_section_raster(preset_t *self, print_job_t *pri
 			break;
 		}
 		case 's': {
-			switch (entry->key[1]) {
+			switch (tolower(entry->key[1])) {
 			case 'p': { // speed (-r SPEED, --raster-speed=SPEED)
 				raster->speed = atoi(entry->value);
 				break;
@@ -123,7 +123,7 @@ static preset_t *preset_load_ini_section_vector(preset_t *self, print_job_t *pri
 	}
 
 	for (ini_entry_t *entry = section->entries; entry != NULL; entry = entry->next) {
-		switch (*entry->key) {
+		switch (tolower(entry->key[0])) {
 		case 'c': { // color
 			continue;
 		}
@@ -136,7 +136,7 @@ static preset_t *preset_load_ini_section_vector(preset_t *self, print_job_t *pri
 			break;
 		}
 		case 'p': { // power (-V POWER, --vector-power=COLOR=POWER)
-			switch (entry->key[1]) {
+			switch (tolower(entry->key[1])) {
 			case 'o': {
 				config->power = atoi(entry->value);
 				break;
@@ -159,7 +159,7 @@ static preset_t *preset_load_ini_section_vector(preset_t *self, print_job_t *pri
 static preset_t *preset_load_ini_section_preset(preset_t * self, print_job_t *print_job, ini_section_t *section)
 {
 	for (ini_entry_t *entry = section->entries; entry != NULL; entry = entry->next) {
-		switch (*entry->key) {
+		switch (tolower(entry->key[0])) {
 		case 'n': { // name
 			self->name = strndup(entry->value, MAX_FIELD_LENGTH);
 			break;
@@ -202,7 +202,7 @@ static preset_t *preset_load_ini_section_preset(preset_t * self, print_job_t *pr
 
 static preset_t *preset_load_ini_section(preset_t * self, print_job_t *print_job, ini_section_t *section)
 {
-	switch (section->name[0]) {
+	switch (tolower(section->name[0])) {
 	case 'p': { // preset
 		return preset_load_ini_section_preset(self, print_job, section);
 	}
