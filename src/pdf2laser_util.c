@@ -7,7 +7,7 @@
 #include <sys/sendfile.h>  // for sendfile
 #endif
 #include <sys/stat.h>      // for fstat, stat
-#include <unistd.h>        // for ssize_t
+#include <unistd.h>        // for ssize_t, lseek
 
 int pdf2laser_sendfile(int out_fd, int in_fd)
 {
@@ -16,6 +16,9 @@ int pdf2laser_sendfile(int out_fd, int in_fd)
 		perror("Error stating file");
 		return -1;
 	}
+
+	// ensure we are sending the entire file from in_fd to out_fd
+	lseek(in_fd, 0, SEEK_SET);
 
 #ifdef __linux
 	ssize_t bs = 0;
