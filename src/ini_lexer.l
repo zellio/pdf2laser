@@ -6,9 +6,9 @@
 %option header-file="ini_lexer.h"
 
 %{
-#include "ini_parser.h"  // for YYSTYPE, TOKEN_STRING, TOKEN_EQUALS, TOKEN_LBRACKET, TOKEN_RBRACKET
-#include "ini_file.h"    // for MAX_FIELD_LENGTH
 #include "config.h"      // for DEBUG_PARSER
+#include "ini_file.h"    // for MAX_FIELD_LENGTH
+#include "ini_parser.h"  // for YYSTYPE, TOKEN_STRING, TOKEN_EQUALS, TOKEN_LBRACKET, TOKEN_RBRACKET
 #ifdef DEBUG_PARSER
 #include <stdbool.h>
 #endif

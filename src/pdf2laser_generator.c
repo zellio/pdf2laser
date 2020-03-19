@@ -1,14 +1,15 @@
 #include "pdf2laser_generator.h"
-#include <stddef.h>
+#include <fcntl.h>                    // for open, O_RDONLY, SEEK_SET
 #include <ghostscript/gserrors.h>     // for gs_error_Quit
 #include <ghostscript/iapi.h>         // for gsapi_delete_instance, gsapi_exit, gsapi_init_with_args, gsapi_new_instance, gsapi_set_arg_encoding, GS_ARG_ENCODING_UTF8
 #include <inttypes.h>                 // for PRId32
+#include <stdbool.h>                  // for bool, false
 #include <stdint.h>                   // for int32_t, uint8_t, uint32_t
-#include <stdio.h>                    // for fprintf, fputc, fread, sscanf, FILE, NULL, printf, fileno, getline, perror, stderr, size_t, fflush, fseek, snprintf, SEEK_SET
+#include <stdio.h>                    // for fprintf, fclose, fopen, fread, FILE, fputc, sscanf, NULL, fileno, perror, printf, getline, stderr, size_t, fflush, fseek, fwrite, snprintf, stdin
 #include <stdlib.h>                   // for free, calloc
-#include <string.h>                   // for strncmp, strndup
+#include <string.h>                   // for memset, strncmp, strndup
 #include <strings.h>                  // for strncasecmp
-#include <sys/types.h>                // for ssize_t
+#include <unistd.h>                   // for close, ssize_t
 #include "config.h"                   // for GS_ARG_NCHARS
 #include "pdf2laser_util.h"           // for pdf2laser_sendfile
 #include "type_point.h"               // for point_t, point_compare
@@ -17,8 +18,6 @@
 #include "type_vector.h"              // for vector_t, vector_create
 #include "type_vector_list.h"         // for vector_list_append, vector_list_contains, vector_list_t, vector_list_optimize
 #include "type_vector_list_config.h"  // for vector_list_config_t, vector_list_config_id_to_rgb
-#include <fcntl.h>
-#include <unistd.h>
 
 /**
  * Convert a big endian value stored in the array starting at the given pointer
