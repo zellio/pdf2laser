@@ -12,6 +12,7 @@
 #include <unistd.h>          // for alarm, close, read, write, gethostname, sleep
 #include "config.h"          // for HOSTNAME_NCHARS
 #include "pdf2laser_util.h"  // for pdf2laser_sendfile
+#include <fcntl.h>
 
 char *queue = "";
 
@@ -121,7 +122,7 @@ static bool printer_disconnect(int32_t socket_descriptor)
 /**
  *
  */
-bool printer_send(const char *host, FILE *pjl_file, const char *job_name)
+int printer_send(print_job_t *print_job, char *target_pjl)
 {
 	char local_hostname[HOSTNAME_NCHARS];
 	char *first_dot;
@@ -132,33 +133,35 @@ bool printer_send(const char *host, FILE *pjl_file, const char *job_name)
 	}
 
 	uint8_t lpdres;
-	int32_t p_sock = printer_connect(host, PRINTER_MAX_WAIT);
+	int32_t p_sock = printer_connect(print_job->host, PRINTER_MAX_WAIT);
 
 	write(p_sock, "\002\r\n", 3);
 	read(p_sock, &lpdres, 1);
 	if (lpdres) {
-		fprintf (stderr, "Bad response from %s, %"PRIu8"\n", host, lpdres);
-		return false;
+		fprintf (stderr, "Bad response from %s, %"PRIu8"\n", print_job->host, lpdres);
+		return -1;
 	}
+
+	int pjl_fno = open(target_pjl, O_RDONLY);
 
 	struct stat file_stat;
-	if (fstat(fileno(pjl_file), &file_stat)) {
+	if (fstat(pjl_fno, &file_stat)) {
 		perror("Error reading pjl file\n");
-		return false;
+		return -1;
 	}
 
-	size_t job_header_size = snprintf(NULL, 0, "\003%"PRIu32" dfA%s%s\r\n", (uint32_t)file_stat.st_size, job_name, local_hostname);
+	size_t job_header_size = snprintf(NULL, 0, "\003%"PRIu32" dfA%s%s\r\n", (uint32_t)file_stat.st_size, print_job->name, local_hostname);
 	char job_header[job_header_size];
-	snprintf(job_header, 10240, "\003%"PRIu32" dfA%s%s\r\n", (uint32_t)file_stat.st_size, job_name, local_hostname);
+	snprintf(job_header, 10240, "\003%"PRIu32" dfA%s%s\r\n", (uint32_t)file_stat.st_size, print_job->name, local_hostname);
 
 	write(p_sock, job_header, strlen(job_header));
 	read(p_sock, &lpdres, 1);
 	if (lpdres) {
-		fprintf(stderr, "Bad response from %s, %"PRIu8"\n", host, lpdres);
-		return false;
+		fprintf(stderr, "Bad response from %s, %"PRIu8"\n", print_job->host, lpdres);
+		return -1;
 	}
 
-	pdf2laser_sendfile(p_sock, fileno(pjl_file));
+	pdf2laser_sendfile(p_sock, pjl_fno);
 
-	return printer_disconnect(p_sock);
+	return (printer_disconnect(p_sock) ? 0 : -1);
 }

@@ -67,7 +67,7 @@ char *print_job_inspect(print_job_t *self)
 
 char *print_job_to_string(print_job_t *self)
 {
-	const char *print_job_string_header_template = "Job: %s\nRaster: speed=%d power=%d dpi=%d\n";
+	const char *print_job_string_header_template = "Job: %s\nRaster: speed=%d power=%d dpi=%d";
 
 	size_t s_len = 1;  // \0
 	s_len += snprintf(NULL, 0, print_job_string_header_template, self->name, self->raster->speed, self->raster->power, self->raster->resolution);
@@ -81,11 +81,11 @@ char *print_job_to_string(print_job_t *self)
 	size_t index = 0;
 	for (vector_list_config_t *config = self->configs; config != NULL; config = config->next) {
 		configs[index] = vector_list_config_to_string(config);
+
 		s_len += 1;  // '\n'
 		// should be safe because we generate this string
 		s_len += strlen(configs[index]);
 	}
-
 
 	char *s = calloc(s_len, sizeof(char));
 	size_t rc = 0;

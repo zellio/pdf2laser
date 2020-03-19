@@ -12,7 +12,10 @@ AC_CONFIG_MACRO_DIRS([m4])
 
 # Define configurable defaults.
 AC_ARG_VAR([DEBUG], [Print debug messages])
-AC_DEFINE_UNQUOTED([DEBUG], [${DEBUG=false}], [Print debug messages])
+AC_DEFINE_UNQUOTED([DEBUG], [(${DEBUG=false})], [Print debug messages])
+
+AC_ARG_VAR([DEBUG_PARSER], [Print debug messages for the ini parser.])
+AC_DEFINE_UNQUOTED([DEBUG_PARSER], [(${DEBUG_PARSER=${DEBUG=false}})], [Print debug messages for the ini parser.])
 
 AC_ARG_VAR([DEFAULT_HOST], [Default host address when -p/--printer is not specified. If not overridden, defaults to the NYC Resistor laser host (192.168.1.4).])
 AC_DEFINE_UNQUOTED([DEFAULT_HOST], ["${DEFAULT_HOST=192.168.1.4}"], [Default host address when -p/--printer is not specified.])
@@ -25,9 +28,6 @@ AC_DEFINE_UNQUOTED([BED_HEIGHT], [(${BED_HEIGHT=864})], [Default bed height (y-a
 
 AC_ARG_VAR([BED_WIDTH], [Default bed width (x-axis) in pts.])
 AC_DEFINE_UNQUOTED([BED_WIDTH], [(${BED_WIDTH=1728})], [Default bed width (x-axis) in pts.])
-
-AC_ARG_VAR([DEBUG], [Default for debug mode.])
-AC_DEFINE_UNQUOTED([DEBUG], [(${DEBUG=false})], [Default for debug mode.])
 
 AC_ARG_VAR([FILENAME_NCHARS], [Number of characters allowable for a filename.])
 AC_DEFINE_UNQUOTED([FILENAME_NCHARS], [(${FILENAME_NCHARS=1024})], [Number of characters allowable for a filename.])
