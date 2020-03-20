@@ -33,70 +33,72 @@ In addition to conversation,
 .B pdf2laser
 will attempt to greedily optimize the vector path of a cut.
 While this optimization can be disabled (via
-.BR \-O ", " \-\^\-no-optimize )
+.BR \-O ", " \-\^\-no-vector-optimize )
 it should lead to locally faster cuts.
 .SH OPTIONS
 Mandatory arguments to long options are mandatory for short options too.
-.SS Generic Program Information
+.SS General options:
 .TP
-.B \-\^\-help
-Output a usage message and exit.
+.BI "\-n " "JOBNAME\fR, " \-\-job= JOBNAME
+Set the job name to display
 .TP
-.B \-\^\-version
-Output the version number of
-.B pdf2laser
-and exit.
-.SS General Options
+.BI "\-p " "ADDRESS\fR, " \-\-printer= ADDRESS
+ADDRESS of the printer
 .TP
-.BR \-a ", " \-\^\-autofocus
-Enable auto focus.
+.BI "\-j " "MODE\fR, " \-\-job-mode= MODE
+Set job mode to
+.BR Vector ", " Raster ", or " Combined
 .TP
-.BI \-n " JOBNAME" "\fR,\fP \-\^\-job=" JOBNAME
-Set the display name of the job.
+.BI "\-P " "PRESET\fR, " \-\-preset= PRESET
+Select a default preset
 .TP
-.BI \-p " ADDRESS" "\fR,\fP \-\^\-printer=" ADDRESS
-IP address of the target printer.
+.BR \-a ", " \-\-autofocus
+Enable auto focus
+.SS Raster options:
 .TP
-.BI \-P " PRESET" "\fR,\fP \-\^\-preset=" PRESET
-Select a preset.
+.BI "\-R " "POWER\fR, " \-\-raster-power= POWER
+Laser power for raster pass
 .TP
-.BI \-j " MODE" "\fR,\fP \-\^\-job-mode=" MODE
-Mode for print job (Combined, Vector, or Raster).
-.SS Raster Options
+.BI "\-r " "SPEED\fR, " \-\-raster-speed= SPEED
+Laser head speed for raster pass
 .TP
-.BI \-d " DPI" "\fR,\fP \-\^\-dpi=" DPI
-Resolution of raster artwork.
+.BI "\-d " "DPI\fR, " \-\-raster-dpi= DPI
+Resolution of source file images
 .TP
-.BI \-m " MODE" "\fR,\fP \-\^\-mode=" MODE
-Mode for rasterization (default mono).
+.BI "\-m " "MODE\fR, " \-\-raster-mode= MODE
+Mode for rasterization (default mono)
 .TP
-.BI \-r " SPEED" "\fR,\fP \-\^\-raster-speed=" SPEED
-Raster speed (0-100).
+.BI "\-s " "SIZE\fR, " \-\-raster-screen-size= SIZE
+Photograph screen size (default 8)
+.SS Vector options:
 .TP
-.BI \-R " POWER" "\fR,\fP \-\^\-raster-power=" POWER
-Raster power (0-100).
+.BI "\-V " "POWER\fR, " \-\-vector-power= POWER
+Laser power for vector pass
 .TP
-.BI \-s " SIZE" "\fR,\fP \-\^\-screen-size=" SIZE
-Photograph screen size (default 8).
-.SS Vector Options
+.BI "\-v " "SPEED\fR, " \-\-vector-speed= SPEED
+Laser head speed for vector pass
 .TP
-.BR \-O ", " \-\^\-no-optimize
-Disable vector optimization.
+.BI "\-f " "FREQ\fR, " \-\-vector-frequency= FREQ
+Laser frequency for vector pass
 .TP
-.BR \-F ", " \-\^\-no-fallthrough
-Disables automatic configuration of unspecified colors.
+.BI "\-M " "PASSES\fR, " \-\-vector-passes= PASSES
+Number of times to repeat vector pass
 .TP
-.BI \-f " FREQUENCY" "\fR,\fP \-\^\-frequency=" FREQUENCY
-Vector frequency (10-5000).
+.BR \-O ", " \-\-no-vector-optimize
+Disable vector optimization
 .TP
-.BI \-V " POWER" "\fR,\fP \-\^\-vector-power=" COLOR=POWER
-Vector power for the color specified (Color=POWER).
+.BR \-F ", " \-\-no-vector-fallthrough
+Disable automatic vector configuration
+.SS Generic Program Information:
 .TP
-.BI \-v " SPEED" "\fR,\fP \-\^\-vector-speed=" COLOR=SPEED
-Vector speed for the color specified (Color=SPEED).
+.BR \-D ", " \-\-debug
+Enable debug mode
 .TP
-.BI \-M " PASSES" "\fR,\fP \-\^\-multipass=" COLOR=PASSES
-Number of times to repeat the specified color (Color=PASSES) (1 or more).
+.BR \-h ", " \-\-help
+Output a usage message and exit
+.TP
+.B \-\-version
+Output the version number and exit
 .SH LASER JOB OPTION DESCRIPTION
 Laser cuts are composed of two components, the raster which equates to the etch pass and the vector which equates to the cut pass.
 You can control what sort of job is being run via the
@@ -144,8 +146,8 @@ The
 .IR FREQUENCY ", " POWER ", " SPEED ", and " PASSES
 settings take a comma separated list of arguments consisting of
 .B Color=Value
-pairs (e.g.
-.BR ff0000=10,00ff00=20 ")."
+pairs
+.RB (e.g. ff0000=10,00ff00=20 ")."
 These correspond to the
 .IR FREQUENCY ", " POWER ", and " SPEED
 levels for the RGB color specific by the given color code, and the
@@ -202,7 +204,7 @@ the command call will look like so.
 .BI "\-\^\-printer " ADDRESS
 \E\
 .br
-.BI "\-\^\-dpi " DPI
+.BI "\-\^\-raster-dpi " DPI
 \E\
 .br
 .BI "\-\^\-raster-power " POWER
@@ -211,7 +213,7 @@ the command call will look like so.
 .BI "\-\^\-raster-speed " SPEED
 \E\
 .br
-.BI "\-\^\-frequency " COLOR=FREQUENCY
+.BI "\-\^\-vector-frequency " COLOR=FREQUENCY
 \E\
 .br
 .BI "\-\^\-vector-power " COLOR=POWER
@@ -220,7 +222,7 @@ the command call will look like so.
 .BI "\-\^\-vector-speed " COLOR=SPEED
 \E\
 .br
-.BI "\-\^\-multipass " COLOR=PASSES
+.BI "\-\^\-vector-passes " COLOR=PASSES
 \E\
 .br
 .B FILE
@@ -237,7 +239,7 @@ When cutting and rastering 1/8th inch birch plywood the call would look as such.
 .BI "\-\^\-printer " 192.168.1.4
 \E\
 .br
-.BI "\-\^\-dpi " 300
+.BI "\-\^\-raster-dpi " 300
 \E\
 .br
 .BI "\-\^\-raster-power " 40
@@ -246,7 +248,7 @@ When cutting and rastering 1/8th inch birch plywood the call would look as such.
 .BI "\-\^\-raster-speed " 100
 \E\
 .br
-.BI "\-\^\-frequency " 000000=5
+.BI "\-\^\-vector-frequency " 000000=5
 \E\
 .br
 .BI "\-\^\-vector-power " 000000=100
@@ -255,7 +257,7 @@ When cutting and rastering 1/8th inch birch plywood the call would look as such.
 .BI "\-\^\-vector-speed " 000000=12
 \E\
 .br
-.BI "\-\^\-multipass " 000000=1
+.BI "\-\^\-vector-passes " 000000=1
 \E\
 .br
 .B design.pdf
