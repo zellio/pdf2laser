@@ -99,7 +99,7 @@ char *print_job_to_string(print_job_t *self)
 	return s;
 }
 
-vector_list_config_t *print_job_append_vector_list_config(print_job_t *self, vector_list_config_t *new_config)
+static vector_list_config_t *print_job_append_vector_list_config(print_job_t *self, vector_list_config_t *new_config)
 {
 	vector_list_config_t *config = self->configs;
 
@@ -136,7 +136,7 @@ vector_list_config_t *print_job_clone_last_vector_list_config(print_job_t *self,
 	return print_job_append_vector_list_config(self, config_shallow_clone);
 }
 
-vector_list_config_t *print_job_find_vector_list_config_by_id(print_job_t *self, uint32_t id)
+static vector_list_config_t *print_job_find_vector_list_config_by_id(print_job_t *self, uint32_t id)
 {
 	for (vector_list_config_t *config = self->configs;
 	     config != NULL;
