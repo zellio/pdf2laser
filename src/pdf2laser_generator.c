@@ -420,7 +420,7 @@ int generate_raster(print_job_t *print_job, FILE *pjl_file, FILE *bitmap_file)
 					default: {       // mono
 						static int i;
 						if (i++==0)
-							printf("mono\n");
+							; // printf("mono\n");
 						int d = (h + 3) / 4 * 4;  // BMP padded to 4 bytes per scan line
 						if (d > (int) sizeof (buf)) {
 							perror("Too wide");
@@ -735,6 +735,11 @@ int generate_pjl(print_job_t *print_job, char *bmp_target, char *vector_target, 
 
 	if (print_job->mode == PRINT_JOB_MODE_VECTOR ||
 	    print_job->mode == PRINT_JOB_MODE_COMBINED) {
+
+		if (print_job->configs == NULL) {
+			fprintf(stderr, "No vector settings provided, cannot generate vector.\n");
+			return -1;
+		}
 
 		/* We're going to perform a vector print. */
 		generate_vector(print_job, pjl_target_fh, vector_target_fh);

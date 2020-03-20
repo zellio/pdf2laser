@@ -129,6 +129,10 @@ vector_list_config_t *print_job_append_new_vector_list_config(print_job_t *self,
 vector_list_config_t *print_job_clone_last_vector_list_config(print_job_t *self, int32_t red, int32_t green, int32_t blue)
 {
 	vector_list_config_t *config = self->configs;
+
+	if (config == NULL)
+		return NULL;
+
 	while (config->next) {
 		config = config->next;
 	}
