@@ -575,7 +575,7 @@ int vectors_parse(print_job_t *print_job, FILE * const vector_file)
 			sscanf(line, "L%d,%d", &x_next, &y_next);
 			vector_t *vector = vector_create(x_current, y_current, x_next, y_next);
 			if (print_job->vector_optimize &&
-			    vector_list_contains(current_list, vector)) {
+			    vector_list_contains(current_list, vector) >= 0) {
 				free(vector);
 			}
 			else {
@@ -590,7 +590,7 @@ int vectors_parse(print_job_t *print_job, FILE * const vector_file)
 			// Closing statment from current point to starting point.
 			vector_t *vector = vector_create(x_current, y_current, x_start, y_start);
 			if (print_job->vector_optimize &&
-			    vector_list_contains(current_list, vector)) {
+			    vector_list_contains(current_list, vector) >= 0) {
 				free(vector);
 			}
 			else {

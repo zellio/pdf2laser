@@ -79,44 +79,18 @@ vector_t *vector_list_remove(vector_list_t *self, vector_t *vector)
 	return vector;
 }
 
-vector_list_t *vector_list_stats(vector_list_t *self)
+int vector_list_contains(vector_list_t *self, vector_t *vector)
 {
-	int32_t transits = 0;
-	int64_t transit_total = 0;
-
-	int32_t cuts = 0;
-	int64_t cut_total = 0;
-
-	int32_t current_x = 0;
-	int32_t current_y = 0;
-
-	vector_t *vector = self->head;
-	while (vector) {
-		int32_t transit_dx = current_x - vector->start->x;
-		int32_t transit_dy = current_y - vector->start->y;
-		int64_t transit_length = sqrt(pow(transit_dx, 2) + pow(transit_dy, 2));
-		if (transit_length) {
-			transits += 1;
-			transit_total += transit_length;
+	size_t index = 0;
+	vector_t *v = self->head;
+	while (v) {
+		if (vector_compare(vector, v) == 0) {
+			return index;
 		}
-
-		int64_t cut_dx = vector->start->x - vector->end->x;
-		int64_t cut_dy = vector->start->y - vector->end->y;
-		int64_t cut_length = sqrt(pow(cut_dx, 2) + pow(cut_dy, 2));
-		if (cut_length) {
-			cuts += 1;
-			cut_total += cut_length;
-		}
-
-		current_x = vector->end->x;
-		current_y = vector->end->y;
-		vector = vector->next;
+		index += 1;
+		v = v->next;
 	}
-
-	printf("Cuts: %"PRId32" len %"PRId64"\n", cuts, cut_total);
-	printf("Move: %"PRId32" len %"PRId64"\n", transits, transit_total);
-
-	return self;
+	return -1;
 }
 
 /** Find the closest vector to a given point and remove it from the list.
@@ -196,14 +170,42 @@ vector_list_t *vector_list_optimize(vector_list_t *self)
 	return list;
 }
 
-bool vector_list_contains(vector_list_t *self, vector_t *vector)
+vector_list_t *vector_list_stats(vector_list_t *self)
 {
-	vector_t *v = self->head;
-	while (v) {
-		if (vector_compare(vector, v) == 0) {
-			return true;
+	int32_t transits = 0;
+	int64_t transit_total = 0;
+
+	int32_t cuts = 0;
+	int64_t cut_total = 0;
+
+	int32_t current_x = 0;
+	int32_t current_y = 0;
+
+	vector_t *vector = self->head;
+	while (vector) {
+		int32_t transit_dx = current_x - vector->start->x;
+		int32_t transit_dy = current_y - vector->start->y;
+		int64_t transit_length = sqrt(pow(transit_dx, 2) + pow(transit_dy, 2));
+		if (transit_length) {
+			transits += 1;
+			transit_total += transit_length;
 		}
-		v = v->next;
+
+		int64_t cut_dx = vector->start->x - vector->end->x;
+		int64_t cut_dy = vector->start->y - vector->end->y;
+		int64_t cut_length = sqrt(pow(cut_dx, 2) + pow(cut_dy, 2));
+		if (cut_length) {
+			cuts += 1;
+			cut_total += cut_length;
+		}
+
+		current_x = vector->end->x;
+		current_y = vector->end->y;
+		vector = vector->next;
 	}
-	return false;
+
+	printf("Cuts: %"PRId32" len %"PRId64"\n", cuts, cut_total);
+	printf("Move: %"PRId32" len %"PRId64"\n", transits, transit_total);
+
+	return self;
 }
