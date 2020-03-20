@@ -139,7 +139,7 @@ int printer_send(print_job_t *print_job, char *target_pjl)
 	write(p_sock, "\002\r\n", 3);
 	read(p_sock, &lpdres, 1);
 	if (lpdres) {
-		fprintf (stderr, "Bad response from %s, %"PRIu8"\n", print_job->host, lpdres);
+		fprintf(stderr, "Bad response from %s, %"PRIu8"\n", print_job->host, lpdres);
 		return -1;
 	}
 

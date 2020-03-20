@@ -240,7 +240,7 @@ bool pdf2laser_optparse(print_job_t *print_job, preset_file_t **preset_files, si
 			break;
 
 		case 'P':
-			// usage(EXIT_FAILURE, "Presets are not supported yet\n");
+			// handled above
 			break;
 
 		case 'n':

@@ -74,9 +74,9 @@ int generate_pdf(const char *source_pdf, const char *target_pdf)
  */
 int generate_ps(const char *target_pdf, const char *target_ps)
 {
-	fprintf(stderr, "Executing pdf2ps\n");
 	int gs_argc = 13;
 	char *gs_argv[gs_argc];
+
 	gs_argv[0] = "gs";
 	gs_argv[1] = "-q";
 	gs_argv[2] = "-dNOPAUSE";
@@ -84,10 +84,7 @@ int generate_ps(const char *target_pdf, const char *target_ps)
 	gs_argv[4] = "-P-";
 	gs_argv[5] = "-dSAFER";
 	gs_argv[6] = "-sDEVICE=ps2write";
-
-	gs_argv[7] = calloc(GS_ARG_NCHARS + 13, sizeof(char));
-	snprintf(gs_argv[7], GS_ARG_NCHARS + 13, "-sOutputFile=%s", target_ps);
-
+	gs_argv[7] = pdf2laser_format_string("-sOutputFile=%s", target_ps);
 	gs_argv[8] = "-c";
 	gs_argv[9] = "save";
 	gs_argv[10] = "pop";
@@ -111,6 +108,9 @@ int generate_ps(const char *target_pdf, const char *target_ps)
 		rc = rc2;
 
 	gsapi_delete_instance(minst);
+
+	free(gs_argv[7]);
+	free(gs_argv[12]);
 
 	return rc;
 }
@@ -406,7 +406,7 @@ int generate_raster(print_job_t *print_job, FILE *pjl_file, FILE *bitmap_file)
 						}
 						l = fread((char *)buf, 1, d, bitmap_file);
 						if (l != d) {
-							fprintf (stderr, "Bad bit data from gs %"PRId32"/%"PRId32" (y=%d)\n", l, d, y);
+							fprintf(stderr, "Bad bit data from gs %"PRId32"/%"PRId32" (y=%d)\n", l, d, y);
 							return -1;
 						}
 						for (l = 0; l < h; l++) {
