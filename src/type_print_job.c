@@ -67,10 +67,10 @@ char *print_job_inspect(print_job_t *self)
 
 char *print_job_to_string(print_job_t *self)
 {
-	const char *print_job_string_header_template = "Job: %s\nRaster: speed=%"PRId32" power=%"PRId32" dpi=%"PRIu32"";
+	const char *print_job_string_header_template = "Job: %s\nRaster: speed=%"PRId32" power=%"PRId32" dpi=%"PRIu32" mode=%s";
 
 	size_t s_len = 1;  // \0
-	s_len += snprintf(NULL, 0, print_job_string_header_template, self->name, self->raster->speed, self->raster->power, self->raster->resolution);
+	s_len += snprintf(NULL, 0, print_job_string_header_template, self->name, self->raster->speed, self->raster->power, self->raster->resolution, raster_mode_to_string(self->raster->mode));
 
 	size_t config_count = 0;
 	for (vector_list_config_t *config = self->configs; config != NULL; config = config->next)
@@ -89,7 +89,7 @@ char *print_job_to_string(print_job_t *self)
 
 	char *s = calloc(s_len, sizeof(char));
 	size_t rc = 0;
-	rc += snprintf(s + rc, s_len - rc, print_job_string_header_template, self->name, self->raster->speed, self->raster->power, self->raster->resolution);
+	rc += snprintf(s + rc, s_len - rc, print_job_string_header_template, self->name, self->raster->speed, self->raster->power, self->raster->resolution, raster_mode_to_string(self->raster->mode));
 
 	for (size_t index = 0; index < config_count; index++) {
 		rc += snprintf(s + rc, s_len - rc, "\n%s", configs[index]);

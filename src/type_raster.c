@@ -2,7 +2,7 @@
 #include <stdlib.h>  // for calloc, free, NULL
 #include "config.h"  // for RASTER_MODE_DEFAULT, RASTER_POWER_DEFAULT, RASTER_REPEAT, RASTER_SPEED_DEFAULT, RESOLUTION_DEFAULT, SCREEN_DEFAULT
 
-char *raster_mode_to_string(raster_mode mode)
+char *raster_mode_to_device_string(raster_mode mode)
 {
 	switch (mode) {
 	case RASTER_MODE_COLOR:
@@ -14,6 +14,21 @@ char *raster_mode_to_string(raster_mode mode)
 	case RASTER_MODE_NONE:
 	default:
 		return NULL;
+	}
+}
+
+char *raster_mode_to_string(raster_mode mode)
+{
+	switch (mode) {
+	case RASTER_MODE_COLOR:
+		return "color";
+	case RASTER_MODE_GREY_SCALE:
+		return "grey";
+	case RASTER_MODE_MONO:
+		return "mono";
+	case RASTER_MODE_NONE:
+	default:
+		return "none";
 	}
 }
 

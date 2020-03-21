@@ -83,7 +83,7 @@ static int GSDLLCALL gsdll_stdout(__attribute__ ((unused)) void *minst, const ch
  * @return Return true if the execution of ghostscript succeeds, false
  * otherwise.
  */
-static int execute_ghostscript(print_job_t *print_job, const char *const target_eps, const char *const target_bmp, const char *const target_vector, const char *const raster_string)
+static int execute_ghostscript(print_job_t *print_job, const char *const target_eps, const char *const target_bmp, const char *const target_vector) //, const char *const raster_string)
 {
 	int gs_argc = 8;
 	char *gs_argv[8];
@@ -93,7 +93,7 @@ static int execute_ghostscript(print_job_t *print_job, const char *const target_
 	gs_argv[2] = "-dBATCH";
 	gs_argv[3] = "-dNOPAUSE";
 	gs_argv[4] = pdf2laser_format_string("-r%d", print_job->raster->resolution);
-	gs_argv[5] = pdf2laser_format_string("-sDEVICE=%s", raster_string);
+	gs_argv[5] = pdf2laser_format_string("-sDEVICE=%s", raster_mode_to_device_string(print_job->raster->mode));
 	gs_argv[6] = pdf2laser_format_string("-sOutputFile=%s", target_bmp);
 	gs_argv[7] = strndup(target_eps, FILENAME_NCHARS);
 
@@ -305,8 +305,7 @@ int main(int argc, char *argv[])
 
 	char *target_bmp = pdf2laser_format_string("%s.bmp", target_base);
 	char *target_vector = pdf2laser_format_string("%s.vector", target_base);
-	const char * const raster_string = raster_mode_to_string(print_job->raster->mode);
-	if (execute_ghostscript(print_job, target_eps, target_bmp, target_vector, raster_string)) {
+	if (execute_ghostscript(print_job, target_eps, target_bmp, target_vector)) {
 		perror("Failed to execute ghostscript");
 		return -1;
 	}

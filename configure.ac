@@ -42,7 +42,7 @@ AC_ARG_VAR([FLIP], [default on whether or not the result is supposed to be flipp
 AC_DEFINE_UNQUOTED([FLIP], [(${FLIP=false})], [default on whether or not the result is supposed to be flipped along the X axis.])
 
 AC_ARG_VAR([RASTER_MODE_DEFAULT], [Default mode for processing raster engraving (varying power depending upon image characteristics).])
-AC_DEFINE_UNQUOTED([RASTER_MODE_DEFAULT], [(${RASTER_MODE_DEFAULT=RASTER_MODE_NONE})], [Default mode for processing raster engraving (varying power depending upon image characteristics).])
+AC_DEFINE_UNQUOTED([RASTER_MODE_DEFAULT], [(${RASTER_MODE_DEFAULT=RASTER_MODE_MONO})], [Default mode for processing raster engraving (varying power depending upon image characteristics).])
 
 AC_ARG_VAR([RASTER_POWER_DEFAULT], [Default power level for raster engraving])
 AC_DEFINE_UNQUOTED([RASTER_POWER_DEFAULT], [(${RASTER_POWER_DEFAULT=0})], [Default power level for raster engraving])
