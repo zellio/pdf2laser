@@ -96,7 +96,7 @@ int generate_ps(const char *target_pdf, const char *target_ps)
 
 	rc = gsapi_new_instance(&minst, NULL);
 	if (rc < 0)
-		return -1;
+		goto terminate_generate_ps;
 
 	rc = gsapi_set_arg_encoding(minst, GS_ARG_ENCODING_UTF8);
 	if (rc == 0)
@@ -109,6 +109,7 @@ int generate_ps(const char *target_pdf, const char *target_ps)
 
 	gsapi_delete_instance(minst);
 
+ terminate_generate_ps:
 	free(gs_argv[7]);
 	free(gs_argv[12]);
 
@@ -419,8 +420,9 @@ int generate_raster(print_job_t *print_job, FILE *pjl_file, FILE *bitmap_file)
 						break;
 					default: {       // mono
 						static int i;
-						if (i++==0)
+						if (i++==0) {
 							; // printf("mono\n");
+						}
 						int d = (h + 3) / 4 * 4;  // BMP padded to 4 bytes per scan line
 						if (d > (int) sizeof (buf)) {
 							perror("Too wide");

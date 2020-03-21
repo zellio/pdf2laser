@@ -149,7 +149,7 @@ char *ini_file_to_string(ini_file_t *self)
 
 	char *s = calloc(buffer_size + 1, sizeof(char));
 	int rc = 0;
-	for (int index = 0; index < section_count; index += 1) {
+	for (index = 0; index < section_count; index += 1) {
 		rc += snprintf(s + rc, buffer_size - rc, "%s\n\n", sections[index]);
 		free(sections[index]);
 	}

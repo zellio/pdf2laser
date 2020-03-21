@@ -105,7 +105,7 @@ static int execute_ghostscript(print_job_t *print_job, const char *const target_
 	rc = gsapi_new_instance(&minst, NULL);
 
 	if (rc < 0)
-		return rc;
+		goto terminate_execute_ghostscript;
 
 	rc = gsapi_set_arg_encoding(minst, GS_ARG_ENCODING_UTF8);
 	if (rc == 0) {
@@ -117,9 +117,10 @@ static int execute_ghostscript(print_job_t *print_job, const char *const target_
 	if ((rc == 0) || (rc2 == gs_error_Quit))
 		rc = rc2;
 
-	fclose(fh_vector);
-
 	gsapi_delete_instance(minst);
+
+ terminate_execute_ghostscript:
+	fclose(fh_vector);
 
 	free(gs_argv[4]);
 	free(gs_argv[5]);
@@ -168,13 +169,14 @@ static int pdf2laser_load_presets(preset_file_t ***preset_files, size_t *preset_
 
 			struct stat preset_file_stat;
 			if (stat(preset_file_path, &preset_file_stat))
-				continue;
+				goto pfd2laser_load_preset_counter_skip;
 
 			if (!S_ISREG(preset_file_stat.st_mode))
-				continue;
+				goto pfd2laser_load_preset_counter_skip;
 
 			preset_file_count += 1;
 
+		pfd2laser_load_preset_counter_skip:
 			free(preset_file_path);
 		}
 		closedir(preset_dir);
@@ -195,16 +197,17 @@ static int pdf2laser_load_presets(preset_file_t ***preset_files, size_t *preset_
 
 			struct stat preset_file_stat;
 			if (stat(preset_file_path, &preset_file_stat))
-				continue;
+				goto pfd2laser_load_preset_load_skip;
 
 			if (!S_ISREG(preset_file_stat.st_mode))
-				continue;
+				goto pfd2laser_load_preset_load_skip;
 
 			if (preset_file_index < preset_file_count) {
 				(*preset_files)[preset_file_index] = preset_file_create(preset_file_path);
 				preset_file_index += 1;
 			}
 
+		pfd2laser_load_preset_load_skip:
 			free(preset_file_path);
 		}
 		closedir(preset_dir);
@@ -247,6 +250,7 @@ int main(int argc, char *argv[])
 
 	const char *source_filename = print_job->source_filename;
 	char *source_basename = strndup(print_job->source_filename, FILENAME_NCHARS);
+	char *source_basename_ptr = source_basename;
 	source_basename = basename(source_basename);
 
 	// If no job name is specified, use just the filename if there
@@ -262,6 +266,8 @@ int main(int argc, char *argv[])
 		*last_dot = '\0';
 	}
 	char *target_base = pdf2laser_format_string("%s/%s", tmpdir_name, source_basename);
+
+	free(source_basename_ptr);
 
 	char *target_pdf = pdf2laser_format_string("%s.pdf", target_base);
 	if (generate_pdf(source_filename, target_pdf)) {

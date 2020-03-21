@@ -1,5 +1,5 @@
 #include "type_print_job.h"
-#include <inttypes.h>                 // for PRIxPTR
+#include <inttypes.h>                 // for PRIxPTR, PRId32, PRIu32
 #include <stdbool.h>                  // for true, false
 #include <stddef.h>                   // for NULL, size_t
 #include <stdio.h>                    // for snprintf
@@ -67,7 +67,7 @@ char *print_job_inspect(print_job_t *self)
 
 char *print_job_to_string(print_job_t *self)
 {
-	const char *print_job_string_header_template = "Job: %s\nRaster: speed=%d power=%d dpi=%d";
+	const char *print_job_string_header_template = "Job: %s\nRaster: speed=%"PRId32" power=%"PRId32" dpi=%"PRIu32"";
 
 	size_t s_len = 1;  // \0
 	s_len += snprintf(NULL, 0, print_job_string_header_template, self->name, self->raster->speed, self->raster->power, self->raster->resolution);

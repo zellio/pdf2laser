@@ -87,14 +87,18 @@ static int32_t vector_config_set_param_offset(print_job_t *print_job, char *opta
 {
 	size_t optlen = strnlen(optarg, OPTARG_MAX_LENGTH);
 	char *s = calloc(optlen + 1, sizeof(char));
+	char *s_ptr = s;
+
 	strncpy(s, optarg, optlen);
 
 	char *token = strtok(s, ",");
 	while (token) {
 		uint64_t values[2] = {0, 0};
 		int32_t rc = sscanf(token, "%lx=%lu", &values[0], &values[1]);
-		if (rc != 2)
+		if (rc != 2) {
+			free(s_ptr);
 			return -1;
+		}
 
 		int32_t red, green, blue;
 		vector_list_config_id_to_rgb(values[0], &red, &green, &blue);
@@ -109,6 +113,9 @@ static int32_t vector_config_set_param_offset(print_job_t *print_job, char *opta
 
 		token = strtok(NULL, ",");
 	}
+
+	free(s_ptr);
+
 	return 0;
 }
 

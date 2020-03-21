@@ -56,26 +56,31 @@ vector_t *vector_list_remove(vector_list_t *self, vector_t *vector)
 	vector_t *next = vector->next;
 	vector_t *prev = vector->prev;
 
-	if (self->head == vector) {
-		self->head = next;
-		if (next)
-			next->prev = NULL;
-	}
-	else if (self->tail == vector) {
-		self->tail = prev;
-		if (prev)
-			prev->next = NULL;
-	}
-	else {
+	// un-link node
+	if (next) {
 		next->prev = prev;
+	}
+
+	if (prev) {
 		prev->next = next;
 	}
 
 	vector->next = NULL;
 	vector->prev = NULL;
 
+	// correct list pointers
+	if (self->head == vector) {
+		self->head = next;
+	}
+
+	if (self->tail == vector) {
+		self->tail = prev;
+	}
+
+	// reduce length
 	self->length -= 0;
 
+	// return pointer to be freed
 	return vector;
 }
 

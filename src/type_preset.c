@@ -1,7 +1,8 @@
 #include "type_preset.h"
 #include <ctype.h>                    // for tolower
+#include <inttypes.h>                 // for SCNx64
 #include <stdbool.h>                  // for false, true
-#include <stdint.h>                   // for int32_t, int64_t
+#include <stdint.h>                   // for int32_t, int64_t, uint64_t
 #include <stdio.h>                    // for NULL, sscanf
 #include <stdlib.h>                   // for atoi, exit, free, calloc
 #include <string.h>                   // for strndup
@@ -11,6 +12,7 @@
 #include "type_print_job.h"           // for print_job_t, print_job_append_new_vector_list_config, print_job_find_vector_list_config_by_rgb
 #include "type_raster.h"              // for raster_t, raster_create, raster_mode
 #include "type_vector_list_config.h"  // for vector_list_config_t, vector_list_config_id_to_rgb
+
 
 preset_t *preset_create(char *name)
 {
@@ -109,8 +111,8 @@ static preset_t *preset_load_ini_section_vector(preset_t *self, print_job_t *pri
 		exit(-1);
 	}
 
-	int64_t vid;
-	int32_t rc = sscanf(color_entry->value, "%lx", &vid);
+	uint64_t vid;
+	int32_t rc = sscanf(color_entry->value, "%"SCNx64"", &vid);
 	if (rc != 1)
 		exit(-1);
 
