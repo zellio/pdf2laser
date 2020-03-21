@@ -299,11 +299,7 @@ int main(int argc, char *argv[])
 
 	char *target_bmp = pdf2laser_format_string("%s.bmp", target_base);
 	char *target_vector = pdf2laser_format_string("%s.vector", target_base);
-	const char * const raster_string =
-		print_job->raster->mode == 'c' ? "bmp16m" :
-		print_job->raster->mode == 'g' ? "bmpgray" :
-		"bmpmono";
-
+	const char * const raster_string = raster_mode_to_string(print_job->raster->mode);
 	if (execute_ghostscript(print_job, target_eps, target_bmp, target_vector, raster_string)) {
 		perror("Failed to execute ghostscript");
 		return -1;

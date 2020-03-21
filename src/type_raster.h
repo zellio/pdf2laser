@@ -27,6 +27,8 @@ struct raster {
 	int32_t screen_size;
 };
 
+char *raster_mode_to_string(raster_mode mode);
+
 raster_t *raster_create(void);
 raster_t *raster_destroy(raster_t *raster);
 
