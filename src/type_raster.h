@@ -28,6 +28,7 @@ struct raster {
 };
 
 char *raster_mode_to_string(raster_mode mode);
+char *raster_mode_to_device_string(raster_mode mode);
 
 raster_t *raster_create(void);
 raster_t *raster_destroy(raster_t *raster);
