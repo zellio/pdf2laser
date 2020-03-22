@@ -27,6 +27,13 @@ preset file format
 Description of the INI based file format for
 .B pdf2laser
 preset files.
+.SS Preset File Search Path
+.PP
+.nf
+@DATAROOTDIR@/pdf2laser/presets/*
+@SYSCONFDIR@/pdf2laser/presets/*
+$HOME/.pdf2laser/presets/*
+.fi
 .SH DESCRIPTION
 Preset files define a static configuration for pdf2laser. They allow you to set the various flags for
 .B pdf2laser
@@ -147,10 +154,6 @@ Controls the
 .BR -M ", " --multipass
 flag. Will run a full vector the number of times of this value.
 .RE
-.SH NOTES
-.SH BUGS
-Bug reports and issues may be posted on
-https://github.com/zellio/pdf2laser/issues
 .SH EXAMPLE
 Example preset file for 3mm birch plywood.
 .PP
@@ -175,6 +178,9 @@ Speed = 15
 Power = 100
 Multipass = 1
 .EE
+.SH BUGS
+Bug reports and issues may be posted on
+https://github.com/zellio/pdf2laser/issues
 .SH AUTHORS
 .PP
 Originally written by Zachary Elliott <contact@zell.io>.

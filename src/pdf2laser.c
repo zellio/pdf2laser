@@ -145,12 +145,9 @@ static char *append_directory(char *base_directory, char *directory_name)
 
 static int pdf2laser_load_presets(preset_file_t ***preset_files, size_t *preset_files_count) {
 	char *search_dirs[3];
-	search_dirs[0] = strndup(DATAROOTDIR"/pdf2laser/presets", PATH_MAX);
+	search_dirs[2] = pdf2laser_format_string("%s/.pdf2laser/presets", getenv("HOME"));
 	search_dirs[1] = strndup(SYSCONFDIR"/pdf2laser/presets", PATH_MAX);
-
-	size_t homedir_len = strnlen(getenv("HOME"), PATH_MAX) + strnlen(".pdf2laser/presets", 19) + 2;
-	search_dirs[2] = calloc(homedir_len, sizeof(char));
-	snprintf(search_dirs[2], homedir_len, "%s/.pdf2laser/presets", getenv("HOME"));
+	search_dirs[0] = strndup(DATAROOTDIR"/pdf2laser/presets", PATH_MAX);
 
 	size_t preset_file_count = 0;
 	size_t preset_file_index = 0;

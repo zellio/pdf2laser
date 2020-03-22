@@ -54,7 +54,7 @@ static void usage(int rc, const char * const msg)
 		"  -n, --job=JOBNAME              Set the job name to display\n"
 		"  -p, --printer=ADDRESS          ADDRESS of the printer\n"
 		"  -j, --job-mode=MODE            Set job mode to Vector, Raster, or Combined\n"
-		"  -P, --preset=PRESET            Select a default preset\n"
+		"  -P, --preset=PRESET            Load configuration preset\n"
 		"  -a, --autofocus                Enable auto focus\n"
 		"\n"
 		"Raster options:\n"
@@ -210,10 +210,10 @@ bool pdf2laser_optparse(print_job_t *print_job, preset_file_t **preset_files, si
 	optparse_init(&options, argv);
 
 	char *preset = NULL;
-	while ((option = optparse_long( &options, preset_long_option, NULL)) != -1) {
+	while ((option = optparse_long(&options, preset_long_option, NULL)) != -1) {
 		switch (option) {
 		case 'P':
-			preset = strndup(options.optarg, 1024);
+			preset = strndup(options.optarg, FILENAME_NCHARS);
 			break;
 		default:
 			continue;
@@ -221,15 +221,24 @@ bool pdf2laser_optparse(print_job_t *print_job, preset_file_t **preset_files, si
 	}
 
 	if (preset) {
+		uint8_t preset_found = 0;
 		for (size_t index = 0; index < preset_files_count; index += 1) {
-			if (strncmp(preset, preset_files[index]->preset->name, 1024)) {
+			if (strncmp(preset, preset_files[index]->preset->name, FILENAME_NCHARS)) {
 				continue;
 			}
 			preset_apply_to_print_job(preset_files[index]->preset, print_job);
+			preset_found = 1;
+			break;
 		}
 
-		// locate preset file
-		// merge preset file
+		if (preset_found == 0) {
+			fprintf(stderr, "Invalid preset: %s\nValid presets:", preset);
+			for (size_t index = 0; index < preset_files_count; index += 1) {
+				fprintf(stderr, "\n - %s", preset_files[index]->preset->name);
+			}
+			exit(-1);
+		}
+
 		free(preset);
 	}
 
