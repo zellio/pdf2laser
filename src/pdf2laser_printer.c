@@ -1,19 +1,20 @@
 #include "pdf2laser_printer.h"
-#include <arpa/inet.h>        // for inet_ntoa
-#include <errno.h>            // for errno, EINTR, EAGAIN, EBADF, EIO
-#include <netdb.h>            // for addrinfo, freeaddrinfo, getaddrinfo
-#include <netinet/in.h>       // for sockaddr_in, ntohs
-#include <stdint.h>           // for int32_t, uint32_t, uint8_t
-#include <stdio.h>            // for perror, fprintf, NULL, fileno, printf, snprintf
-#include <string.h>           // for strchr
-#ifdef __linux
-#include <sys/sendfile.h>     // for sendfile
-#endif
-#include <sys/socket.h>       // for connect, socket, PF_UNSPEC, SOCK_STREAM
-#include <sys/stat.h>         // for fstat, stat
-#include <unistd.h>           // for alarm, close, sleep, ssize_t
+#include <arpa/inet.h>       // for inet_ntoa
+#include <errno.h>           // for EBADF, EINTR, EIO, errno
+#include <fcntl.h>           // for open, O_RDONLY
+#include <inttypes.h>        // for PRIu32, PRIu8
+#include <netdb.h>           // for addrinfo, freeaddrinfo, getaddrinfo
+#include <netinet/in.h>      // for sockaddr_in, ntohs
+#include <stdbool.h>         // for bool, false, true
+#include <stdint.h>          // for int32_t, uint32_t, uint8_t
+#include <stdio.h>           // for perror, fprintf, snprintf, NULL, printf, stderr, size_t
+#include <string.h>          // for strchr, strlen
+#include <sys/socket.h>      // for connect, socket, PF_UNSPEC, SOCK_STREAM
+#include <sys/stat.h>        // for fstat, stat
+#include <unistd.h>          // for alarm, close, read, write, gethostname, sleep
+#include "config.h"          // for HOSTNAME_NCHARS
+#include "pdf2laser_util.h"  // for pdf2laser_sendfile
 
-//bool debug = false;
 char *queue = "";
 
 /**
@@ -47,14 +48,14 @@ static int32_t printer_connect(const char *host, const uint32_t timeout)
 				const struct sockaddr_in * addr_in = (void*) addr->ai_addr;
 				if (addr_in)
 					printf("trying to connect to %s:%d\n",
-						   inet_ntoa(addr_in->sin_addr),
-						   ntohs(addr_in->sin_port));
+					       inet_ntoa(addr_in->sin_addr),
+					       ntohs(addr_in->sin_port));
 
 				socket_descriptor = socket(addr->ai_family, addr->ai_socktype,
-										   addr->ai_protocol);
+				                           addr->ai_protocol);
 				if (socket_descriptor >= 0) {
 					if (!connect(socket_descriptor, addr->ai_addr,
-								 addr->ai_addrlen)) {
+					             addr->ai_addrlen)) {
 						break;
 					} else {
 						close(socket_descriptor);
@@ -122,69 +123,46 @@ static bool printer_disconnect(int32_t socket_descriptor)
 /**
  *
  */
-bool printer_send(const char *host, FILE *pjl_file, const char *job_name)
+int printer_send(print_job_t *print_job, char *target_pjl)
 {
-	char local_hostname[1024];
+	char local_hostname[HOSTNAME_NCHARS];
 	char *first_dot;
 
-	gethostname(local_hostname, 1024);
+	gethostname(local_hostname, HOSTNAME_NCHARS);
 	if ((first_dot = strchr(local_hostname, '.'))) {
 		*first_dot = '\0';
 	}
 
 	uint8_t lpdres;
-	int32_t p_sock = printer_connect(host, PRINTER_MAX_WAIT);
+	int32_t p_sock = printer_connect(print_job->host, PRINTER_MAX_WAIT);
 
 	write(p_sock, "\002\r\n", 3);
 	read(p_sock, &lpdres, 1);
 	if (lpdres) {
-		fprintf (stderr, "Bad response from %s, %u\n", host, lpdres);
-		return false;
+		fprintf(stderr, "Bad response from %s, %"PRIu8"\n", print_job->host, lpdres);
+		return -1;
 	}
+
+	int pjl_fno = open(target_pjl, O_RDONLY);
 
 	struct stat file_stat;
-	if (fstat(fileno(pjl_file), &file_stat)) {
+	if (fstat(pjl_fno, &file_stat)) {
 		perror("Error reading pjl file\n");
-		return false;
+		return -1;
 	}
 
-	char job_header[10240];
-	snprintf(job_header, 10240, "\003%u dfA%s%s\r\n", (uint32_t)file_stat.st_size, job_name, local_hostname);
+	size_t job_header_size = snprintf(NULL, 0, "\003%"PRIu32" dfA%s%s\r\n", (uint32_t)file_stat.st_size, print_job->name, local_hostname);
+	char job_header[job_header_size];
+	snprintf(job_header, 10240, "\003%"PRIu32" dfA%s%s\r\n", (uint32_t)file_stat.st_size, print_job->name, local_hostname);
 
 	write(p_sock, job_header, strlen(job_header));
 	read(p_sock, &lpdres, 1);
 	if (lpdres) {
-		fprintf(stderr, "Bad response from %s, %u\n", host, lpdres);
-		return false;
+		fprintf(stderr, "Bad response from %s, %"PRIu8"\n", print_job->host, lpdres);
+		return -1;
 	}
 
-#ifdef __linux
-	ssize_t bs = 0;
-	size_t bytes_sent = 0;
-	size_t count = file_stat.st_size;
+	pdf2laser_sendfile(p_sock, pjl_fno);
 
-	while (bytes_sent < count) {
-		if ((bs = sendfile(p_sock, fileno(pjl_file), 0, count - bytes_sent)) <= 0) {
-			if (errno == EINTR || errno == EAGAIN)
-				continue;
-			perror("sendfile filed");
-			return -1;
-		}
-		bytes_sent += bs;
-	}
-
-	printf("Job size: %d (%d)\n", bytes_sent, count);
-#else
-	{
-		char buffer[102400];
-		size_t rc;
-		while ((rc = fread(buffer, 1, 102400, pjl_file)) > 0)
-			write(p_sock, buffer, rc);
-
-		printf("Job size: %d\n", (int)file_stat.st_size);
-	}
-#endif
-
-
-	return printer_disconnect(p_sock);
+	return (printer_disconnect(p_sock) ? 0 : -1);
 }

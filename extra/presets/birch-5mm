@@ -1,0 +1,12 @@
+[Preset]
+Name = birch-5mm
+
+[Raster]
+Speed = 100
+Power = 40
+
+[Vector]
+Color = 000000
+Speed = 12
+Power = 100
+Frequency = 250

@@ -1,9 +1,7 @@
-#ifndef __PDF2LASER_TYPE_H__
-#define __PDF2LASER_TYPE_H__ 1
+#ifndef __PDF2LASER_TYPE_RASTER_H__
+#define __PDF2LASER_TYPE_RASTER_H__ 1
 
-#include <stdbool.h>                // for bool
-#include <stdint.h>                 // for int32_t, uint32_t, int8_t
-#include "pdf2laser_vector_list.h"  // for vector_list_t
+#include <stdint.h>  // for int32_t, int8_t, uint32_t
 
 #ifdef __cplusplus
 extern "C" {
@@ -29,27 +27,11 @@ struct raster {
 	int32_t screen_size;
 };
 
-typedef struct print_job print_job_t;
-struct print_job {
-	char *source_filename;
-	char *host;
+char *raster_mode_to_string(raster_mode mode);
+char *raster_mode_to_device_string(raster_mode mode);
 
-	char *name;
-	bool focus;
-	//uint8_t flip;
-	uint32_t height;
-	uint32_t width;
-
-	raster_t *raster;
-
-	int32_t vector_frequency;
-	bool vector_optimize;
-
-	vector_list_t **vectors;
-
-	bool debug;
-};
-
+raster_t *raster_create(void);
+raster_t *raster_destroy(raster_t *raster);
 
 #ifdef __cplusplus
 };

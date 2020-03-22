@@ -1,0 +1,12 @@
+[Preset]
+Name = acrylic-9.5mm
+
+[Raster]
+Speed = 100
+Power = 30
+
+[Vector]
+Color = 000000
+Speed = 2
+Power = 100
+Frequency = 5000

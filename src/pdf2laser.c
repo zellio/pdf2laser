@@ -1,7 +1,6 @@
-
 /// pdf2laser.c --- tool for printing to Epilog Fusion laser cutters
 
-// Copyright (C) 2015-2017 Zachary Elliott <contact@zell.io>
+// Copyright (C) 2015-2020 Zachary Elliott <contact@zell.io>
 // Copyright (C) 2011-2015 Trammell Hudson <hudson@osresearch.net>
 // Copyright (C) 2008-2011 AS220 Labs <brandon@as220.org>
 // Copyright (C) 2002-2008 Andrews & Arnold Ltd <info@aaisp.net.uk>
@@ -11,7 +10,7 @@
 //          Trammell Hudson <hudson@osresearch.net>
 //          Zachary Elliott <contact@zell.io>
 // URL: https://github.com/zellio/pdf2laser
-// Version: 0.5.1
+// Version: 1.0.0
 
 /// Commentary:
 
@@ -38,24 +37,27 @@
 #define _XOPEN_SOURCE 700
 
 #include "pdf2laser.h"
-#include <errno.h>                  // for errno, EAGAIN, EINTR
-#include <ghostscript/gserrors.h>   // for gs_error_type::gs_error_Quit
-#include <ghostscript/iapi.h>       // for gsapi_new_instance, gsapi_set_arg_encoding, gsapi_set_stdio, gsapi_init_with_args, gsapi_delete_instance, gsapi_exit
-#include <libgen.h>                 // for basename
-#include <stdint.h>                 // for int32_t, uint8_t
-#include <stdio.h>                  // for perror, snprintf, fclose, fopen
-#include <stdlib.h>                 // for calloc, mkdtemp
-#include <string.h>                 // for strrchr, strncmp
-#ifdef __linux
-#include <sys/sendfile.h>           // for sendfile
-#endif
-#include <sys/stat.h>               // for fstat, stat
-#include <unistd.h>                 // for unlink, rmdir, ssize_t
-#include "pdf2laser_cli.h"          // for optparse
-#include "pdf2laser_generator.h"    // for VECTOR_PASSES, generate_ps, generate_eps, generate_pjl
-#include "pdf2laser_printer.h"      // for pritner_send
-#include "pdf2laser_type.h"         // for print_job_t, raster_t
-#include "pdf2laser_vector_list.h"  // for vector_list_t, vector_list_create
+#include <dirent.h>                // for closedir, opendir, readdir, DIR, dirent
+#include <ghostscript/gserrors.h>  // for gs_error_Quit
+#include <ghostscript/iapi.h>      // for gsapi_delete_instance, gsapi_exit, gsapi_init_with_args, gsapi_new_instance, gsapi_set_arg_encoding, gsapi_set_stdio, GSDLLCALL, GS_ARG_ENCODING_UTF8
+#include <libgen.h>                // for basename
+#include <limits.h>                // for PATH_MAX
+#include <stdbool.h>               // for false
+#include <stddef.h>                // for size_t, NULL
+#include <stdint.h>                // for int32_t
+#include <stdio.h>                 // for perror, snprintf, fclose, fflush, fopen, fwrite, printf, FILE
+#include <stdlib.h>                // for free, calloc, getenv, mkdtemp
+#include <string.h>                // for strndup, strnlen, strrchr
+#include <sys/stat.h>              // for stat, S_ISREG
+#include <unistd.h>                // for unlink, rmdir
+#include "config.h"                // for FILENAME_NCHARS, DEBUG, TMP_DIRECTORY
+#include "pdf2laser_cli.h"         // for pdf2laser_optparse
+#include "pdf2laser_generator.h"   // for generate_eps, generate_pdf, generate_pjl, generate_ps
+#include "pdf2laser_printer.h"     // for printer_send
+#include "pdf2laser_util.h"        // for pdf2laser_format_string
+#include "type_preset_file.h"      // for preset_file_t, preset_file_create, preset_file_destroy
+#include "type_print_job.h"        // for print_job_t, print_job_create, print_job_destroy, print_job_to_string
+#include "type_raster.h"           // for raster_t
 
 FILE *fh_vector;
 static int GSDLLCALL gsdll_stdout(__attribute__ ((unused)) void *minst, const char *str, int len)
@@ -76,18 +78,13 @@ static int GSDLLCALL gsdll_stdout(__attribute__ ((unused)) void *minst, const ch
  * @param filename_vector the filename that will contain the vector
  * information.
  * @param bmp_mode a string which is one of bmp16m, bmpgray, or bmpmono.
-  * @param resolution the encapsulated postscript resolution.
+ * @param resolution the encapsulated postscript resolution.
  *
  * @return Return true if the execution of ghostscript succeeds, false
  * otherwise.
  */
-static bool execute_ghostscript(print_job_t *print_job,
-								const char * const filename_bitmap,
-								const char * const filename_eps,
-								const char * const filename_vector,
-								const char * const bmp_mode)
+static int execute_ghostscript(print_job_t *print_job, const char *const target_eps, const char *const target_bmp, const char *const target_vector) //, const char *const raster_string)
 {
-
 	int gs_argc = 8;
 	char *gs_argv[8];
 
@@ -95,20 +92,12 @@ static bool execute_ghostscript(print_job_t *print_job,
 	gs_argv[1] = "-q";
 	gs_argv[2] = "-dBATCH";
 	gs_argv[3] = "-dNOPAUSE";
+	gs_argv[4] = pdf2laser_format_string("-r%d", print_job->raster->resolution);
+	gs_argv[5] = pdf2laser_format_string("-sDEVICE=%s", raster_mode_to_device_string(print_job->raster->mode));
+	gs_argv[6] = pdf2laser_format_string("-sOutputFile=%s", target_bmp);
+	gs_argv[7] = strndup(target_eps, FILENAME_NCHARS);
 
-	gs_argv[4] = calloc(64, sizeof(char));
-	snprintf(gs_argv[4], 64, "-r%d", print_job->raster->resolution);
-
-	gs_argv[5] = calloc(1024, sizeof(char));
-	snprintf(gs_argv[5], 1024, "-sDEVICE=%s", bmp_mode);
-
-	gs_argv[6] = calloc(1024, sizeof(char));
-	snprintf(gs_argv[6], 1024, "-sOutputFile=%s", filename_bitmap);
-
-	gs_argv[7] = calloc(1024, sizeof(char));
-	snprintf(gs_argv[7], 1024, "%s", filename_eps);
-
-	fh_vector = fopen(filename_vector, "w");
+	fh_vector = fopen(target_vector, "w");
 
 	int32_t rc;
 
@@ -116,7 +105,7 @@ static bool execute_ghostscript(print_job_t *print_job,
 	rc = gsapi_new_instance(&minst, NULL);
 
 	if (rc < 0)
-		return false;
+		goto terminate_execute_ghostscript;
 
 	rc = gsapi_set_arg_encoding(minst, GS_ARG_ENCODING_UTF8);
 	if (rc == 0) {
@@ -124,19 +113,109 @@ static bool execute_ghostscript(print_job_t *print_job,
 		rc = gsapi_init_with_args(minst, gs_argc, gs_argv);
 	}
 
-    int32_t rc2 = gsapi_exit(minst);
-    if ((rc == 0) || (rc2 == gs_error_Quit))
+	int32_t rc2 = gsapi_exit(minst);
+	if ((rc == 0) || (rc2 == gs_error_Quit))
 		rc = rc2;
-
-	fclose(fh_vector);
 
 	gsapi_delete_instance(minst);
 
-	if (rc)
-		return false;
+ terminate_execute_ghostscript:
+	fclose(fh_vector);
 
-	return true;
+	free(gs_argv[4]);
+	free(gs_argv[5]);
+	free(gs_argv[6]);
+	free(gs_argv[7]);
+
+	return rc;
 }
+
+static char *append_directory(char *base_directory, char *directory_name)
+{
+	static const char *path_template = "%s/%s";
+
+	size_t path_length = 1;
+	path_length += snprintf(NULL, 0, path_template, base_directory, directory_name);
+
+	char *s = calloc(path_length, sizeof(char));
+	snprintf(s, path_length, path_template, base_directory, directory_name);
+
+	return s;
+}
+
+static int pdf2laser_load_presets(preset_file_t ***preset_files, size_t *preset_files_count) {
+	char *search_dirs[3];
+	search_dirs[2] = pdf2laser_format_string("%s/.pdf2laser/presets", getenv("HOME"));
+	search_dirs[1] = strndup(SYSCONFDIR"/pdf2laser/presets", PATH_MAX);
+	search_dirs[0] = strndup(DATAROOTDIR"/pdf2laser/presets", PATH_MAX);
+
+	size_t preset_file_count = 0;
+	size_t preset_file_index = 0;
+	struct dirent *directory_entry;
+
+	for (size_t index = 0; index < 3; index += 1) {
+		DIR *preset_dir = opendir(search_dirs[index]);
+		if (preset_dir == NULL) {
+			if (DEBUG) {
+				perror("opendir failed");
+			}
+			continue;
+		}
+		while ((directory_entry = readdir(preset_dir))) {
+			char *preset_file_path = append_directory(search_dirs[index], directory_entry->d_name);
+
+			struct stat preset_file_stat;
+			if (stat(preset_file_path, &preset_file_stat))
+				goto pfd2laser_load_preset_counter_skip;
+
+			if (!S_ISREG(preset_file_stat.st_mode))
+				goto pfd2laser_load_preset_counter_skip;
+
+			preset_file_count += 1;
+
+		pfd2laser_load_preset_counter_skip:
+			free(preset_file_path);
+		}
+		closedir(preset_dir);
+	}
+
+	*preset_files_count = preset_file_count;
+	*preset_files = calloc(preset_file_count, sizeof(preset_file_t*));
+	for (size_t index = 0; index < 3; index += 1) {
+		DIR *preset_dir = opendir(search_dirs[index]);
+		if (preset_dir == NULL) {
+			if (DEBUG) {
+				perror("opendir failed");
+			}
+			continue;
+		}
+		while ((directory_entry = readdir(preset_dir))) {
+			char *preset_file_path = append_directory(search_dirs[index], directory_entry->d_name);
+
+			struct stat preset_file_stat;
+			if (stat(preset_file_path, &preset_file_stat))
+				goto pfd2laser_load_preset_load_skip;
+
+			if (!S_ISREG(preset_file_stat.st_mode))
+				goto pfd2laser_load_preset_load_skip;
+
+			if (preset_file_index < preset_file_count) {
+				(*preset_files)[preset_file_index] = preset_file_create(preset_file_path);
+				preset_file_index += 1;
+			}
+
+		pfd2laser_load_preset_load_skip:
+			free(preset_file_path);
+		}
+		closedir(preset_dir);
+	}
+
+	for (size_t index = 0; index < 3; index += 1)
+		free(search_dirs[index]);
+
+	return  0;
+}
+
 
 /**
  * Main entry point for the program.
@@ -149,279 +228,143 @@ static bool execute_ghostscript(print_job_t *print_job,
  */
 int main(int argc, char *argv[])
 {
-	// Create tmp working directory
-	char tmpdir_template[1024] = { '\0' };
-	snprintf(tmpdir_template, 1024, "%s/%s.XXXXXX", TMP_DIRECTORY, basename(argv[0]));
+	// Create temp working directory
+	char *tmpdir_template = pdf2laser_format_string("%s/%s.XXXXXX", TMP_DIRECTORY, basename(argv[0]));
 	char *tmpdir_name = mkdtemp(tmpdir_template);
-
 	if (tmpdir_name == NULL) {
 		perror("mkdtemp failed");
 		return false;
 	}
 
-	// Default host is defined in config.h, and can be overridden at configuration time, e.g.
-	//   ./configure DEFAULT_HOST=foo
-	char *host = DEFAULT_HOST;
+	// Load preset files
+	preset_file_t **preset_files;
+	size_t preset_files_count;
+	pdf2laser_load_presets(&preset_files, &preset_files_count);
 
-	// Job struct defaults
-	print_job_t *print_job = &(print_job_t){
-		// .flip = FLIP,
-		.host = host,
-		.height = BED_HEIGHT,
-		.width = BED_WIDTH,
-		.focus = false,
-		.raster = &(raster_t){
-			.resolution = RESOLUTION_DEFAULT,
-			.mode = RASTER_MODE_DEFAULT,
-			.speed = RASTER_SPEED_DEFAULT,
-			.power = RASTER_POWER_DEFAULT,
-			.repeat = RASTER_REPEAT,
-			.screen_size = SCREEN_DEFAULT,
-		},
-		.vector_frequency = VECTOR_FREQUENCY_DEFAULT,
-		.vector_optimize = true,
-		.vectors = NULL,
-		.debug = DEBUG,
-	};
-
-	// NOTE: This should be replaced with something that processes the colours
-	// that are passed in so pdf2laser can support something other than the
-	// current RGB layout.
-	print_job->vectors = calloc(VECTOR_PASSES, sizeof(vector_list_t*));
-	for (int32_t i = 0; i < VECTOR_PASSES; i++) {
-		print_job->vectors[i] = vector_list_create();
-	}
-
-	// Process command line options
-	optparse(print_job, argc, argv);
+	// parse command line options
+	print_job_t *print_job = print_job_create();
+	pdf2laser_optparse(print_job, preset_files, preset_files_count, argc, argv);
 
 	const char *source_filename = print_job->source_filename;
-
 	char *source_basename = strndup(print_job->source_filename, FILENAME_NCHARS);
+	char *source_basename_ptr = source_basename;
 	source_basename = basename(source_basename);
 
 	// If no job name is specified, use just the filename if there
-	if (!print_job->name) {
-		print_job->name = source_basename;
+	if (print_job->name == NULL) {
+		print_job->name = strndup(source_basename, FILENAME_NCHARS);
 	}
 
 	// Report the settings on stdout
-	printf("Job: %s\n"
-		   "Raster: speed=%d power=%d dpi=%d\n"
-		   "Vector: freq=%d speed=R%d,G%d,B%d power=R%d,G%d,B%d multipass=R%d,G%d,B%d\n"
-		   "",
-		   print_job->name,
-		   print_job->raster->speed,
-		   print_job->raster->power,
-		   print_job->raster->resolution,
-		   print_job->vector_frequency,
-		   print_job->vectors[0]->speed,
-		   print_job->vectors[1]->speed,
-		   print_job->vectors[2]->speed,
-		   print_job->vectors[0]->power,
-		   print_job->vectors[1]->power,
-		   print_job->vectors[2]->power,
-		   print_job->vectors[0]->multipass,
-		   print_job->vectors[1]->multipass,
-		   print_job->vectors[2]->multipass);
+	printf("Configured values:\n%s\n", print_job_to_string(print_job));
 
-	char *target_base = strndup(source_basename, FILENAME_NCHARS);
-	char *last_dot = strrchr(target_base, '.');
-	if (last_dot != NULL)
+	char *last_dot = strrchr(source_basename, '.');
+	if (last_dot != NULL) {
 		*last_dot = '\0';
+	}
+	char *target_base = pdf2laser_format_string("%s/%s", tmpdir_name, source_basename);
 
-	char target_basename[FILENAME_NCHARS] = { '\0' };
-	char target_bitmap[FILENAME_NCHARS] = { '\0' };
-	char target_eps[FILENAME_NCHARS] = { '\0' };
-	char target_pdf[FILENAME_NCHARS] = { '\0' };
-	char target_pjl[FILENAME_NCHARS] = { '\0' };
-	char target_ps[FILENAME_NCHARS] = { '\0' };
-	char target_vector[FILENAME_NCHARS] = { '\0' };
+	free(source_basename_ptr);
 
-	snprintf(target_basename, FILENAME_NCHARS, "%s/%s", tmpdir_name, target_base);
-	snprintf(target_bitmap, FILENAME_NCHARS, "%s.bmp", target_basename);
-	snprintf(target_eps, FILENAME_NCHARS, "%s.eps", target_basename);
-	snprintf(target_pdf, FILENAME_NCHARS, "%s.pdf", target_basename);
-	snprintf(target_pjl, FILENAME_NCHARS, "%s.pjl", target_basename);
-	snprintf(target_ps, FILENAME_NCHARS, "%s.ps", target_basename);
-	snprintf(target_vector, FILENAME_NCHARS, "%s.vector", target_basename);
-
-	FILE *fh_bitmap;
-	FILE *fh_pdf;
-	FILE *fh_ps;
-	FILE *fh_pjl;
-	FILE *fh_vector;
-
-	fh_pdf = fopen(target_pdf, "w");
-	if (!fh_pdf) {
-		perror(target_pdf);
-		return 1;
+	char *target_pdf = pdf2laser_format_string("%s.pdf", target_base);
+	if (generate_pdf(source_filename, target_pdf)) {
+		perror("Failed to clone pdf file");
+		return -1;
 	}
 
-	if (strncmp(source_filename, "stdin", 5) == 0) {
-		uint8_t buffer[102400];
-		size_t rc;
-		while ((rc = fread(buffer, 1, 102400, stdin)) > 0)
-			fwrite(buffer, 1, rc, fh_pdf);
-	}
-	else {
-		FILE *fh_source = fopen(source_filename, "r");
-		int32_t source_fno = fileno(fh_source);
-
-		struct stat file_stat;
-		if (fstat(source_fno, &file_stat)) {
-			perror("Error reading pjl file\n");
-			return false;
-		}
-
-#ifdef __linux
-		ssize_t bs = 0;
-		size_t bytes_sent = 0;
-		size_t count = file_stat.st_size;
-
-		while (bytes_sent < count) {
-			if ((bs = sendfile(fileno(fh_pdf), source_fno, 0, count - bytes_sent)) <= 0) {
-				if (errno == EINTR || errno == EAGAIN)
-					continue;
-				perror("sendfile filed");
-				return -1;
-			}
-			bytes_sent += bs;
-		}
-#else
-		{
-			char buffer[102400];
-			size_t rc;
-			while ((rc = fread(buffer, 1, 102400, fh_source)) > 0)
-				fwrite(buffer, 1, rc, fh_pdf);
-		}
-
-#endif
-
-		fclose(fh_source);
-	}
-
-	fclose(fh_pdf);
-
-	if (!generate_ps(target_pdf, target_ps)) {
-		perror("Error converting pdf to postscript.");
-		return 1;
+	char *target_ps = pdf2laser_format_string("%s.ps", target_base);
+	if (generate_ps(target_pdf, target_ps)) {
+		perror("Failed to generate ps file");
+		return -1;
 	}
 
 	if (!print_job->debug) {
-		/* Debug is disabled so remove generated pdf file. */
 		if (unlink(target_pdf)) {
-			perror(target_pdf);
+			perror("Error deleting pdf file");
+			return -1;
 		}
 	}
+	free(target_pdf);
 
-	fh_ps = fopen(target_ps, "r");
-	if (!fh_ps) {
-		perror("Error opening postscript file.");
-		return 1;
+	char *target_eps = pdf2laser_format_string("%s.eps", target_base);
+	if (generate_eps(print_job, target_ps, target_eps)) {
+		perror("Failed to generate eps file");
+		return -1;
 	}
 
-	/* Open the encapsulated postscript file for writing. */
-	FILE * const fh_eps = fopen(target_eps, "w");
-	if (!fh_eps) {
-		perror(target_eps);
-		return 1;
-	}
-
-	/* Convert postscript to encapsulated postscript. */
-	if (!generate_eps(print_job, fh_ps, fh_eps)) {
-		perror("Error converting postscript to encapsulated postscript.");
-		fclose(fh_eps);
-		return 1;
-	}
-
-	/* Cleanup after encapsulated postscript creation. */
-	fclose(fh_eps);
-	if (fh_ps != stdin) {
-		fclose(fh_ps);
-		if (unlink(target_ps)) {
-			perror(target_ps);
-		}
-	}
-
-	const char * const raster_string =
-		print_job->raster->mode == 'c' ? "bmp16m" :
-		print_job->raster->mode == 'g' ? "bmpgray" :
-		"bmpmono";
-
-
-	fprintf(stderr, "execute_ghostscript\n");
-	if(!execute_ghostscript(print_job,
-							target_bitmap,
-							target_eps,
-							target_vector,
-							raster_string)) {
-		perror("Failure to execute ghostscript command.\n");
-		return 1;
-	}
-
-	/* Open file handles needed by generation of the printer job language
-	 * file.
-	 */
-	fh_bitmap = fopen(target_bitmap, "r");
-	fh_vector = fopen(target_vector, "r");
-	fh_pjl = fopen(target_pjl, "w");
-	if (!fh_pjl) {
-		perror(target_pjl);
-		return 1;
-	}
-
-	/* Execute the generation of the printer job language (pjl) file. */
-	if (!generate_pjl(print_job, fh_bitmap, fh_pjl, fh_vector)) {
-		perror("Generation of pjl file failed.\n");
-		fclose(fh_pjl);
-		return 1;
-	}
-
-	/* Close open file handles. */
-	fclose(fh_bitmap);
-	fclose(fh_pjl);
-	fclose(fh_vector);
-
-	/* Cleanup unneeded files provided that debug mode is disabled. */
 	if (!print_job->debug) {
-		if (unlink(target_bitmap)) {
-			perror(target_bitmap);
+		if (unlink(target_ps)) {
+			perror("Error deleting ps file");
+			return -1;
 		}
+	}
+	free(target_ps);
+
+	char *target_bmp = pdf2laser_format_string("%s.bmp", target_base);
+	char *target_vector = pdf2laser_format_string("%s.vector", target_base);
+	if (execute_ghostscript(print_job, target_eps, target_bmp, target_vector)) {
+		perror("Failed to execute ghostscript");
+		return -1;
+	}
+
+	if (!print_job->debug) {
 		if (unlink(target_eps)) {
-			perror(target_eps);
+			perror("Error deleting eps file");
+			return -1;
 		}
+	}
+	free(target_eps);
+
+	char *target_pjl = pdf2laser_format_string("%s.pjl", target_base);
+	if (generate_pjl(print_job, target_bmp, target_vector, target_pjl)) {
+		perror("Failed to generate pjl file");
+		return -1;
+	}
+
+	if (!print_job->debug) {
+		if (unlink(target_bmp)) {
+			perror("Error deleting bmp file");
+			return -1;
+		}
+	}
+	free(target_bmp);
+
+	if (!print_job->debug) {
 		if (unlink(target_vector)) {
-			perror(target_vector);
+			perror("Error deleting vector file");
+			return -1;
 		}
 	}
+	free(target_vector);
 
-	/* Open printer job language file. */
-	fh_pjl = fopen(target_pjl, "r");
-	if (!fh_pjl) {
-		perror(target_pjl);
-		return 1;
+	free(target_base);
+
+	if (printer_send(print_job, target_pjl)) {
+		perror("Failed to send job to printer");
+		return -1;
 	}
 
-	/* Send print job to printer. */
-	if (!printer_send(print_job->host, fh_pjl, print_job->name)) {
-		perror("Could not send pjl file to printer.\n");
-		return 1;
-	}
-
-	fclose(fh_pjl);
 	if (!print_job->debug) {
 		if (unlink(target_pjl)) {
-			perror(target_pjl);
+			perror("Error deleting pjl file");
+			return -1;
 		}
+	}
+	free(target_pjl);
+
+	print_job_destroy(print_job);
+
+	for (size_t index = 0; index < preset_files_count; index += 1) {
+		preset_file_destroy(preset_files[index]);
 	}
 
 	if (!print_job->debug) {
 		if (rmdir(tmpdir_name) == -1) {
-			perror("rmdir failed: ");
-			return 1;
+			perror("Error deleting tmpdir");
+			return -1;
 		}
 	}
+	free(tmpdir_name);
 
 	return 0;
 }

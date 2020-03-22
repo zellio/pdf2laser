@@ -1,0 +1,189 @@
+'\" t
+.TH "pdf2laser.preset" "5" "2020-03-11" "GNU" "NYC Resistor Tools"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.\" -----------------------------------------------------------------
+.\" * set default formatting
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
+.nh
+.\" disable justification (adjust text to left margin only)
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+.SH NAME
+pdf2laser.preset -
+.B pdf2laser
+preset file format
+.SH SYNOPSIS
+Description of the INI based file format for
+.B pdf2laser
+preset files.
+.SS Preset File Search Path
+.PP
+.nf
+@DATAROOTDIR@/pdf2laser/presets/*
+@SYSCONFDIR@/pdf2laser/presets/*
+$HOME/.pdf2laser/presets/*
+.fi
+.SH DESCRIPTION
+Preset files define a static configuration for pdf2laser. They allow you to set the various flags for
+.B pdf2laser
+in a file and reuse them for multiple cuts.
+As stated, the files are in an INI format and are comprised of three sections: Preset, Raster, and Vector.
+They are described below.
+.SH [PRESET] SECTION OPTIONS
+The preset file may include at most one [Preset] section, which carries the global configuration options for a print job.
+.PP
+.I Name=
+.RS 4
+Name of the preset file.
+Used to identify which preset to use on the command line via the
+.BR -p ", " --preset " flag."
+.RE
+.PP
+.I Autofocus=
+.RS 4
+Controls auto-focus of the print job. This honestly does nothing right now.
+.RE
+.PP
+.I Fallthrough=
+.RS 4
+Controls the Fallthrough setting of the vectors in the print job.
+Fallthrough means that
+.B pdf2laser
+will apply the settings for the last vector configured to any vectors which do not have a configuration.
+.RE
+.SH [RASTER] SECTION OPTIONS
+The preset file may include at most one [Raster] section, which carries the raster settings for a job.
+.PP
+.I Mode=
+.RS 4
+Controls the mode of the print's etch. There are three valid values:
+.BR mono ", " grey ", and " colour "."
+.PP
+The
+.B mono
+raster mode uses a line or dot screen on any grey levels or colours.
+This can be controlled with the
+.B SIZE
+parameter.
+The default value of 8 makes a nice fine line screen on 600dpi engraving.
+.PP
+The
+.B grey
+raster mode maps the grey level to power level. The power level is scaled to the raster power setting.
+.PP
+In the
+.B colour
+mode, the primary and secondary colours are processed as separate passes, using the grey level of the colour as a power level.
+The power level is scaled to the raster power setting as in the grey mode.
+Note that red is 100% red, and non 100% green and blue, etc, so 50% red, 0% green/blue is not counted as red, but counts as “grey”.
+100% red, and 50% green/blue counts as red, half power.
+This means you can make distinct raster areas of the page so that you do not waste time moving the head over blank space between them.
+.RE
+.PP
+.I Speed=
+.RS 4
+Controls how quickly the laser head runs during the etching pass. Valid values are between 0 and 100
+.RE
+.PP
+.I Power=
+.RS 4
+Controls how powerful the laser is during the etching pass. Valid values are between 0 and 100.
+.RE
+.PP
+.I Resolution=
+.RS 4
+This controls the
+.I DPI
+of the etching pass. This should be configured to the DPI of the input PDF file.
+Generally speaking, a higher DPI means a cleaner, slower etch with a higher level of detail.
+.RE
+.PP
+.I ScreenSize=
+.RS 4
+Used to configure the
+.B mono
+raster mode.
+See that section above for more information.
+.RE
+.SH [VECTOR] SECTION OPTIONS
+The preset file may include any number of [Vector] sections, which carry the
+vector settings for the print job. Each section
+.B MUST
+have a different color value.
+.PP
+.I Color=
+.RS 4
+Controls which color the rest of the vector settings applies to. This value
+.B MUST
+be provided as three hex bytes.
+(e.g. FF0000 for Red, 00FF00 for Green, &c.)
+.RE
+.PP
+.I Frequency=
+.RS 4
+Controls the frequency of the laser during the cut pass.
+Valid values are between 10 and 5000.
+.RE
+.PP
+.I Speed=
+.RS 4
+Controls the speed of the laser during the cut pass.
+Valid values are between 0 and 100.
+.RE
+.PP
+.I Power=
+.RS 4
+Controls the power of the laser during the cut pass.
+Valid values are between 0 and 100.
+.RE
+.PP
+.I Passes=
+.RS 4
+Controls the
+.BR -M ", " --multipass
+flag. Will run a full vector the number of times of this value.
+.RE
+.SH EXAMPLE
+Example preset file for 3mm birch plywood.
+.PP
+.in +4n
+.EX
+[Preset]
+Name = birch-3mm
+Autofocus = false
+Fallthrough = True
+
+[Raster]
+Mode = grey
+Speed = 100
+Power = 40
+Resolution = 600
+ScreenSize = 8
+
+[Vector]
+Color = 000000
+Frequency = 50
+Speed = 15
+Power = 100
+Multipass = 1
+.EE
+.SH BUGS
+Bug reports and issues may be posted on
+https://github.com/zellio/pdf2laser/issues
+.SH AUTHORS
+.PP
+Originally written by Zachary Elliott <contact@zell.io>.
+.SH "SEE ALSO"
+.PP
+.BR pdf2laser "(1)"

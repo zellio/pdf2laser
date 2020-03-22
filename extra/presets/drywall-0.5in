@@ -1,0 +1,8 @@
+[Preset]
+Name = drywall-0.5in
+
+[Vector]
+Color = 000000
+Speed = 2
+Power = 100
+Frequency = 2500

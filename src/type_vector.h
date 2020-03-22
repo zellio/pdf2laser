@@ -1,8 +1,8 @@
-#ifndef __PDF2LASER_VECTOR_H__
-#define __PDF2LASER_VECTOR_H__ 1
+#ifndef __PDF2LASER_TYPE_VECTOR_H__
+#define __PDF2LASER_TYPE_VECTOR_H__ 1
 
-#include <stdint.h>   // for int32_t
-#include <stdbool.h>  // for bool
+#include <stdint.h>      // for int32_t
+#include "type_point.h"  // for point_t
 
 #ifdef __cplusplus
 extern "C" {
@@ -10,12 +10,6 @@ extern "C" {
 #if 0
 }
 #endif
-
-typedef struct point point_t;
-struct point {
-	int32_t x;
-	int32_t y;
-};
 
 typedef struct vector vector_t;
 struct vector {
@@ -27,11 +21,10 @@ struct vector {
 };
 
 vector_t *vector_create(int32_t start_x, int32_t start_y, int32_t end_x, int32_t end_y);
-bool vector_destroy(vector_t *self);
+vector_t *vector_destroy(vector_t *self);
 int32_t vector_compare(vector_t *self, vector_t *other);
 
 vector_t *vector_flip(vector_t *self);
-int32_t point_compare(point_t *self, point_t *other);
 
 #ifdef __cplusplus
 };

@@ -1,0 +1,12 @@
+[Preset]
+Name = plywood-5mm
+
+[Raster]
+Speed = 100
+Power = 80
+
+[Vector]
+Color = 000000
+Speed = 15
+Power = 80
+Frequency = 1000

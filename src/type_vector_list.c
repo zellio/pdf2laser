@@ -1,7 +1,9 @@
-#include "pdf2laser_vector_list.h"
-#include <math.h>    // for pow, powl, sqrt
-#include <stdio.h>   // for NULL, printf
-#include <stdlib.h>  // for calloc
+#include "type_vector_list.h"
+#include <inttypes.h>     // for PRId32, PRId64
+#include <math.h>         // for pow, powl, sqrt
+#include <stdio.h>        // for NULL, printf, size_t
+#include <stdlib.h>       // for calloc, free
+#include "type_vector.h"  // for vector_t, vector_compare, vector_destroy, vector_flip
 
 vector_list_t *vector_list_create(void)
 {
@@ -9,11 +11,28 @@ vector_list_t *vector_list_create(void)
 	list->head = NULL;
 	list->tail = NULL;
 	list->length = 0;
-	list->pass = 0;
-	list->power = 0;
-	list->speed = 0;
-	list->multipass = 1;
 	return list;
+}
+
+vector_list_t *vector_list_destroy(vector_list_t *self)
+{
+	if (self == NULL)
+		return NULL;
+
+	vector_t *vectors[self->length];
+	size_t index = 0;
+	for (vector_t *vector = self->head; vector != NULL; vector = vector->next) {
+		vectors[index] = vector;
+		index += 1;
+	}
+
+	for (index = 0; index < (size_t)self->length; index += 1) {
+		vector_destroy(vectors[index]);
+	}
+
+	free(self);
+
+	return NULL;
 }
 
 vector_list_t *vector_list_append(vector_list_t *self, vector_t *vector)
@@ -24,7 +43,7 @@ vector_list_t *vector_list_append(vector_list_t *self, vector_t *vector)
 		self->length = 1;
 	}
 	else {
- 		vector->prev = self->tail;
+		vector->prev = self->tail;
 		self->tail->next = vector;
 		self->tail = vector;
 		self->length += 1;
@@ -37,67 +56,46 @@ vector_t *vector_list_remove(vector_list_t *self, vector_t *vector)
 	vector_t *next = vector->next;
 	vector_t *prev = vector->prev;
 
-	if (self->head == vector) {
-		self->head = next;
-		if (next)
-			next->prev = NULL;
-	}
-	else if (self->tail == vector) {
-		self->tail = prev;
-		if (prev)
-			prev->next = NULL;
-	}
-	else {
+	// un-link node
+	if (next) {
 		next->prev = prev;
+	}
+
+	if (prev) {
 		prev->next = next;
 	}
 
 	vector->next = NULL;
 	vector->prev = NULL;
 
+	// correct list pointers
+	if (self->head == vector) {
+		self->head = next;
+	}
+
+	if (self->tail == vector) {
+		self->tail = prev;
+	}
+
+	// reduce length
 	self->length -= 0;
 
+	// return pointer to be freed
 	return vector;
 }
 
-vector_list_t *vector_list_stats(vector_list_t *self)
+int vector_list_contains(vector_list_t *self, vector_t *vector)
 {
-	int32_t transits = 0;
-	int64_t transit_total = 0;
-
-	int32_t cuts = 0;
-	int64_t cut_total = 0;
-
-	int32_t current_x = 0;
-	int32_t current_y = 0;
-
-	vector_t *vector = self->head;
-	while (vector) {
-		int32_t transit_dx = current_x - vector->start->x;
-		int32_t transit_dy = current_y - vector->start->y;
-		int64_t transit_length = sqrt(pow(transit_dx, 2) + pow(transit_dy, 2));
-		if (transit_length) {
-			transits += 1;
-			transit_total += transit_length;
+	size_t index = 0;
+	vector_t *v = self->head;
+	while (v) {
+		if (vector_compare(vector, v) == 0) {
+			return index;
 		}
-
-		int64_t cut_dx = vector->start->x - vector->end->x;
-		int64_t cut_dy = vector->start->y - vector->end->y;
-		int64_t cut_length = sqrt(pow(cut_dx, 2) + pow(cut_dy, 2));
-		if (cut_length) {
-			cuts += 1;
-			cut_total += cut_length;
-		}
-
-		current_x = vector->end->x;
-		current_y = vector->end->y;
-		vector = vector->next;
+		index += 1;
+		v = v->next;
 	}
-
-	printf("Cuts: %d len %lld\n", cuts, cut_total);
-	printf("Move: %d len %lld\n", transits, transit_total);
-
-	return self;
+	return -1;
 }
 
 /** Find the closest vector to a given point and remove it from the list.
@@ -161,7 +159,6 @@ vector_t *vector_list_find_closest(vector_list_t *list, point_t *point)
  *
  * This does not split vectors.
  */
-//static int vector_optimize(vectors_t * const vectors)
 vector_list_t *vector_list_optimize(vector_list_t *self)
 {
 	vector_list_t *list = vector_list_create();
@@ -175,22 +172,45 @@ vector_list_t *vector_list_optimize(vector_list_t *self)
 
 	vector_list_stats(list);
 
-	list->pass = self->pass;
-	list->power = self->power;
-	list->speed = self->speed;
-	list->multipass = self->multipass;
-
 	return list;
 }
 
-bool vector_list_contains(vector_list_t *self, vector_t *vector)
+vector_list_t *vector_list_stats(vector_list_t *self)
 {
-	vector_t *v = self->head;
-	while (v) {
-		if (vector_compare(vector, v) == 0) {
-			return true;
+	int32_t transits = 0;
+	int64_t transit_total = 0;
+
+	int32_t cuts = 0;
+	int64_t cut_total = 0;
+
+	int32_t current_x = 0;
+	int32_t current_y = 0;
+
+	vector_t *vector = self->head;
+	while (vector) {
+		int32_t transit_dx = current_x - vector->start->x;
+		int32_t transit_dy = current_y - vector->start->y;
+		int64_t transit_length = sqrt(pow(transit_dx, 2) + pow(transit_dy, 2));
+		if (transit_length) {
+			transits += 1;
+			transit_total += transit_length;
 		}
-		v = v->next;
+
+		int64_t cut_dx = vector->start->x - vector->end->x;
+		int64_t cut_dy = vector->start->y - vector->end->y;
+		int64_t cut_length = sqrt(pow(cut_dx, 2) + pow(cut_dy, 2));
+		if (cut_length) {
+			cuts += 1;
+			cut_total += cut_length;
+		}
+
+		current_x = vector->end->x;
+		current_y = vector->end->y;
+		vector = vector->next;
 	}
-	return false;
+
+	printf("Cuts: %"PRId32" len %"PRId64"\n", cuts, cut_total);
+	printf("Move: %"PRId32" len %"PRId64"\n", transits, transit_total);
+
+	return self;
 }
