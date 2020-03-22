@@ -1,5 +1,5 @@
 #include "type_print_job.h"
-#include <inttypes.h>                 // for PRIxPTR
+#include <inttypes.h>                 // for PRIxPTR, PRId32, PRIu32
 #include <stdbool.h>                  // for true, false
 #include <stddef.h>                   // for NULL, size_t
 #include <stdio.h>                    // for snprintf
@@ -67,10 +67,10 @@ char *print_job_inspect(print_job_t *self)
 
 char *print_job_to_string(print_job_t *self)
 {
-	const char *print_job_string_header_template = "Job: %s\nRaster: speed=%d power=%d dpi=%d";
+	const char *print_job_string_header_template = "Job: %s\nRaster: speed=%"PRId32" power=%"PRId32" dpi=%"PRIu32" mode=%s";
 
 	size_t s_len = 1;  // \0
-	s_len += snprintf(NULL, 0, print_job_string_header_template, self->name, self->raster->speed, self->raster->power, self->raster->resolution);
+	s_len += snprintf(NULL, 0, print_job_string_header_template, self->name, self->raster->speed, self->raster->power, self->raster->resolution, raster_mode_to_string(self->raster->mode));
 
 	size_t config_count = 0;
 	for (vector_list_config_t *config = self->configs; config != NULL; config = config->next)
@@ -89,7 +89,7 @@ char *print_job_to_string(print_job_t *self)
 
 	char *s = calloc(s_len, sizeof(char));
 	size_t rc = 0;
-	rc += snprintf(s + rc, s_len - rc, print_job_string_header_template, self->name, self->raster->speed, self->raster->power, self->raster->resolution);
+	rc += snprintf(s + rc, s_len - rc, print_job_string_header_template, self->name, self->raster->speed, self->raster->power, self->raster->resolution, raster_mode_to_string(self->raster->mode));
 
 	for (size_t index = 0; index < config_count; index++) {
 		rc += snprintf(s + rc, s_len - rc, "\n%s", configs[index]);
@@ -99,7 +99,7 @@ char *print_job_to_string(print_job_t *self)
 	return s;
 }
 
-vector_list_config_t *print_job_append_vector_list_config(print_job_t *self, vector_list_config_t *new_config)
+static vector_list_config_t *print_job_append_vector_list_config(print_job_t *self, vector_list_config_t *new_config)
 {
 	vector_list_config_t *config = self->configs;
 
@@ -129,6 +129,10 @@ vector_list_config_t *print_job_append_new_vector_list_config(print_job_t *self,
 vector_list_config_t *print_job_clone_last_vector_list_config(print_job_t *self, int32_t red, int32_t green, int32_t blue)
 {
 	vector_list_config_t *config = self->configs;
+
+	if (config == NULL)
+		return NULL;
+
 	while (config->next) {
 		config = config->next;
 	}
@@ -136,7 +140,7 @@ vector_list_config_t *print_job_clone_last_vector_list_config(print_job_t *self,
 	return print_job_append_vector_list_config(self, config_shallow_clone);
 }
 
-vector_list_config_t *print_job_find_vector_list_config_by_id(print_job_t *self, uint32_t id)
+static vector_list_config_t *print_job_find_vector_list_config_by_id(print_job_t *self, uint32_t id)
 {
 	for (vector_list_config_t *config = self->configs;
 	     config != NULL;

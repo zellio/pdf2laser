@@ -19,7 +19,6 @@ struct preset {
 
 preset_t *preset_create(char *name);
 preset_t *preset_destroy(preset_t *self);
-// preset_t *preset_load_ini_file(preset_t *self, ini_file_t *file);
 
 preset_t *preset_apply_to_print_job(preset_t *self, print_job_t *print_job);
 

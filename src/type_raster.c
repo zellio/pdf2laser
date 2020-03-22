@@ -1,6 +1,36 @@
 #include "type_raster.h"
-#include <stdlib.h>  // for NULL, calloc, free
+#include <stdlib.h>  // for calloc, free, NULL
 #include "config.h"  // for RASTER_MODE_DEFAULT, RASTER_POWER_DEFAULT, RASTER_REPEAT, RASTER_SPEED_DEFAULT, RESOLUTION_DEFAULT, SCREEN_DEFAULT
+
+char *raster_mode_to_string(raster_mode mode)
+{
+	switch (mode) {
+	case RASTER_MODE_COLOR:
+		return "color";
+	case RASTER_MODE_GREY_SCALE:
+		return "grey";
+	case RASTER_MODE_MONO:
+		return "mono";
+	case RASTER_MODE_NONE:
+	default:
+		return "none";
+	}
+}
+
+char *raster_mode_to_device_string(raster_mode mode)
+{
+	switch (mode) {
+	case RASTER_MODE_COLOR:
+		return "bmp16m";
+	case RASTER_MODE_GREY_SCALE:
+		return "bmpgray";
+	case RASTER_MODE_MONO:
+		return "bmpmono";
+	case RASTER_MODE_NONE:
+	default:
+		return NULL;
+	}
+}
 
 raster_t *raster_create(void)
 {

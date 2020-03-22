@@ -16,25 +16,25 @@
 #include "type_vector_list_config.h"  // for vector_list_config_t, vector_list_config_id_to_rgb
 
 static const struct optparse_long long_options[] = {
-	{"debug",           'D',  OPTPARSE_NONE},
-	{"printer",         'p',  OPTPARSE_REQUIRED},
-	{"preset",          'P',  OPTPARSE_REQUIRED},
-	{"autofocus",       'a',  OPTPARSE_NONE},
-	{"job-mode",        'j',  OPTPARSE_REQUIRED},
-	{"job",             'n',  OPTPARSE_REQUIRED},
-	{"dpi",             'd',  OPTPARSE_REQUIRED},
-	{"raster-power",    'R',  OPTPARSE_REQUIRED},
-	{"raster-speed",    'r',  OPTPARSE_REQUIRED},
-	{"mode",            'm',  OPTPARSE_REQUIRED},
-	{"screen-size",     's',  OPTPARSE_REQUIRED},
-	{"frequency",       'f',  OPTPARSE_REQUIRED},
-	{"vector-power",    'V',  OPTPARSE_REQUIRED},
-	{"vector-speed",    'v',  OPTPARSE_REQUIRED},
-	{"multipass",       'M',  OPTPARSE_REQUIRED},
-	{"no-optimize",     'O',  OPTPARSE_NONE},
-	{"no-fallthrough",  'F',  OPTPARSE_NONE},
-	{"help",            'h',  OPTPARSE_NONE},
-	{"version",         '@',  OPTPARSE_NONE},
+	{"debug",                 'D',  OPTPARSE_NONE},
+	{"printer",               'p',  OPTPARSE_REQUIRED},
+	{"preset",                'P',  OPTPARSE_REQUIRED},
+	{"autofocus",             'a',  OPTPARSE_NONE},
+	{"job-mode",              'j',  OPTPARSE_REQUIRED},
+	{"job",                   'n',  OPTPARSE_REQUIRED},
+	{"raster-power",          'R',  OPTPARSE_REQUIRED},
+	{"raster-speed",          'r',  OPTPARSE_REQUIRED},
+	{"raster-dpi",            'd',  OPTPARSE_REQUIRED},
+	{"raster-mode",           'm',  OPTPARSE_REQUIRED},
+	{"screen-size",           's',  OPTPARSE_REQUIRED},
+	{"vector-power",          'V',  OPTPARSE_REQUIRED},
+	{"vector-speed",          'v',  OPTPARSE_REQUIRED},
+	{"vector-frequency",      'f',  OPTPARSE_REQUIRED},
+	{"vector-passes",         'M',  OPTPARSE_REQUIRED},
+	{"no-vector-optimize",    'O',  OPTPARSE_NONE},
+	{"no-vector-fallthrough", 'F',  OPTPARSE_NONE},
+	{"help",                  'h',  OPTPARSE_NONE},
+	{"version",               '@',  OPTPARSE_NONE},
 	{0}
 };
 
@@ -51,31 +51,31 @@ static void usage(int rc, const char * const msg)
 		"Usage: " PACKAGE " [OPTION]... [FILE]\n"
 		"\n"
 		"General options:\n"
-		"    -a, --autofocus                   Enable auto focus\n"
-		"    -n JOBNAME, --job=JOBNAME         Set the job name to display\n"
-		"    -p ADDRESS, --printer=ADDRESS     ADDRESS of the printer\n"
-		"    -P PRESET, --preset=PRESET        Select a default preset\n"
-		"    -j MODE, --job-mode=MODE          Set job mode to Vector, Raster, or Combined\n"
+		"  -n, --job=JOBNAME              Set the job name to display\n"
+		"  -p, --printer=ADDRESS          ADDRESS of the printer\n"
+		"  -j, --job-mode=MODE            Set job mode to Vector, Raster, or Combined\n"
+		"  -P, --preset=PRESET            Select a default preset\n"
+		"  -a, --autofocus                Enable auto focus\n"
 		"\n"
 		"Raster options:\n"
-		"    -d DPI, --dpi DPI                 Resolution of raster artwork\n"
-		"    -m MODE, --mode MODE              Mode for rasterization (default mono)\n"
-		"    -r SPEED, --raster-speed=SPEED    Raster speed\n"
-		"    -R POWER, --raster-power=POWER    Raster power\n"
-		"    -s SIZE, --screen-size SIZE       Photograph screen size (default 8)\n"
+		"  -R, --raster-power=POWER       Laser power for raster pass\n"
+		"  -r, --raster-speed=SPEED       Laser head speed for raster pass\n"
+		"  -d, --raster-dpi=DPI           Resolution of source file images\n"
+		"  -m, --raster-mode=MODE         Mode for rasterization (default mono)\n"
+		"  -s, --raster-screen-size=SIZE  Photograph screen size (default 8)\n"
 		"\n"
 		"Vector options:\n"
-		"    -O, --no-optimize                 Disable vector optimization\n"
-		"    -F, --no-fallthrough              Disable automatic vector configuration\n"
-		"    -f FREQ, --frequency=FREQ         Vector frequency\n"
-		"    -v SPEED, --vector-speed=VALUE    Vector speed for the COLOR=VALUE pair\n"
-		"    -V POWER, --vector-power=VALUE    Vector power for the COLOR=VALUE pair\n"
-		"    -M PASSES, --multipass=VALUE      Number of times to repeat the COLOR=VALUE pair\n"
+		"  -V, --vector-power=POWER       Laser power for vector pass\n"
+		"  -v, --vector-speed=SPEED       Laser head speed for vector pass\n"
+		"  -f, --vector-frequency=FREQ    Laser frequency for vector pass\n"
+		"  -M, --vector-passes=PASSES     Number of times to repeat vector pass\n"
+		"  -O, --no-vector-optimize       Disable vector optimization\n"
+		"  -F, --no-vector-fallthrough    Disable automatic vector configuration\n"
 		"\n"
-		"General options:\n"
-		"    -D, --debug                       Enable debug mode\n"
-		"    -h, --help                        Output a usage message and exit\n"
-		"    --version                         Output the version number and exit\n"
+		"Generic program options:\n"
+		"  -D, --debug                    Enable debug mode\n"
+		"  -h, --help                     Output a usage message and exit\n"
+		"      --version                  Output the version number and exit\n"
 		"";
 
 	fprintf(stderr, "%s%s\n", msg, usage_str);
@@ -87,14 +87,18 @@ static int32_t vector_config_set_param_offset(print_job_t *print_job, char *opta
 {
 	size_t optlen = strnlen(optarg, OPTARG_MAX_LENGTH);
 	char *s = calloc(optlen + 1, sizeof(char));
+	char *s_ptr = s;
+
 	strncpy(s, optarg, optlen);
 
 	char *token = strtok(s, ",");
 	while (token) {
 		uint64_t values[2] = {0, 0};
 		int32_t rc = sscanf(token, "%lx=%lu", &values[0], &values[1]);
-		if (rc != 2)
+		if (rc != 2) {
+			free(s_ptr);
 			return -1;
+		}
 
 		int32_t red, green, blue;
 		vector_list_config_id_to_rgb(values[0], &red, &green, &blue);
@@ -109,6 +113,9 @@ static int32_t vector_config_set_param_offset(print_job_t *print_job, char *opta
 
 		token = strtok(NULL, ",");
 	}
+
+	free(s_ptr);
+
 	return 0;
 }
 
@@ -240,7 +247,7 @@ bool pdf2laser_optparse(print_job_t *print_job, preset_file_t **preset_files, si
 			break;
 
 		case 'P':
-			// usage(EXIT_FAILURE, "Presets are not supported yet\n");
+			// handled above
 			break;
 
 		case 'n':

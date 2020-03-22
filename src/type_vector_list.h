@@ -22,12 +22,15 @@ struct vector_list {
 
 vector_list_t *vector_list_create(void);
 vector_list_t *vector_list_destroy(vector_list_t *self);
+
 vector_list_t *vector_list_append(vector_list_t *self, vector_t *vector);
 vector_t *vector_list_remove(vector_list_t *self, vector_t *vector);
-vector_list_t *vector_list_stats(vector_list_t *self);
+int vector_list_contains(vector_list_t *self, vector_t *vector);
+
 vector_t *vector_list_find_closest(vector_list_t *list, point_t *point);
 vector_list_t *vector_list_optimize(vector_list_t *self);
-bool vector_list_contains(vector_list_t *self, vector_t *vector);
+
+vector_list_t *vector_list_stats(vector_list_t *self);
 
 #ifdef __cplusplus
 };

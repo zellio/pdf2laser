@@ -1,5 +1,5 @@
 #include "type_vector_list_config.h"
-#include <inttypes.h>          // for PRIxPTR
+#include <inttypes.h>          // for PRIxPTR, PRIx32, PRId32, PRIu32
 #include <stdio.h>             // for snprintf, NULL, size_t
 #include <stdlib.h>            // for calloc, free
 #include "type_vector_list.h"  // for vector_list_create, vector_list_destroy
@@ -51,7 +51,7 @@ char *vector_list_config_inspect(vector_list_config_t *self)
 
 char *vector_list_config_to_string(vector_list_config_t *self)
 {
-	static char *template = "Vector: pass=%d color=%02x%02x%02x speed=%d power=%d multipass=%d frequency=%d";
+	static char *template = "Vector: pass=%"PRIu32" color=%02"PRIx32"%02"PRIx32"%02"PRIx32" speed=%"PRId32" power=%"PRId32" multipass=%"PRId32" frequency=%"PRId32"";
 
 	int32_t red, green, blue;
 	vector_list_config_id_to_rgb(self->id, &red, &green, &blue);

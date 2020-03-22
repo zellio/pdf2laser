@@ -42,21 +42,21 @@
 #include <ghostscript/iapi.h>      // for gsapi_delete_instance, gsapi_exit, gsapi_init_with_args, gsapi_new_instance, gsapi_set_arg_encoding, gsapi_set_stdio, GSDLLCALL, GS_ARG_ENCODING_UTF8
 #include <libgen.h>                // for basename
 #include <limits.h>                // for PATH_MAX
-#include <stdbool.h>               // for false, bool, true
+#include <stdbool.h>               // for false
 #include <stddef.h>                // for size_t, NULL
-#include <stdint.h>                // for int32_t, uint8_t
-#include <stdio.h>                 // for perror, snprintf, fclose, fopen, FILE, fileno, fwrite, printf, fflush, fprintf, fread, stdin, stderr
-#include <stdlib.h>                // for calloc, free, getenv, mkdtemp
-#include <string.h>                // for strndup, strnlen, strncmp, strrchr
+#include <stdint.h>                // for int32_t
+#include <stdio.h>                 // for perror, snprintf, fclose, fflush, fopen, fwrite, printf, FILE
+#include <stdlib.h>                // for free, calloc, getenv, mkdtemp
+#include <string.h>                // for strndup, strnlen, strrchr
 #include <sys/stat.h>              // for stat, S_ISREG
 #include <unistd.h>                // for unlink, rmdir
-#include "config.h"                // for FILENAME_NCHARS, GS_ARG_NCHARS, DEBUG, TMP_DIRECTORY
+#include "config.h"                // for FILENAME_NCHARS, DEBUG, TMP_DIRECTORY
 #include "pdf2laser_cli.h"         // for pdf2laser_optparse
-#include "pdf2laser_generator.h"   // for generate_eps, generate_pjl, generate_ps
+#include "pdf2laser_generator.h"   // for generate_eps, generate_pdf, generate_pjl, generate_ps
 #include "pdf2laser_printer.h"     // for printer_send
-#include "pdf2laser_util.h"        // for pdf2laser_sendfile
-#include "type_preset_file.h"      // for preset_file_t, preset_file_create
-#include "type_print_job.h"        // for print_job_t, print_job_to_string, print_job_create
+#include "pdf2laser_util.h"        // for pdf2laser_format_string
+#include "type_preset_file.h"      // for preset_file_t, preset_file_create, preset_file_destroy
+#include "type_print_job.h"        // for print_job_t, print_job_create, print_job_destroy, print_job_to_string
 #include "type_raster.h"           // for raster_t
 
 FILE *fh_vector;
@@ -83,7 +83,7 @@ static int GSDLLCALL gsdll_stdout(__attribute__ ((unused)) void *minst, const ch
  * @return Return true if the execution of ghostscript succeeds, false
  * otherwise.
  */
-static int execute_ghostscript(print_job_t *print_job, const char *const target_eps, const char *const target_bmp, const char *const target_vector, const char *const raster_string)
+static int execute_ghostscript(print_job_t *print_job, const char *const target_eps, const char *const target_bmp, const char *const target_vector) //, const char *const raster_string)
 {
 	int gs_argc = 8;
 	char *gs_argv[8];
@@ -93,7 +93,7 @@ static int execute_ghostscript(print_job_t *print_job, const char *const target_
 	gs_argv[2] = "-dBATCH";
 	gs_argv[3] = "-dNOPAUSE";
 	gs_argv[4] = pdf2laser_format_string("-r%d", print_job->raster->resolution);
-	gs_argv[5] = pdf2laser_format_string("-sDEVICE=%s", raster_string);
+	gs_argv[5] = pdf2laser_format_string("-sDEVICE=%s", raster_mode_to_device_string(print_job->raster->mode));
 	gs_argv[6] = pdf2laser_format_string("-sOutputFile=%s", target_bmp);
 	gs_argv[7] = strndup(target_eps, FILENAME_NCHARS);
 
@@ -105,7 +105,7 @@ static int execute_ghostscript(print_job_t *print_job, const char *const target_
 	rc = gsapi_new_instance(&minst, NULL);
 
 	if (rc < 0)
-		return rc;
+		goto terminate_execute_ghostscript;
 
 	rc = gsapi_set_arg_encoding(minst, GS_ARG_ENCODING_UTF8);
 	if (rc == 0) {
@@ -117,9 +117,10 @@ static int execute_ghostscript(print_job_t *print_job, const char *const target_
 	if ((rc == 0) || (rc2 == gs_error_Quit))
 		rc = rc2;
 
-	fclose(fh_vector);
-
 	gsapi_delete_instance(minst);
+
+ terminate_execute_ghostscript:
+	fclose(fh_vector);
 
 	free(gs_argv[4]);
 	free(gs_argv[5]);
@@ -168,13 +169,14 @@ static int pdf2laser_load_presets(preset_file_t ***preset_files, size_t *preset_
 
 			struct stat preset_file_stat;
 			if (stat(preset_file_path, &preset_file_stat))
-				continue;
+				goto pfd2laser_load_preset_counter_skip;
 
 			if (!S_ISREG(preset_file_stat.st_mode))
-				continue;
+				goto pfd2laser_load_preset_counter_skip;
 
 			preset_file_count += 1;
 
+		pfd2laser_load_preset_counter_skip:
 			free(preset_file_path);
 		}
 		closedir(preset_dir);
@@ -195,16 +197,17 @@ static int pdf2laser_load_presets(preset_file_t ***preset_files, size_t *preset_
 
 			struct stat preset_file_stat;
 			if (stat(preset_file_path, &preset_file_stat))
-				continue;
+				goto pfd2laser_load_preset_load_skip;
 
 			if (!S_ISREG(preset_file_stat.st_mode))
-				continue;
+				goto pfd2laser_load_preset_load_skip;
 
 			if (preset_file_index < preset_file_count) {
 				(*preset_files)[preset_file_index] = preset_file_create(preset_file_path);
 				preset_file_index += 1;
 			}
 
+		pfd2laser_load_preset_load_skip:
 			free(preset_file_path);
 		}
 		closedir(preset_dir);
@@ -247,6 +250,7 @@ int main(int argc, char *argv[])
 
 	const char *source_filename = print_job->source_filename;
 	char *source_basename = strndup(print_job->source_filename, FILENAME_NCHARS);
+	char *source_basename_ptr = source_basename;
 	source_basename = basename(source_basename);
 
 	// If no job name is specified, use just the filename if there
@@ -262,6 +266,8 @@ int main(int argc, char *argv[])
 		*last_dot = '\0';
 	}
 	char *target_base = pdf2laser_format_string("%s/%s", tmpdir_name, source_basename);
+
+	free(source_basename_ptr);
 
 	char *target_pdf = pdf2laser_format_string("%s.pdf", target_base);
 	if (generate_pdf(source_filename, target_pdf)) {
@@ -299,12 +305,7 @@ int main(int argc, char *argv[])
 
 	char *target_bmp = pdf2laser_format_string("%s.bmp", target_base);
 	char *target_vector = pdf2laser_format_string("%s.vector", target_base);
-	const char * const raster_string =
-		print_job->raster->mode == 'c' ? "bmp16m" :
-		print_job->raster->mode == 'g' ? "bmpgray" :
-		"bmpmono";
-
-	if (execute_ghostscript(print_job, target_eps, target_bmp, target_vector, raster_string)) {
+	if (execute_ghostscript(print_job, target_eps, target_bmp, target_vector)) {
 		perror("Failed to execute ghostscript");
 		return -1;
 	}

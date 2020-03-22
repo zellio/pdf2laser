@@ -1,18 +1,19 @@
 #include "pdf2laser_printer.h"
 #include <arpa/inet.h>       // for inet_ntoa
 #include <errno.h>           // for EBADF, EINTR, EIO, errno
-#include <inttypes.h>        // for PRIu8
+#include <fcntl.h>           // for open, O_RDONLY
+#include <inttypes.h>        // for PRIu32, PRIu8
 #include <netdb.h>           // for addrinfo, freeaddrinfo, getaddrinfo
 #include <netinet/in.h>      // for sockaddr_in, ntohs
+#include <stdbool.h>         // for bool, false, true
 #include <stdint.h>          // for int32_t, uint32_t, uint8_t
-#include <stdio.h>           // for perror, fprintf, fileno, snprintf, NULL, printf, stderr, FILE, size_t
+#include <stdio.h>           // for perror, fprintf, snprintf, NULL, printf, stderr, size_t
 #include <string.h>          // for strchr, strlen
 #include <sys/socket.h>      // for connect, socket, PF_UNSPEC, SOCK_STREAM
 #include <sys/stat.h>        // for fstat, stat
 #include <unistd.h>          // for alarm, close, read, write, gethostname, sleep
 #include "config.h"          // for HOSTNAME_NCHARS
 #include "pdf2laser_util.h"  // for pdf2laser_sendfile
-#include <fcntl.h>
 
 char *queue = "";
 
@@ -138,7 +139,7 @@ int printer_send(print_job_t *print_job, char *target_pjl)
 	write(p_sock, "\002\r\n", 3);
 	read(p_sock, &lpdres, 1);
 	if (lpdres) {
-		fprintf (stderr, "Bad response from %s, %"PRIu8"\n", print_job->host, lpdres);
+		fprintf(stderr, "Bad response from %s, %"PRIu8"\n", print_job->host, lpdres);
 		return -1;
 	}
 

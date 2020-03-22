@@ -51,10 +51,8 @@ char *print_job_to_string(print_job_t *self);
 print_job_t *print_job_merge(print_job_t *self, print_job_t *other);
 
 vector_list_config_t *print_job_clone_last_vector_list_config(print_job_t *self, int32_t red, int32_t green, int32_t blue);
-vector_list_config_t *print_job_append_vector_list_config(print_job_t *self, vector_list_config_t *new_config);
 vector_list_config_t *print_job_append_new_vector_list_config(print_job_t *self, int32_t red, int32_t green, int32_t blue);
 
-vector_list_config_t *print_job_find_vector_list_config_by_id(print_job_t *self, uint32_t id);
 vector_list_config_t *print_job_find_vector_list_config_by_rgb(print_job_t *self, int32_t red, int32_t green, int32_t blue);
 
 #ifdef __cplusplus

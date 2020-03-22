@@ -1,14 +1,15 @@
 #include "pdf2laser_generator.h"
-#include <stddef.h>
+#include <fcntl.h>                    // for open, O_RDONLY, SEEK_SET
 #include <ghostscript/gserrors.h>     // for gs_error_Quit
 #include <ghostscript/iapi.h>         // for gsapi_delete_instance, gsapi_exit, gsapi_init_with_args, gsapi_new_instance, gsapi_set_arg_encoding, GS_ARG_ENCODING_UTF8
 #include <inttypes.h>                 // for PRId32
+#include <stdbool.h>                  // for bool, false
 #include <stdint.h>                   // for int32_t, uint8_t, uint32_t
-#include <stdio.h>                    // for fprintf, fputc, fread, sscanf, FILE, NULL, printf, fileno, getline, perror, stderr, size_t, fflush, fseek, snprintf, SEEK_SET
+#include <stdio.h>                    // for fprintf, fclose, fopen, fread, FILE, fputc, sscanf, NULL, fileno, perror, printf, getline, stderr, size_t, fflush, fseek, fwrite, snprintf, stdin
 #include <stdlib.h>                   // for free, calloc
-#include <string.h>                   // for strncmp, strndup
+#include <string.h>                   // for memset, strncmp, strndup
 #include <strings.h>                  // for strncasecmp
-#include <sys/types.h>                // for ssize_t
+#include <unistd.h>                   // for close, ssize_t
 #include "config.h"                   // for GS_ARG_NCHARS
 #include "pdf2laser_util.h"           // for pdf2laser_sendfile
 #include "type_point.h"               // for point_t, point_compare
@@ -17,8 +18,6 @@
 #include "type_vector.h"              // for vector_t, vector_create
 #include "type_vector_list.h"         // for vector_list_append, vector_list_contains, vector_list_t, vector_list_optimize
 #include "type_vector_list_config.h"  // for vector_list_config_t, vector_list_config_id_to_rgb
-#include <fcntl.h>
-#include <unistd.h>
 
 /**
  * Convert a big endian value stored in the array starting at the given pointer
@@ -75,9 +74,9 @@ int generate_pdf(const char *source_pdf, const char *target_pdf)
  */
 int generate_ps(const char *target_pdf, const char *target_ps)
 {
-	fprintf(stderr, "Executing pdf2ps\n");
 	int gs_argc = 13;
 	char *gs_argv[gs_argc];
+
 	gs_argv[0] = "gs";
 	gs_argv[1] = "-q";
 	gs_argv[2] = "-dNOPAUSE";
@@ -85,10 +84,7 @@ int generate_ps(const char *target_pdf, const char *target_ps)
 	gs_argv[4] = "-P-";
 	gs_argv[5] = "-dSAFER";
 	gs_argv[6] = "-sDEVICE=ps2write";
-
-	gs_argv[7] = calloc(GS_ARG_NCHARS + 13, sizeof(char));
-	snprintf(gs_argv[7], GS_ARG_NCHARS + 13, "-sOutputFile=%s", target_ps);
-
+	gs_argv[7] = pdf2laser_format_string("-sOutputFile=%s", target_ps);
 	gs_argv[8] = "-c";
 	gs_argv[9] = "save";
 	gs_argv[10] = "pop";
@@ -100,7 +96,7 @@ int generate_ps(const char *target_pdf, const char *target_ps)
 
 	rc = gsapi_new_instance(&minst, NULL);
 	if (rc < 0)
-		return -1;
+		goto terminate_generate_ps;
 
 	rc = gsapi_set_arg_encoding(minst, GS_ARG_ENCODING_UTF8);
 	if (rc == 0)
@@ -112,6 +108,10 @@ int generate_ps(const char *target_pdf, const char *target_ps)
 		rc = rc2;
 
 	gsapi_delete_instance(minst);
+
+ terminate_generate_ps:
+	free(gs_argv[7]);
+	free(gs_argv[12]);
 
 	return rc;
 }
@@ -407,7 +407,7 @@ int generate_raster(print_job_t *print_job, FILE *pjl_file, FILE *bitmap_file)
 						}
 						l = fread((char *)buf, 1, d, bitmap_file);
 						if (l != d) {
-							fprintf (stderr, "Bad bit data from gs %"PRId32"/%"PRId32" (y=%d)\n", l, d, y);
+							fprintf(stderr, "Bad bit data from gs %"PRId32"/%"PRId32" (y=%d)\n", l, d, y);
 							return -1;
 						}
 						for (l = 0; l < h; l++) {
@@ -420,8 +420,9 @@ int generate_raster(print_job_t *print_job, FILE *pjl_file, FILE *bitmap_file)
 						break;
 					default: {       // mono
 						static int i;
-						if (i++==0)
-							printf("mono\n");
+						if (i++==0) {
+							; // printf("mono\n");
+						}
 						int d = (h + 3) / 4 * 4;  // BMP padded to 4 bytes per scan line
 						if (d > (int) sizeof (buf)) {
 							perror("Too wide");
@@ -576,7 +577,7 @@ int vectors_parse(print_job_t *print_job, FILE * const vector_file)
 			sscanf(line, "L%d,%d", &x_next, &y_next);
 			vector_t *vector = vector_create(x_current, y_current, x_next, y_next);
 			if (print_job->vector_optimize &&
-			    vector_list_contains(current_list, vector)) {
+			    vector_list_contains(current_list, vector) >= 0) {
 				free(vector);
 			}
 			else {
@@ -591,7 +592,7 @@ int vectors_parse(print_job_t *print_job, FILE * const vector_file)
 			// Closing statment from current point to starting point.
 			vector_t *vector = vector_create(x_current, y_current, x_start, y_start);
 			if (print_job->vector_optimize &&
-			    vector_list_contains(current_list, vector)) {
+			    vector_list_contains(current_list, vector) >= 0) {
 				free(vector);
 			}
 			else {
@@ -736,6 +737,11 @@ int generate_pjl(print_job_t *print_job, char *bmp_target, char *vector_target, 
 
 	if (print_job->mode == PRINT_JOB_MODE_VECTOR ||
 	    print_job->mode == PRINT_JOB_MODE_COMBINED) {
+
+		if (print_job->configs == NULL) {
+			fprintf(stderr, "No vector settings provided, cannot generate vector.\n");
+			return -1;
+		}
 
 		/* We're going to perform a vector print. */
 		generate_vector(print_job, pjl_target_fh, vector_target_fh);
