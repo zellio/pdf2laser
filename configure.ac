@@ -1,12 +1,13 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
-AC_PREREQ([2.69])
+AC_PREREQ([2.71])
 
-AC_INIT([pdf2laser], [1.0.0], [https://github.com/zellio/pdf2laser/issues], [pdf2laser])
+AC_INIT([pdf2laser], [1.0.1], [https://github.com/zellio/pdf2laser/issues], [pdf2laser])
 AM_INIT_AUTOMAKE([-Wall])
 AC_CONFIG_SRCDIR([src/pdf2laser.c])
 AC_CONFIG_HEADERS([config.h])
+AC_USE_SYSTEM_EXTENSIONS
 
 AC_CONFIG_MACRO_DIRS([m4])
 
@@ -69,15 +70,13 @@ AC_DEFINE_UNQUOTED([PRESET_NAME_NCHARS], [(${PRESET_NAME_NCHARS=1024})], [Number
 AC_PROG_CC([clang gcc])
 AC_PROG_CXX([clang])
 AC_PROG_YACC([bison yacc])
-AC_PROG_LEX([flex lex])
+AC_PROG_LEX(noyywrap)
 AC_PROG_INSTALL
 AC_PROG_LN_S
 
 # Checks for libraries.
 AC_SEARCH_LIBS([sqrt], [m])
 AC_SEARCH_LIBS([gsapi_new_instance], [gs])
-
-AC_USE_SYSTEM_EXTENSIONS
 
 LT_INIT
 
